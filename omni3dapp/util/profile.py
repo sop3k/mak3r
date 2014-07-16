@@ -27,7 +27,7 @@ else:
 
 from util.version import getVersion
 from util import validators
-#from omniapp.logger import log
+from omni3dapp.logger import log
 
 
 #The settings dictionary contains a key/value reference to all possible settings. With the setting name as key.
@@ -866,7 +866,7 @@ def loadPreferences(filename):
         for setting in settingsList:
             if setting.isMachineSetting():
                 if profileParser.has_option('machine_%d' % (n), setting.getName()):
-                    setting.settingValue(unicode(profileParser.get('machine_%d' % (n), setting.getName()), 'utf-8', 'replace'), n)
+                    setting.setValue(unicode(profileParser.get('machine_%d' % (n), setting.getName()), 'utf-8', 'replace'), n)
         n += 1
 
     setActiveMachine(int(getPreferenceFloat('active_machine')))

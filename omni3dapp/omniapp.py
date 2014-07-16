@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from optparse import OptionParser
-from util import profile
 
-from logger import log
+from omni3dapp.util import profile
+from omni3dapp.logger import log
 
 
 def parse_arguments():
@@ -80,7 +80,7 @@ def main():
     #    app.CuraApp(args).MainLoop()
 
     from gui import app
-    app.start_app()
+    app.OmniApp(args)
 
 
 if __name__ == "__main__":

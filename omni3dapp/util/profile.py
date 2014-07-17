@@ -249,7 +249,7 @@ setting('plugin_config', '', str, 'hidden', 'hidden')
 setting('object_center_x', -1, float, 'hidden', 'hidden')
 setting('object_center_y', -1, float, 'hidden', 'hidden')
 
-setting('start.gcode', """;Sliced at: {day} {date} {time}
+setting('startgcode', """;Sliced at: {day} {date} {time}
 ;Basic settings: Layer height: {layer_height} Walls: {wall_thickness} Fill: {fill_density}
 ;Print time: {print_time}
 ;Filament used: {filament_amount}m {filament_weight}g
@@ -274,7 +274,7 @@ G1 F{travel_speed}
 M117 Printing...
 """, str, 'alteration', 'alteration')
 #######################################################################################
-setting('end.gcode', """;End GCode
+setting('endgcode', """;End GCode
 M104 S0                     ;extruder heater off
 M140 S0                     ;heated bed heater off (if you have it)
 
@@ -288,7 +288,7 @@ G90                         ;absolute positioning
 ;{profile_string}
 """, str, 'alteration', 'alteration')
 #######################################################################################
-setting('start2.gcode', """;Sliced at: {day} {date} {time}
+setting('start2gcode', """;Sliced at: {day} {date} {time}
 ;Basic settings: Layer height: {layer_height} Walls: {wall_thickness} Fill: {fill_density}
 ;Print time: {print_time}
 ;Filament used: {filament_amount}m {filament_weight}g
@@ -321,7 +321,7 @@ G1 F{travel_speed}
 M117 Printing...
 """, str, 'alteration', 'alteration')
 #######################################################################################
-setting('end2.gcode', """;End GCode
+setting('end2gcode', """;End GCode
 M104 T0 S0                     ;extruder heater off
 M104 T1 S0                     ;extruder heater off
 M140 S0                     ;heated bed heater off (if you have it)
@@ -336,7 +336,7 @@ G90                         ;absolute positioning
 ;{profile_string}
 """, str, 'alteration', 'alteration')
 #######################################################################################
-setting('start3.gcode', """;Sliced at: {day} {date} {time}
+setting('start3gcode', """;Sliced at: {day} {date} {time}
 ;Basic settings: Layer height: {layer_height} Walls: {wall_thickness} Fill: {fill_density}
 ;Print time: {print_time}
 ;Filament used: {filament_amount}m {filament_weight}g
@@ -375,7 +375,7 @@ G1 F{travel_speed}
 M117 Printing...
 """, str, 'alteration', 'alteration')
 #######################################################################################
-setting('end3.gcode', """;End GCode
+setting('end3gcode', """;End GCode
 M104 T0 S0                     ;extruder heater off
 M104 T1 S0                     ;extruder heater off
 M104 T2 S0                     ;extruder heater off
@@ -436,7 +436,7 @@ G1 F{travel_speed}
 M117 Printing...
 """, str, 'alteration', 'alteration')
 #######################################################################################
-setting('end4.gcode', """;End GCode
+setting('end4gcode', """;End GCode
 M104 T0 S0                     ;extruder heater off
 M104 T1 S0                     ;extruder heater off
 M104 T2 S0                     ;extruder heater off

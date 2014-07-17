@@ -70,7 +70,7 @@
              </rect>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>3</number>
             </property>
             <widget class="QWidget" name="basic">
              <property name="enabled">
@@ -1064,6 +1064,9 @@
                 <height>771</height>
                </rect>
               </property>
+              <property name="currentIndex">
+               <number>1</number>
+              </property>
               <widget class="QWidget" name="page_3">
                <widget class="QTextEdit" name="startgcode">
                 <property name="geometry">
@@ -1073,6 +1076,11 @@
                   <width>431</width>
                   <height>761</height>
                  </rect>
+                </property>
+                <property name="font">
+                 <font>
+                  <family>Monospace</family>
+                 </font>
                 </property>
                </widget>
               </widget>
@@ -1085,6 +1093,11 @@
                   <width>431</width>
                   <height>761</height>
                  </rect>
+                </property>
+                <property name="font">
+                 <font>
+                  <family>Monospace</family>
+                 </font>
                 </property>
                </widget>
               </widget>

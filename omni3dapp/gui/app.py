@@ -8,15 +8,8 @@ import glob
 
 from PySide import QtCore, QtGui
 
-from mainwindow import Ui_MainWindow
+from mainwindow import MainWindow
 from omni3dapp.logger import log
-
-
-class MainWindow(QtGui.QMainWindow):
-    def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
 
 
 class OmniApp(object):
@@ -32,8 +25,6 @@ class OmniApp(object):
         self.main_window = None
         self.splash = None
         self.load_files = files
-
-        # self.Bind(wx.EVT_ACTIVATE_APP, self.OnActivate)
 
         if sys.platform.startswith('win'):
             # Check for an already running instance,
@@ -67,12 +58,12 @@ class OmniApp(object):
 
         if sys.platform.startswith('darwin'):
             # Do not show a splashscreen on OSX, as by Apple guidelines
-            self.after_splash_callback()
+            self.after_splash()
         else:
             self.set_splash_screen()
-            self.splash.show()
+            # self.splash.show()
             app.processEvents()
-            self.after_splash_callback()
+            self.after_splash()
         if self.main_window:
             self.splash.finish(self.main_window)
             sys.exit(app.exec_())
@@ -81,7 +72,6 @@ class OmniApp(object):
         from omni3dapp.util.resources import getPathForImage
         pixmap = QtGui.QPixmap(getPathForImage('splashimage.png'))
         self.splash = QtGui.QSplashScreen(pixmap, QtCore.Qt.WindowStaysOnTopHint)
-        self.splash.setMask(pixmap.mask())
 
     def run_config_wizard(self, resource_base_path):
         if platform.system() == "Windows":
@@ -116,7 +106,7 @@ class OmniApp(object):
         #         webbrowser.open(new_version)
         #         return True
 
-    def after_splash_callback(self):
+    def after_splash(self):
         from omni3dapp.util import resources, profile, version
         resources.setupLocalization(profile.getPreference('language'))
 
@@ -149,11 +139,6 @@ class OmniApp(object):
             log.debug('Machine name not found')
             return 
 
-        # self.mainWindow = mainWindow.mainWindow()
-        # if self.splash is not None:
-        #     self.splash.Show(False)
-        # self.SetTopWindow(self.mainWindow)
-        # self.mainWindow.Show()
         # self.mainWindow.OnDropFiles(self.loadFiles)
         self.main_window = MainWindow()
         self.main_window.show()
@@ -165,6 +150,3 @@ class OmniApp(object):
         #     newVersionDialog.newVersionDialog().Show()
 
         # setFullScreenCapable(self.mainWindow)
-
-        # if sys.platform.startswith('darwin'):
-        #     wx.CallAfter(self.StupidMacOSWorkaround)

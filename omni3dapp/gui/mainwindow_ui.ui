@@ -47,7 +47,7 @@
       <layout class="QHBoxLayout" name="horizontalLayout_3">
        <item>
         <widget class="QWidget" name="widget" native="true">
-         <widget class="QStackedWidget" name="stackedWidget">
+         <widget class="QStackedWidget" name="slice_modes">
           <property name="geometry">
            <rect>
             <x>0</x>
@@ -57,9 +57,9 @@
            </rect>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
-          <widget class="QWidget" name="page">
+          <widget class="QWidget" name="normal">
            <widget class="QTabWidget" name="tabWidget">
             <property name="geometry">
              <rect>
@@ -70,7 +70,7 @@
              </rect>
             </property>
             <property name="currentIndex">
-             <number>3</number>
+             <number>0</number>
             </property>
             <widget class="QWidget" name="basic">
              <property name="enabled">
@@ -1105,7 +1105,7 @@
             </widget>
            </widget>
           </widget>
-          <widget class="QWidget" name="page_2">
+          <widget class="QWidget" name="simple">
            <widget class="QWidget" name="layoutWidget">
             <property name="geometry">
              <rect>

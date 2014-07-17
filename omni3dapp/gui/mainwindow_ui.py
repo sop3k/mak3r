@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'mainwindow_ui.ui'
 #
-# Created: Thu Jul 17 12:06:36 2014
+# Created: Thu Jul 17 17:59:01 2014
 #      by: pyside-uic 0.2.13 running on PySide 1.1.0
 #
 # WARNING! All changes made in this file will be lost!
@@ -30,12 +30,12 @@ class Ui_MainWindow(object):
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
         self.widget = QtGui.QWidget(self.layoutWidget)
         self.widget.setObjectName("widget")
-        self.stackedWidget = QtGui.QStackedWidget(self.widget)
-        self.stackedWidget.setGeometry(QtCore.QRect(0, 0, 491, 941))
-        self.stackedWidget.setObjectName("stackedWidget")
-        self.page = QtGui.QWidget()
-        self.page.setObjectName("page")
-        self.tabWidget = QtGui.QTabWidget(self.page)
+        self.slice_modes = QtGui.QStackedWidget(self.widget)
+        self.slice_modes.setGeometry(QtCore.QRect(0, 0, 491, 941))
+        self.slice_modes.setObjectName("slice_modes")
+        self.normal = QtGui.QWidget()
+        self.normal.setObjectName("normal")
+        self.tabWidget = QtGui.QTabWidget(self.normal)
         self.tabWidget.setGeometry(QtCore.QRect(0, 20, 481, 921))
         self.tabWidget.setObjectName("tabWidget")
         self.basic = QtGui.QWidget()
@@ -536,10 +536,10 @@ class Ui_MainWindow(object):
         self.endgcode.setObjectName("endgcode")
         self.stackedWidget_2.addWidget(self.page_4)
         self.tabWidget.addTab(self.start_end_gcode, "")
-        self.stackedWidget.addWidget(self.page)
-        self.page_2 = QtGui.QWidget()
-        self.page_2.setObjectName("page_2")
-        self.layoutWidget9 = QtGui.QWidget(self.page_2)
+        self.slice_modes.addWidget(self.normal)
+        self.simple = QtGui.QWidget()
+        self.simple.setObjectName("simple")
+        self.layoutWidget9 = QtGui.QWidget(self.simple)
         self.layoutWidget9.setGeometry(QtCore.QRect(10, 10, 201, 361))
         self.layoutWidget9.setObjectName("layoutWidget9")
         self.verticalLayout_3 = QtGui.QVBoxLayout(self.layoutWidget9)
@@ -598,7 +598,7 @@ class Ui_MainWindow(object):
         self.checkBox.setGeometry(QtCore.QRect(0, 20, 181, 21))
         self.checkBox.setObjectName("checkBox")
         self.verticalLayout_3.addWidget(self.groupBox_3)
-        self.stackedWidget.addWidget(self.page_2)
+        self.slice_modes.addWidget(self.simple)
         self.horizontalLayout_3.addWidget(self.widget)
         self.widget_2 = QtGui.QWidget(self.layoutWidget)
         self.widget_2.setObjectName("widget_2")
@@ -732,8 +732,8 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.stackedWidget.setCurrentIndex(0)
-        self.tabWidget.setCurrentIndex(3)
+        self.slice_modes.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         self.stackedWidget_2.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 

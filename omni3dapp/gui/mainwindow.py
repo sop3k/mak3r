@@ -5,6 +5,7 @@ from PySide import QtCore, QtGui
 from mainwindow_ui import Ui_MainWindow
 from omni3dapp.util import profile
 from omni3dapp.gui.util.gcode_text_styling import GCodeSyntaxHighlighter
+from omni3dapp.gui import sceneview
 from omni3dapp.logger import log
 
 
@@ -22,8 +23,21 @@ class MainWindow(QtGui.QMainWindow):
         super(MainWindow, self).__init__(parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        self.setup_scene()
         self.set_up_fields()
         self.connect_actions()
+
+    def setup_scene(self):
+        self.scene = sceneview.SceneView()
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.ui.right_widget.sizePolicy().hasHeightForWidth())
+        self.scene.setSizePolicy(sizePolicy)
+        self.scene.setObjectName("scene")
+        self.ui.horizontalLayout_3.removeWidget(self.ui.right_widget)
+        self.ui.horizontalLayout_3.addWidget(self.scene)
 
     def set_up_fields(self):
         for key, val in profile.settingsDictionary.iteritems():
@@ -59,7 +73,7 @@ class MainWindow(QtGui.QMainWindow):
         self.update_slice_mode(is_simple=False)
 
     def update_slice_mode(self, is_simple):
-        self.ui.slice_modes.setCurrentIndex(1)
+        self.ui.slice_modes.setCurrentIndex(int(is_simple))
 
         for item in self.NORMAL_MODE_ONLY_ITEMS:
             action = self.findChild(QtGui.QAction, 'action{0}'.format(item))

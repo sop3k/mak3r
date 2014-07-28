@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1019</width>
+    <width>1200</width>
     <height>700</height>
    </rect>
   </property>
@@ -19,8 +19,8 @@
      <rect>
       <x>10</x>
       <y>0</y>
-      <width>1001</width>
-      <height>700</height>
+      <width>1180</width>
+      <height>654</height>
      </rect>
     </property>
     <property name="widgetResizable">
@@ -30,8 +30,8 @@
      <property name="geometry">
       <rect>
        <x>0</x>
-       <y>0</y>
-       <width>999</width>
+       <y>-2</y>
+       <width>1100</width>
        <height>849</height>
       </rect>
      </property>
@@ -46,18 +46,27 @@
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
        <item>
-        <widget class="QWidget" name="widget" native="true">
+        <widget class="QWidget" name="left_widget" native="true">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <widget class="QStackedWidget" name="slice_modes">
           <property name="geometry">
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>491</width>
-            <height>941</height>
+            <width>600</width>
+            <height>849</height>
            </rect>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="normal">
            <widget class="QTabWidget" name="tabWidget">
@@ -1117,7 +1126,7 @@
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_3">
              <item>
-              <widget class="QGroupBox" name="groupBox">
+              <widget class="QGroupBox" name="quickprint_profile">
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
@@ -1150,21 +1159,24 @@
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout">
                  <item>
-                  <widget class="QRadioButton" name="radioButton">
+                  <widget class="QRadioButton" name="high_quality">
                    <property name="text">
                     <string>High quality print</string>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QRadioButton" name="radioButton_2">
+                  <widget class="QRadioButton" name="normal_quality">
                    <property name="text">
                     <string>Normal quality print</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QRadioButton" name="radioButton_3">
+                  <widget class="QRadioButton" name="fast_low_quality">
                    <property name="text">
                     <string>Fast low quality print</string>
                    </property>
@@ -1175,7 +1187,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QGroupBox" name="groupBox_2">
+              <widget class="QGroupBox" name="material">
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
@@ -1196,14 +1208,17 @@
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_2">
                  <item>
-                  <widget class="QRadioButton" name="radioButton_4">
+                  <widget class="QRadioButton" name="pla">
                    <property name="text">
                     <string>PLA</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QRadioButton" name="radioButton_5">
+                  <widget class="QRadioButton" name="abs">
                    <property name="text">
                     <string>ABS</string>
                    </property>
@@ -1217,7 +1232,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLineEdit" name="lineEdit">
+                  <widget class="QLineEdit" name="simple_filament_diameter">
                    <property name="inputMask">
                     <string/>
                    </property>
@@ -1228,7 +1243,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QGroupBox" name="groupBox_3">
+              <widget class="QGroupBox" name="other">
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
@@ -1238,7 +1253,7 @@
                <property name="title">
                 <string>Other</string>
                </property>
-               <widget class="QCheckBox" name="checkBox">
+               <widget class="QCheckBox" name="print_support_structure">
                 <property name="geometry">
                  <rect>
                   <x>0</x>
@@ -1260,7 +1275,14 @@
         </widget>
        </item>
        <item>
-        <widget class="QWidget" name="widget_2" native="true"/>
+        <widget class="QWidget" name="right_widget" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -1272,7 +1294,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1019</width>
+     <width>1200</width>
      <height>24</height>
     </rect>
    </property>
@@ -1322,6 +1344,9 @@
     <addaction name="actionInstall_custom_firmware"/>
    </widget>
    <widget class="QMenu" name="menuExpert">
+    <property name="tearOffEnabled">
+     <bool>false</bool>
+    </property>
     <property name="title">
      <string>Expert</string>
     </property>
@@ -1460,11 +1485,20 @@
    </property>
   </action>
   <action name="actionSwitch_to_quickprint">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Switch to quickprint...</string>
    </property>
   </action>
   <action name="actionSwitch_to_expert_mode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Switch to full settings...</string>
    </property>

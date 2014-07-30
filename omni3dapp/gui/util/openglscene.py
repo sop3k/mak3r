@@ -1,17 +1,13 @@
 from __future__ import division
 __copyright__ = "Copyright (C) 2013 David Braam - Released under terms of the AGPLv3 License"
 
-import traceback
-import sys
 import os
 import time
 
 import OpenGL
 OpenGL.ERROR_CHECKING = False
 from OpenGL.GL import *
-from PySide import QtOpenGL
 
-from omni3dapp.logger import log
 from omni3dapp.util import version
 from omni3dapp.gui.util import openglHelpers
 
@@ -41,7 +37,7 @@ class glGuiControl(object):
         self._parent = parent
         self._base = parent._base
         self._pos = pos
-        self._size = (0,0, 1, 1)
+        self._size = (0, 0, 1, 1)
         self._parent.add(self)
 
     def setSize(self, x, y, w, h):
@@ -122,127 +118,6 @@ class glGuiContainer(glGuiControl):
         self._layout.update()
         for ctrl in self._glGuiControlList:
             ctrl.updateLayout()
-
-
-class GLScene(QtOpenGL.QGLWidget):
-    def __init__(self, parent=None):
-        super(GLScene, self).__init__(parent)
-
-        self._base = self
-        self._focus = None
-        self._container = glGuiContainer(self, (0,0))
-        self._shownError = False
-
-        self._context = glcanvas.GLContext(self)
-        self._glButtonsTexture = None
-        self._glRobotTexture = None
-        self._buttonSize = 64
-
-        self._animationList = []
-        self.glReleaseList = []
-        self._refreshQueued = False
-        self._idleCalled = False
-
-        # wx.EVT_PAINT(self, self._OnGuiPaint)
-        # wx.EVT_SIZE(self, self._OnSize)
-        # wx.EVT_ERASE_BACKGROUND(self, self._OnEraseBackground)
-        # wx.EVT_LEFT_DOWN(self, self._OnGuiMouseDown)
-        # wx.EVT_LEFT_DCLICK(self, self._OnGuiMouseDown)
-        # wx.EVT_LEFT_UP(self, self._OnGuiMouseUp)
-        # wx.EVT_RIGHT_DOWN(self, self._OnGuiMouseDown)
-        # wx.EVT_RIGHT_DCLICK(self, self._OnGuiMouseDown)
-        # wx.EVT_RIGHT_UP(self, self._OnGuiMouseUp)
-        # wx.EVT_MIDDLE_DOWN(self, self._OnGuiMouseDown)
-        # wx.EVT_MIDDLE_DCLICK(self, self._OnGuiMouseDown)
-        # wx.EVT_MIDDLE_UP(self, self._OnGuiMouseUp)
-        # wx.EVT_MOTION(self, self._OnGuiMouseMotion)
-        # wx.EVT_CHAR(self, self._OnGuiKeyChar)
-        # wx.EVT_KILL_FOCUS(self, self.OnFocusLost)
-        # wx.EVT_IDLE(self, self._OnIdle)
-
-    def _drawScene(self):
-        if self._glButtonsTexture is None:
-            self._glButtonsTexture = openglHelpers.loadGLTexture('glButtons.png')
-            self._glRobotTexture = openglHelpers.loadGLTexture('UltimakerRobot.png')
-
-        glDisable(GL_DEPTH_TEST)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glDisable(GL_LIGHTING)
-        glColor4ub(255,255,255,255)
-
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        glOrtho(0, self.width()-1, self.height()-1, 0, -1000.0, 1000.0)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-
-        self._container.draw()
-
-    def paintGL(self):
-        self._idleCalled = False
-        h = self.height()
-        w = self.width()
-        oldButtonSize = self._buttonSize
-        if h / 3 < w / 4:
-            w = h * 4 / 3
-        if w < 64 * 8:
-            self._buttonSize = 32
-        elif w < 64 * 10:
-            self._buttonSize = 48
-        elif w < 64 * 15:
-            self._buttonSize = 64
-        elif w < 64 * 20:
-            self._buttonSize = 80
-        else:
-            self._buttonSize = 96
-        if self._buttonSize != oldButtonSize:
-            self._container.updateLayout()
-
-        try:
-            self._context.makeCurrent()
-            for obj in self.glReleaseList:
-                obj.release()
-            del self.glReleaseList
-            renderStartTime = time.time()
-            self.onPaint()
-            self._drawScene()
-            glFlush()
-            # if version.isDevVersion():
-            #   renderTime = time.time() - renderStartTime
-            #   if renderTime == 0:
-            #       renderTime = 0.001
-            #   glLoadIdentity()
-            #   glTranslated(10.0, self.height() - 30.0, -1.0)
-            #   glColor4f(0.2,0.2,0.2,0.5)
-            #   openglHelpers.glDrawStringLeft("fps:%d" % (1 / renderTime))
-            self.swapBuffers()
-        except:
-            # When an exception happens, catch it and show a message box. If the exception is not caught the draw function bugs out.
-            # Only show this exception once so we do not overload the user with popups.
-            errStr = _("An error has occurred during the 3D view drawing.")
-            tb = traceback.extract_tb(sys.exc_info()[2])
-            errStr += "\n%s: '%s'" % (str(sys.exc_info()[0].__name__), str(sys.exc_info()[1]))
-            log.error(errStr)
-            for n in xrange(len(tb)-1, -1, -1):
-                locationInfo = tb[n]
-                errStr += "\n @ %s:%s:%d" % (os.path.basename(locationInfo[0]), locationInfo[2], locationInfo[1])
-            if not self._shownError:
-                traceback.print_exc()
-                log.error(errStr)
-                # TODO: show modal box with error message
-                # wx.CallAfter(wx.MessageBox, errStr, _("3D window error"), wx.OK | wx.ICON_EXCLAMATION)
-                self._shownError = True
-
-    def resizeGL(self):
-        pass
-
-    def updateGL(self):
-        pass
-
-    def add(self, ctrl):
-        if self._container is not None:
-            self._container.add(ctrl)
 
 
 class glGuiLayoutButtons(object):
@@ -600,8 +475,6 @@ class glFrame(glGuiContainer):
         size = self._layout.getLayoutSize()
         glColor4ub(255,255,255,255)
         openglHelpers.glDrawStretchedQuad(pos[0], pos[1], size[0], size[1], bs*0.75, 0)
-        #Draw the controls on the frame
-        super(glFrame, self).draw()
 
     def _checkHit(self, x, y):
         if self._hidden:

@@ -29,13 +29,13 @@ class MainWindow(QtGui.QMainWindow):
         self.connect_actions()
 
     def setup_scene(self):
-        self.scene = sceneview.SceneView()
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.ui.right_widget.sizePolicy().hasHeightForWidth())
-        self.scene.setSizePolicy(sizePolicy)
-        self.scene.setObjectName("scene")
+        self.scene = sceneview.SceneView(self)
+        # sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Preferred)
+        # sizePolicy.setHorizontalStretch(0)
+        # sizePolicy.setVerticalStretch(0)
+        # sizePolicy.setHeightForWidth(self.ui.right_widget.sizePolicy().hasHeightForWidth())
+        # self.scene.setSizePolicy(sizePolicy)
+        # self.scene.setObjectName("scene")
         self.ui.horizontalLayout_3.removeWidget(self.ui.right_widget)
         self.ui.horizontalLayout_3.addWidget(self.scene)
 
@@ -109,3 +109,43 @@ class MainWindow(QtGui.QMainWindow):
         #     self.headOffsetWizardMenuItem.Enable(False)
         # self.scene.updateProfileToControls()
         # self.scene._scene.pushFree()
+
+    def setupSlice(self):
+        put = profile.setTempOverride
+        get = profile.getProfileSetting
+        for setting in profile.settingsList:
+            if not setting.isProfile():
+                continue
+            profile.setTempOverride(setting.getName(), setting.getDefault())
+
+        if self.ui.print_support_structure.isChecked():
+            put('support', _("Exterior Only"))
+
+        nozzle_size = float(get('nozzle_size'))
+        if self.ui.normal_quality.isChecked():
+            put('layer_height', '0.2')
+            put('wall_thickness', nozzle_size * 2.0)
+            put('layer_height', '0.10')
+            put('fill_density', '20')
+        elif self.ui.fast_low_quality.isChecked():
+            put('wall_thickness', nozzle_size * 2.5)
+            put('layer_height', '0.20')
+            put('fill_density', '10')
+            put('print_speed', '60')
+            put('cool_min_layer_time', '3')
+            put('bottom_layer_speed', '30')
+        elif self.ui.high_quality.isChecked():
+            put('wall_thickness', nozzle_size * 2.0)
+            put('layer_height', '0.06')
+            put('fill_density', '20')
+            put('bottom_layer_speed', '15')
+        # elif self.printTypeJoris.GetValue():
+        #     put('wall_thickness', nozzle_size * 1.5)
+
+        put('filament_diameter', self.ui.filament_diameter.text())
+        if self.ui.abs.isChecked():
+            put('print_bed_temperature', '100')
+            put('platform_adhesion', 'Brim')
+            put('filament_flow', '107')
+            put('print_temperature', '245')
+        put('plugin_config', '')

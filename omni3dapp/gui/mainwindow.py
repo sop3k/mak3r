@@ -24,9 +24,18 @@ class MainWindow(QtGui.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.setup_scene()
         self.set_up_fields()
+        self.setup_scene()
         self.connect_actions()
+
+        # self.timer = QtCore.QTimer(self)
+        # self.timer.timeout.connect(self.onTimer)
+        # self.timer.start(1000)
+
+        self.lastTriedClipboard = profile.getProfileString()
+
+        self.update_slice_mode()
+        self.scene.setFocus()
 
     def setup_scene(self):
         self.scene = sceneview.SceneView(self)
@@ -64,6 +73,16 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.actionSwitch_to_quickprint.triggered.connect(self.on_simple_switch)
         self.ui.actionSwitch_to_expert_mode.triggered.connect(self.on_normal_switch)
 
+        self.ui.high_quality.toggled.connect(self.scene.sceneUpdated)
+        self.ui.normal_quality.toggled.connect(self.scene.sceneUpdated)
+        self.ui.fast_low_quality.toggled.connect(self.scene.sceneUpdated)
+        self.ui.pla.toggled.connect(self.scene.sceneUpdated)
+        self.ui.abs.toggled.connect(self.scene.sceneUpdated)
+        self.ui.simple_filament_diameter.textChanged.connect(
+                self.scene.sceneUpdated)
+        self.ui.print_support_structure.stateChanged.connect(
+                self.scene.sceneUpdated)
+
     def on_simple_switch(self, *args, **kwargs):
         profile.putPreference('startMode', 'Simple')
         self.update_slice_mode(is_simple=True)
@@ -72,7 +91,9 @@ class MainWindow(QtGui.QMainWindow):
         profile.putPreference('startMode', 'Normal')
         self.update_slice_mode(is_simple=False)
 
-    def update_slice_mode(self, is_simple):
+    def update_slice_mode(self, is_simple=None):
+        if not is_simple:
+		    is_simple = profile.getPreference('startMode') == 'Simple'
         self.ui.slice_modes.setCurrentIndex(int(is_simple))
 
         for item in self.NORMAL_MODE_ONLY_ITEMS:
@@ -107,8 +128,8 @@ class MainWindow(QtGui.QMainWindow):
         #     self.headOffsetWizardMenuItem.Enable(False)
         # if int(profile.getMachineSetting('extruder_amount')) < 2:
         #     self.headOffsetWizardMenuItem.Enable(False)
-        # self.scene.updateProfileToControls()
-        # self.scene._scene.pushFree()
+        self.scene.updateProfileToControls()
+        self.scene._scene.pushFree()
 
     def setupSlice(self):
         put = profile.setTempOverride
@@ -149,3 +170,29 @@ class MainWindow(QtGui.QMainWindow):
             put('filament_flow', '107')
             put('print_temperature', '245')
         put('plugin_config', '')
+
+    # def onTimer(self, e):
+    #     # Check if there is something in the clipboard
+    #     profileString = ""
+    #     try:
+    #         if not wx.TheClipboard.IsOpened():
+    #             if not wx.TheClipboard.Open():
+    #                 return
+    #             do = wx.TextDataObject()
+    #             if wx.TheClipboard.GetData(do):
+    #                 profileString = do.GetText()
+    #             wx.TheClipboard.Close()
+
+    #             startTag = "CURA_PROFILE_STRING:"
+    #             if startTag in profileString:
+    #                 #print "Found correct syntax on clipboard"
+    #                 profileString = profileString.replace("\n","").strip()
+    #                 profileString = profileString[profileString.find(startTag)+len(startTag):]
+    #                 if profileString != self.lastTriedClipboard:
+    #                     print profileString
+    #                     self.lastTriedClipboard = profileString
+    #                     profile.setProfileFromString(profileString)
+    #                     self.scene.notification.message("Loaded new profile from clipboard.")
+    #                     self.updateProfileToAllControls()
+    #     except:
+    #         print "Unable to read from clipboard"

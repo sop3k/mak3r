@@ -1,6 +1,5 @@
 __copyright__ = "Copyright (C) 2013 David Braam - Released under terms of the AGPLv3 License"
 
-import wx
 import numpy
 import math
 import threading
@@ -10,9 +9,9 @@ OpenGL.ERROR_CHECKING = False
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
-from Cura.util import profile
-from Cura.gui.util import openglHelpers
-from Cura.gui.util import openglGui
+from omni3dapp.util import profile
+from omni3dapp.gui.util import openglHelpers
+from omni3dapp.gui.util import openglscene
 
 class engineResultView(object):
 	def __init__(self, parent):
@@ -24,7 +23,8 @@ class engineResultView(object):
 		self._layerVBOs = []
 		self._layer20VBOs = []
 
-		self.layerSelect = openglGui.glSlider(self._parent, 10000, 0, 1, (-1,-2), lambda : self._parent.QueueRefresh())
+		self.layerSelect = openglscene.glSlider(self._parent, 10000, 0, 1,
+                (-1,-2), lambda : self._parent.updateGL())
 
 	def setResult(self, result):
 		if self._result == result:
@@ -55,7 +55,7 @@ class engineResultView(object):
 			#Abort loading from this thread.
 			return True
 		self._gcodeLoadProgress = progress
-		self._parent._queueRefresh()
+		self._parent.updateGL()
 		return False
 
 	def OnDraw(self):
@@ -158,7 +158,7 @@ class engineResultView(object):
 					n -= 1
 		glPopMatrix()
 		if generatedVBO:
-			self._parent._queueRefresh()
+			self._parent.updateGL()
 
 		if gcodeLayers is not None and self._gcodeLoadProgress != 0.0 and self._gcodeLoadProgress != 1.0:
 			glPushMatrix()
@@ -286,21 +286,21 @@ class engineResultView(object):
 		if not self._enabled:
 			return
 		#TODO: This is strange behaviour. Overloaded functionality of keyboard buttons!
-		if wx.GetKeyState(wx.WXK_SHIFT) or wx.GetKeyState(wx.WXK_CONTROL):
-			if keyCode == wx.WXK_UP:
-				self.layerSelect.setValue(self.layerSelect.getValue() + 1)
-				self._parent.QueueRefresh()
-				return True
-			elif keyCode == wx.WXK_DOWN:
-				self.layerSelect.setValue(self.layerSelect.getValue() - 1)
-				self._parent.QueueRefresh()
-				return True
-			elif keyCode == wx.WXK_PAGEUP:
-				self.layerSelect.setValue(self.layerSelect.getValue() + 10)
-				self._parent.QueueRefresh()
-				return True
-			elif keyCode == wx.WXK_PAGEDOWN:
-				self.layerSelect.setValue(self.layerSelect.getValue() - 10)
-				self._parent.QueueRefresh()
-				return True
+		# if wx.GetKeyState(wx.WXK_SHIFT) or wx.GetKeyState(wx.WXK_CONTROL):
+		# 	if keyCode == wx.WXK_UP:
+		# 		self.layerSelect.setValue(self.layerSelect.getValue() + 1)
+		# 		self._parent.QueueRefresh()
+		# 		return True
+		# 	elif keyCode == wx.WXK_DOWN:
+		# 		self.layerSelect.setValue(self.layerSelect.getValue() - 1)
+		# 		self._parent.QueueRefresh()
+		# 		return True
+		# 	elif keyCode == wx.WXK_PAGEUP:
+		# 		self.layerSelect.setValue(self.layerSelect.getValue() + 10)
+		# 		self._parent.QueueRefresh()
+		# 		return True
+		# 	elif keyCode == wx.WXK_PAGEDOWN:
+		# 		self.layerSelect.setValue(self.layerSelect.getValue() - 10)
+		# 		self._parent.QueueRefresh()
+		# 		return True
 		return False

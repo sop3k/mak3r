@@ -61,7 +61,7 @@ class OmniApp(object):
             self.after_splash()
         else:
             self.set_splash_screen()
-            # self.splash.show()
+            self.splash.show()
             app.processEvents()
             self.after_splash()
         if self.main_window:

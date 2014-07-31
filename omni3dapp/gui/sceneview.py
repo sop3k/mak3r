@@ -19,18 +19,19 @@ from omni3dapp.util import objectscene
 from omni3dapp.util import profile
 from omni3dapp.util import meshLoader
 from omni3dapp.util import resources
+from omni3dapp.util import version
+from omni3dapp.util import sliceEngine
+from omni3dapp.util import removableStorage
 from omni3dapp.gui.util import openglscene, openglHelpers
 from omni3dapp.gui.util import previewTools
+from omni3dapp.gui.util import engineResultView
 from omni3dapp.util.printerConnection import printerConnectionManager
 from omni3dapp.logger import log
 
 
 # from Cura.gui import printWindow
-# from Cura.util import sliceEngine
 # from Cura.util import pluginInfo
-# from Cura.util import removableStorage
 # from Cura.util import explorer
-# from Cura.gui.util import engineResultView
 # from Cura.gui.tools import youmagineGui
 # from Cura.gui.tools import imageToMesh
 
@@ -99,9 +100,9 @@ class SceneView(QtOpenGL.QGLWidget):
         self._projMatrix = None
         self.tempMatrix = None
 
-        # self.openFileButton = openglGui.glButton(self, 4, _("Load"), (0,0), self.showLoadModel)
-        # self.printButton = openglGui.glButton(self, 6, _("Print"), (1,0), self.OnPrintButton)
-        # self.printButton.setDisabled(True)
+        self.openFileButton = openglscene.glButton(self, 4, _("Load"), (0,0), self.showLoadModel)
+        self.printButton = openglscene.glButton(self, 6, _("Print"), (1,0), self.OnPrintButton)
+        self.printButton.setDisabled(True)
 
         group = []
         self.rotateToolButton = openglscene.glRadioButton(self, 8, _("Rotate"), (0,-1), group, self.OnToolSelect)
@@ -155,11 +156,11 @@ class SceneView(QtOpenGL.QGLWidget):
 
         # self.notification = openglGui.glNotification(self, (0, 0))
 
-        # self._engine = sliceEngine.Engine(self._updateEngineProgress)
-        # self._engineResultView = engineResultView.engineResultView(self)
+        self._engine = sliceEngine.Engine(self._updateEngineProgress)
+        self._engineResultView = engineResultView.engineResultView(self)
 
-        # self._sceneUpdateTimer = QtCore.QTimer(self)
-        # self.connect(self._sceneUpdateTimer, QtCore.SIGNAL("timeout()"), self._onRunEngine)
+        self._sceneUpdateTimer = QtCore.QTimer(self)
+        self._sceneUpdateTimer.timeout.connect(self._onRunEngine)
         # self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
         # self.Bind(wx.EVT_LEAVE_WINDOW, self.OnMouseLeave)
 
@@ -167,7 +168,6 @@ class SceneView(QtOpenGL.QGLWidget):
         self.OnToolSelect(0)
         self.updateToolButtons()
         self.updateProfileToControls()
-        self.updateGL()
 
     def _init3DView(self):
         # set viewing projection
@@ -213,6 +213,7 @@ class SceneView(QtOpenGL.QGLWidget):
         glEnable(GL_BLEND)
 
     def paintGL(self):
+        import pdb; pdb.set_trace();
         self._idleCalled = False
         h = self.height()
         w = self.width()
@@ -241,15 +242,14 @@ class SceneView(QtOpenGL.QGLWidget):
             self.onPaint()
             self._drawScene()
             glFlush()
-            # if version.isDevVersion():
-            #   renderTime = time.time() - renderStartTime
-            #   if renderTime == 0:
-            #       renderTime = 0.001
-            #   glLoadIdentity()
-            #   glTranslated(10.0, self.height() - 30.0, -1.0)
-            #   glColor4f(0.2,0.2,0.2,0.5)
-            #   openglHelpers.glDrawStringLeft("fps:%d" % (1 / renderTime))
-            self.swapBuffers()
+            if version.isDevVersion():
+              renderTime = time.time() - renderStartTime
+              if renderTime == 0:
+                  renderTime = 0.001
+              glLoadIdentity()
+              glTranslated(10.0, self.height() - 30.0, -1.0)
+              glColor4f(0.2,0.2,0.2,0.5)
+              openglHelpers.glDrawStringLeft("fps:%d" % (1 / renderTime))
         except:
             # When an exception happens, catch it and show a message box. If the exception is not caught the draw function bugs out.
             # Only show this exception once so we do not overload the user with popups.
@@ -270,8 +270,8 @@ class SceneView(QtOpenGL.QGLWidget):
     def resizeGL(self, width, height):
         self._container.setSize(0, 0, width, height)
         self._container.updateLayout()
-        # GL.glViewport(0, 0, width, height)
-        # GL.glLoadIdentity()
+        # glViewport(0, 0, width, height)
+        # glLoadIdentity()
 
     def _drawScene(self):
         if self._glButtonsTexture is None:
@@ -293,22 +293,16 @@ class SceneView(QtOpenGL.QGLWidget):
         self._container.draw()
 
     def onPaint(self):
-        # glTranslated(0.0, 0.0, -self._zoom)
-        # glRotated(-self._pitch, 1.0, 0.0, 0.0)
-        # glRotated(self._yaw, 0.0, 0.0, 1.0)
-        # glTranslated(-self._viewTarget[0], -self._viewTarget[1], -self._viewTarget[2])
-        # glCallList(self.object)
-
-        # connectionGroup = self._printerConnectionManager.getAvailableGroup()
-        # if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
-        #   self.printButton._imageID = 2
-        #   self.printButton._tooltip = _("Toolpath to SD")
-        # elif connectionGroup is not None:
-        #   self.printButton._imageID = connectionGroup.getIconID()
-        #   self.printButton._tooltip = _("Print with %s") % (connectionGroup.getName())
-        # else:
-        #   self.printButton._imageID = 3
-        #   self.printButton._tooltip = _("Save toolpath")
+        connectionGroup = self._printerConnectionManager.getAvailableGroup()
+        if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
+          self.printButton._imageID = 2
+          self.printButton._tooltip = _("Toolpath to SD")
+        elif connectionGroup is not None:
+          self.printButton._imageID = connectionGroup.getIconID()
+          self.printButton._tooltip = _("Print with %s") % (connectionGroup.getName())
+        else:
+          self.printButton._imageID = 3
+          self.printButton._tooltip = _("Save toolpath")
 
         if self._animView is not None:
             self._viewTarget = self._animView.getPosition()
@@ -430,7 +424,7 @@ class SceneView(QtOpenGL.QGLWidget):
             self._mouse3Dpos -= self._viewTarget
 
         self._objectShader.unbind()
-        # self._engineResultView.OnDraw()
+        self._engineResultView.OnDraw()
         if self.viewMode != 'gcode':
             glStencilFunc(GL_ALWAYS, 1, 1)
             glStencilOp(GL_INCR, GL_INCR, GL_INCR)
@@ -771,10 +765,10 @@ class SceneView(QtOpenGL.QGLWidget):
         self.updateModelSettingsToControls()
 
     def sceneUpdated(self):
-        # self._sceneUpdateTimer.Start(500, True)
-        # self._engine.abortEngine()
+        self._sceneUpdateTimer.start(500, True)
+        self._engine.abortEngine()
         self._scene.updateSizeOffsets()
-        # self.QueueRefresh()
+        self.updateGL()
 
     def updateModelSettingsToControls(self):
         if self._selectedObj is not None:
@@ -790,7 +784,7 @@ class SceneView(QtOpenGL.QGLWidget):
     def _onRunEngine(self, *args, **kwargs):
         if self._isSimpleMode:
             self._parent.setupSlice()
-        # self._engine.runEngine(self._scene)
+        self._engine.runEngine(self._scene)
         if self._isSimpleMode:
             profile.resetTempOverride()
 
@@ -806,8 +800,8 @@ class SceneView(QtOpenGL.QGLWidget):
             self.viewMode = 'xray'
         else:
             self.viewMode = 'normal'
-        # self._engineResultView.setEnabled(self.viewMode == 'gcode')
-        # self.QueueRefresh()
+        self._engineResultView.setEnabled(self.viewMode == 'gcode')
+        self.updateGL()
 
     def OnToolSelect(self, button):
         if self.rotateToolButton.getSelected():
@@ -840,6 +834,34 @@ class SceneView(QtOpenGL.QGLWidget):
             self.scaleToolButton.setSelected(False)
             self.mirrorToolButton.setSelected(False)
             self.OnToolSelect(0)
+
+    def _updateEngineProgress(self, progressValue):
+        result = self._engine.getResult()
+        finished = result is not None and result.isFinished()
+        if not finished:
+            if self.printButton.getProgressBar() is not None and progressValue >= 0.0 and abs(self.printButton.getProgressBar() - progressValue) < 0.01:
+                return
+        self.printButton.setDisabled(not finished)
+        if progressValue >= 0.0:
+            self.printButton.setProgressBar(progressValue)
+        else:
+            self.printButton.setProgressBar(None)
+        self._engineResultView.setResult(result)
+        if finished:
+            self.printButton.setProgressBar(None)
+            text = '%s' % (result.getPrintTime())
+            for e in xrange(0, int(profile.getMachineSetting('extruder_amount'))):
+                amount = result.getFilamentAmount(e)
+                if amount is None:
+                    continue
+                text += '\n%s' % (amount)
+                cost = result.getFilamentCost(e)
+                if cost is not None:
+                    text += '\n%s' % (cost)
+            self.printButton.setBottomText(text)
+        else:
+            self.printButton.setBottomText('')
+        self.updateGL()
 
     def OnRotateReset(self, button):
         if self._selectedObj is None:
@@ -892,3 +914,72 @@ class SceneView(QtOpenGL.QGLWidget):
             return
         self._selectedObj.mirror(axis)
         self.sceneUpdated()
+
+    def OnPrintButton(self, button):
+        print "Entered OnPrintButton method"
+        # if button == 1:
+        #     connectionGroup = self._printerConnectionManager.getAvailableGroup()
+        #     if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
+        #         drives = removableStorage.getPossibleSDcardDrives()
+        #         if len(drives) > 1:
+        #             dlg = wx.SingleChoiceDialog(self, "Select SD drive", "Multiple removable drives have been found,\nplease select your SD card drive", map(lambda n: n[0], drives))
+        #             if dlg.ShowModal() != wx.ID_OK:
+        #                 dlg.Destroy()
+        #                 return
+        #             drive = drives[dlg.GetSelection()]
+        #             dlg.Destroy()
+        #         else:
+        #             drive = drives[0]
+        #         filename = self._scene._objectList[0].getName() + profile.getGCodeExtension()
+        #         threading.Thread(target=self._saveGCode,args=(drive[1] + filename, drive[1])).start()
+        #     elif connectionGroup is not None:
+        #         connections = connectionGroup.getAvailableConnections()
+        #         if len(connections) < 2:
+        #             connection = connections[0]
+        #         else:
+        #             dlg = wx.SingleChoiceDialog(self, "Select the %s connection to use" % (connectionGroup.getName()), "Multiple %s connections found" % (connectionGroup.getName()), map(lambda n: n.getName(), connections))
+        #             if dlg.ShowModal() != wx.ID_OK:
+        #                 dlg.Destroy()
+        #                 return
+        #             connection = connections[dlg.GetSelection()]
+        #             dlg.Destroy()
+        #         self._openPrintWindowForConnection(connection)
+        #     else:
+        #         self.showSaveGCode()
+        # if button == 3:
+        #     menu = wx.Menu()
+        #     connections = self._printerConnectionManager.getAvailableConnections()
+        #     menu.connectionMap = {}
+        #     for connection in connections:
+        #         i = menu.Append(-1, _("Print with %s") % (connection.getName()))
+        #         menu.connectionMap[i.GetId()] = connection
+        #         self.Bind(wx.EVT_MENU, lambda e: self._openPrintWindowForConnection(e.GetEventObject().connectionMap[e.GetId()]), i)
+        #     self.Bind(wx.EVT_MENU, lambda e: self.showSaveGCode(), menu.Append(-1, _("Save GCode...")))
+        #     self.Bind(wx.EVT_MENU, lambda e: self._showEngineLog(), menu.Append(-1, _("Slice engine log...")))
+        #     self.PopupMenu(menu)
+        #     menu.Destroy()
+
+    def showLoadModel(self, button = 1):
+        print "Entered showLoadModel method"
+        # if button == 1:
+        #     dlg=wx.FileDialog(self, _("Open 3D model"), os.path.split(profile.getPreference('lastFile'))[0], style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST|wx.FD_MULTIPLE)
+
+        #     wildcardList = ';'.join(map(lambda s: '*' + s, meshLoader.loadSupportedExtensions() + imageToMesh.supportedExtensions() + ['.g', '.gcode']))
+        #     wildcardFilter = "All (%s)|%s;%s" % (wildcardList, wildcardList, wildcardList.upper())
+        #     wildcardList = ';'.join(map(lambda s: '*' + s, meshLoader.loadSupportedExtensions()))
+        #     wildcardFilter += "|Mesh files (%s)|%s;%s" % (wildcardList, wildcardList, wildcardList.upper())
+        #     wildcardList = ';'.join(map(lambda s: '*' + s, imageToMesh.supportedExtensions()))
+        #     wildcardFilter += "|Image files (%s)|%s;%s" % (wildcardList, wildcardList, wildcardList.upper())
+        #     wildcardList = ';'.join(map(lambda s: '*' + s, ['.g', '.gcode']))
+        #     wildcardFilter += "|GCode files (%s)|%s;%s" % (wildcardList, wildcardList, wildcardList.upper())
+
+        #     dlg.SetWildcard(wildcardFilter)
+        #     if dlg.ShowModal() != wx.ID_OK:
+        #         dlg.Destroy()
+        #         return
+        #     filenames = dlg.GetPaths()
+        #     dlg.Destroy()
+        #     if len(filenames) < 1:
+        #         return False
+        #     profile.putPreference('lastFile', filenames[0])
+        #     self.loadFiles(filenames)

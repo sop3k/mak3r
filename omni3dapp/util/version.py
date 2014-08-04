@@ -42,8 +42,10 @@ def getVersion(getGitVersion = True):
     return "." #No idea what the version is. TODO:Tell the user.
 
 def isDevVersion():
-    gitPath = os.path.abspath(os.path.join(os.path.split(os.path.abspath(__file__))[0], "../.git"))
-    hgPath  = os.path.abspath(os.path.join(os.path.split(os.path.abspath(__file__))[0], "../.hg"))
+    gitPath = os.path.abspath(os.path.join(os.path.split(os.path.abspath(
+        __file__))[0], "../../.git"))
+    hgPath  = os.path.abspath(os.path.join(os.path.split(os.path.abspath(
+        __file__))[0], "../../.hg"))
     return os.path.exists(gitPath) or os.path.exists(hgPath)
 
 def checkForNewerVersion():

@@ -56,10 +56,6 @@ class SceneView(QtOpenGL.QGLWidget):
         self._refreshQueued = False
         self._idleCalled = False
 
-        self.object = 0
-
-        # wx.EVT_PAINT(self, self._OnGuiPaint)
-        # wx.EVT_SIZE(self, self._OnSize)
         # wx.EVT_ERASE_BACKGROUND(self, self._OnEraseBackground)
         # wx.EVT_LEFT_DOWN(self, self._OnGuiMouseDown)
         # wx.EVT_LEFT_DCLICK(self, self._OnGuiMouseDown)
@@ -169,6 +165,9 @@ class SceneView(QtOpenGL.QGLWidget):
         self.updateToolButtons()
         self.updateProfileToControls()
 
+    def minimumSizeHint(self):
+        return QtCore.QSize(700, 100)
+
     def _init3DView(self):
         # set viewing projection
         glViewport(0, 0, self.width(), self.height())
@@ -213,7 +212,6 @@ class SceneView(QtOpenGL.QGLWidget):
         glEnable(GL_BLEND)
 
     def paintGL(self):
-        import pdb; pdb.set_trace();
         self._idleCalled = False
         h = self.height()
         w = self.width()
@@ -243,13 +241,13 @@ class SceneView(QtOpenGL.QGLWidget):
             self._drawScene()
             glFlush()
             if version.isDevVersion():
-              renderTime = time.time() - renderStartTime
-              if renderTime == 0:
-                  renderTime = 0.001
-              glLoadIdentity()
-              glTranslated(10.0, self.height() - 30.0, -1.0)
-              glColor4f(0.2,0.2,0.2,0.5)
-              openglHelpers.glDrawStringLeft("fps:%d" % (1 / renderTime))
+                renderTime = time.time() - renderStartTime
+                if renderTime == 0:
+                    renderTime = 0.001
+                glLoadIdentity()
+                glTranslated(10.0, self.height() - 30.0, -1.0)
+                glColor4f(0.2,0.2,0.2,0.5)
+                openglHelpers.glDrawStringLeft("fps:%d" % (1 / renderTime))
         except:
             # When an exception happens, catch it and show a message box. If the exception is not caught the draw function bugs out.
             # Only show this exception once so we do not overload the user with popups.
@@ -275,8 +273,8 @@ class SceneView(QtOpenGL.QGLWidget):
 
     def _drawScene(self):
         if self._glButtonsTexture is None:
-            self._glButtonsTexture = openglHelpers.loadGLTexture('glButtons.png')
-            self._glRobotTexture = openglHelpers.loadGLTexture('UltimakerRobot.png')
+            self._glButtonsTexture = self.loadGLTexture('glButtons.png')
+            self._glRobotTexture = self.loadGLTexture('UltimakerRobot.png')
 
         glDisable(GL_DEPTH_TEST)
         glEnable(GL_BLEND)
@@ -393,10 +391,10 @@ class SceneView(QtOpenGL.QGLWidget):
                 self._objectOverhangShader = openglHelpers.GLFakeShader()
                 self._objectLoadShader = None
         self._init3DView()
-        glTranslated(0.0, 0.0, -self._zoom)
-        glRotated(-self._pitch, 1.0, 0.0, 0.0)
-        glRotated(self._yaw, 0.0, 0.0, 1.0)
-        glTranslated(-self._viewTarget[0], -self._viewTarget[1], -self._viewTarget[2])
+        glTranslate(0.0, 0.0, -self._zoom)
+        glRotate(-self._pitch, 1.0, 0.0, 0.0)
+        glRotate(self._yaw, 0.0, 0.0, 1.0)
+        glTranslate(-self._viewTarget[0], -self._viewTarget[1], -self._viewTarget[2])
 
         self._viewport = glGetIntegerv(GL_VIEWPORT)
         self._modelMatrix = glGetDoublev(GL_MODELVIEW_MATRIX)
@@ -422,6 +420,12 @@ class SceneView(QtOpenGL.QGLWidget):
             #self.GetTopLevelParent().SetTitle(hex(n) + " " + str(f))
             self._mouse3Dpos = openglHelpers.unproject(self._mouseX, self._viewport[1] + self._viewport[3] - self._mouseY, f, self._modelMatrix, self._projMatrix, self._viewport)
             self._mouse3Dpos -= self._viewTarget
+
+        self._init3DView()
+        glTranslate(0,0,-self._zoom)
+        glRotate(-self._pitch, 1,0,0)
+        glRotate(self._yaw, 0,0,1)
+        glTranslate(-self._viewTarget[0],-self._viewTarget[1],-self._viewTarget[2])
 
         self._objectShader.unbind()
         self._engineResultView.OnDraw()
@@ -616,7 +620,9 @@ class SceneView(QtOpenGL.QGLWidget):
         glEnable(GL_CULL_FACE)
         glEnable(GL_BLEND)
 
-        size = [profile.getMachineSettingFloat('machine_width'), profile.getMachineSettingFloat('machine_depth'), profile.getMachineSettingFloat('machine_height')]
+        size = [profile.getMachineSettingFloat('machine_width'),
+                profile.getMachineSettingFloat('machine_depth'),
+                profile.getMachineSettingFloat('machine_height')]
 
         machine = profile.getMachineSetting('machine_type')
         if machine.startswith('ultimaker'):
@@ -638,7 +644,7 @@ class SceneView(QtOpenGL.QGLWidget):
             #For the Ultimaker 2 render the texture on the back plate to show the Ultimaker2 text.
             if machine == 'ultimaker2':
                 if not hasattr(self._platformMesh[machine], 'texture'):
-                    self._platformMesh[machine].texture = openglHelpers.loadGLTexture('Ultimaker2backplate.png')
+                    self._platformMesh[machine].texture = self.loadGLTexture('Ultimaker2backplate.png')
                 glBindTexture(GL_TEXTURE_2D, self._platformMesh[machine].texture)
                 glEnable(GL_TEXTURE_2D)
                 glPushMatrix()
@@ -715,7 +721,7 @@ class SceneView(QtOpenGL.QGLWidget):
 
         #Draw checkerboard
         if self._platformTexture is None:
-            self._platformTexture = openglHelpers.loadGLTexture('checkerboard.png')
+            self._platformTexture = self.loadGLTexture('checkerboard.png')
             glBindTexture(GL_TEXTURE_2D, self._platformTexture)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
@@ -765,10 +771,17 @@ class SceneView(QtOpenGL.QGLWidget):
         self.updateModelSettingsToControls()
 
     def sceneUpdated(self):
-        self._sceneUpdateTimer.start(500, True)
+        self._sceneUpdateTimer.start(500)
         self._engine.abortEngine()
         self._scene.updateSizeOffsets()
-        self.updateGL()
+        self.queueRefresh()
+
+    def queueRefresh(self):
+        if self._idleCalled:
+            # wx.CallAfter(self.Refresh)
+            self.updateGL()
+        else:
+            self._refreshQueued = True
 
     def updateModelSettingsToControls(self):
         if self._selectedObj is not None:
@@ -801,7 +814,7 @@ class SceneView(QtOpenGL.QGLWidget):
         else:
             self.viewMode = 'normal'
         self._engineResultView.setEnabled(self.viewMode == 'gcode')
-        self.updateGL()
+        self.queueRefresh()
 
     def OnToolSelect(self, button):
         if self.rotateToolButton.getSelected():
@@ -861,7 +874,7 @@ class SceneView(QtOpenGL.QGLWidget):
             self.printButton.setBottomText(text)
         else:
             self.printButton.setBottomText('')
-        self.updateGL()
+        self.queueRefresh()
 
     def OnRotateReset(self, button):
         if self._selectedObj is None:
@@ -983,3 +996,7 @@ class SceneView(QtOpenGL.QGLWidget):
         #         return False
         #     profile.putPreference('lastFile', filenames[0])
         #     self.loadFiles(filenames)
+
+    def loadGLTexture(self, filename):
+        filepath = resources.getPathForImage(filename)
+        return self.bindTexture(QtGui.QPixmap(filepath))

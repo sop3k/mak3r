@@ -4,16 +4,7 @@ import math
 import numpy
 import time
 
-try:
-    from PIL import Image
-except ImportError:
-    import Image
-
-from omni3dapp.util.resources import getPathForImage
-
 import OpenGL
-from PySide import QtCore, QtGui
-from PySide import QtOpenGL
 
 OpenGL.ERROR_CHECKING = False
 from OpenGL.GLUT import *
@@ -442,42 +433,6 @@ def unproject(winx, winy, winz, modelMatrix, projMatrix, viewport):
 
 def convert3x3MatrixTo4x4(matrix):
     return list(matrix.getA()[0]) + [0] + list(matrix.getA()[1]) + [0] + list(matrix.getA()[2]) + [0, 0,0,0,1]
-
-def loadGLTexture(filename):
-    tex = glGenTextures(1)
-    glBindTexture(GL_TEXTURE_2D, tex)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-
-    filepath = getPathForImage(filename)
-    img = QtGui.QImage(filepath)
-    # OpenGL-friendly image
-    img = QtOpenGL.QGLWidget.convertToGLFormat(img)
-    rgbdata = ''
-    height = img.height()
-    width = img.width()
-    for line in xrange(height):
-        for row in xrange(width):
-            pix = QtGui.QColor(img.pixel(row,line)).getRgb()
-            rgbdata += ''.join(hex(c) for c in pix)
-    if img.hasAlphaChannel():
-         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, rgbdata)
-    else:
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGB,
-                GL_UNSIGNED_BYTE, rgbdata)
-    # OpenGL-friendly image
-    # img = QtOpenGL.QGLWidget.convertToGLFormat(img)
-    # rgbData = img.bits()
-
-    # if img.hasAlphaChannel():
-    #     data = ''
-    #     for i in xrange(0, len(alphaData)):
-    #         data += rgbData[i*3:i*3+3] + alphaData[i]
-    #     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.GetWidth(), img.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, data)
-    # else:
-    #     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.GetWidth(), img.GetHeight(), 0, GL_RGB, GL_UNSIGNED_BYTE, rgbData)
-    return tex
 
 def DrawBox(vMin, vMax):
     """ Draw wireframe box

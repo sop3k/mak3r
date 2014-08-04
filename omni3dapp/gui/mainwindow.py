@@ -45,7 +45,7 @@ class MainWindow(QtGui.QMainWindow):
         # sizePolicy.setHeightForWidth(self.ui.right_widget.sizePolicy().hasHeightForWidth())
         # self.scene.setSizePolicy(sizePolicy)
         # self.scene.setObjectName("scene")
-        self.ui.horizontalLayout_3.removeWidget(self.ui.right_widget)
+        # self.ui.horizontalLayout_3.removeWidget(self.ui.right_widget)
         self.ui.horizontalLayout_3.addWidget(self.scene)
 
     def set_up_fields(self):
@@ -59,6 +59,8 @@ class MainWindow(QtGui.QMainWindow):
                     if key.endswith('gcode'):
                         GCodeSyntaxHighlighter(elem)
                     elem.setText(val.getValue())
+                    # if elem._validators:
+                        # set validator    
                 elif isinstance(elem, QtGui.QCheckBox):
                     elem.setChecked(val.getValue() == u'True')
                 elif isinstance(elem, QtGui.QComboBox):
@@ -73,6 +75,7 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.actionSwitch_to_quickprint.triggered.connect(self.on_simple_switch)
         self.ui.actionSwitch_to_expert_mode.triggered.connect(self.on_normal_switch)
 
+        # Simple panel actions
         self.ui.high_quality.toggled.connect(self.scene.sceneUpdated)
         self.ui.normal_quality.toggled.connect(self.scene.sceneUpdated)
         self.ui.fast_low_quality.toggled.connect(self.scene.sceneUpdated)
@@ -82,6 +85,20 @@ class MainWindow(QtGui.QMainWindow):
                 self.scene.sceneUpdated)
         self.ui.print_support_structure.stateChanged.connect(
                 self.scene.sceneUpdated)
+
+        # Normal panel actions
+        self.connect_actions_normal_mode()
+
+    def connect_actions_normal_mode(self):
+        # For each element in self.normal or self.tabWidget
+        for elem in self.ui.normal.findChildren(QtGui.QCheckBox):
+            elem.stateChanged.connect(self.on_setting_change)
+        for elem in self.ui.normal.findChildren(QtGui.QLineEdit):
+            elem.textChanged.connect(self.on_setting_change)
+        for elem in self.ui.normal.findChildren(QtGui.QComboBox):
+            elem.currentIndexChanged.connect(self.on_setting_change)
+        for elem in self.ui.normal.findChildren(QtGui.QListWidget):
+            elem.currentItemChanged.connect(self.on_setting_change)
 
     def on_simple_switch(self, *args, **kwargs):
         profile.putPreference('startMode', 'Simple')
@@ -93,7 +110,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def update_slice_mode(self, is_simple=None):
         if not is_simple:
-		    is_simple = profile.getPreference('startMode') == 'Simple'
+            is_simple = profile.getPreference('startMode') == 'Simple'
         self.ui.slice_modes.setCurrentIndex(int(is_simple))
 
         for item in self.NORMAL_MODE_ONLY_ITEMS:
@@ -196,3 +213,54 @@ class MainWindow(QtGui.QMainWindow):
     #                     self.updateProfileToAllControls()
     #     except:
     #         print "Unable to read from clipboard"
+
+    def update_profile_to_controls_normal_panel(self):
+        super(normalSettingsPanel, self).updateProfileToControls()
+
+        # TODO - loading files to start_end_gcode panel:
+        # if self.alterationPanel is not None:
+        #     self.alterationPanel.updateProfileToControls()
+
+        # TODO - loading plugins:
+        # self.pluginPanel.updateProfileToControls()
+
+    def update_profile_to_controls_all(self):
+        self.scene.updateProfileToControls()
+        self.update_profile_to_controls_normal_panel()
+
+    def on_setting_change(self, *args, **kwargs):
+        # profile.settingsDictionary
+        elem = QtCore.QObject.sender(self)
+        if isinstance(elem, (QtGui.QLineEdit, QtGui.QTextEdit)):
+            profile.settingsDictionary[elem.objectName()].setValue(elem.text())
+        elif isinstance(elem, QtGui.QCheckBox):
+            profile.settingsDictionary[elem.objectName()].setValue(elem.isChecked())
+        elif isinstance(elem, QtGui.QComboBox):
+            profile.settingsDictionary[elem.objectName()].setValue(
+                    elem.itemText(elem.currentIndex()))
+        self.validate_normal_mode()
+
+    def validate_normal_mode(self):
+        # TODO: improve dictionary structure so that we can easily get normal
+        # mode elements
+        # for elem in normal_mode_elems:
+        #     elem.validate()
+        self.scene.sceneUpdated()
+
+    # def _validate(self):
+    #     for setting in self.settingControlList:
+    #         setting._validate()
+    #     if self._callback is not None:
+    #         self._callback()
+
+
+class NormalModeValidator(QtGui.QValidator):
+    def validate(self):
+        # must be implemented by every subclass. It returns Invalid,
+        # Intermediate or Acceptable depending on whether its argument
+        # is valid (for the subclass's definition of valid).
+        super(NormalModeValidator, self).validate()
+
+    def fixup(self):
+        #  provided for validators that can repair some user errors
+        super(NormalModeValidator, self).fixup()

@@ -55,13 +55,12 @@ class OmniApp(object):
                                               args=(portNr,))
             socketListener.daemon = True
             socketListener.start()
-
-        if sys.platform.startswith('darwin'):
+        elif sys.platform.startswith('darwin'):
             # Do not show a splashscreen on OSX, as by Apple guidelines
             self.after_splash()
         else:
             self.set_splash_screen()
-            self.splash.show()
+            # self.splash.show()
             app.processEvents()
             self.after_splash()
         if self.main_window:

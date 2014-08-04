@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'mainwindow_ui.ui'
 #
-# Created: Mon Jul 28 13:59:58 2014
+# Created: Mon Aug  4 14:24:00 2014
 #      by: pyside-uic 0.2.13 running on PySide 1.1.0
 #
 # WARNING! All changes made in this file will be lost!
@@ -20,10 +20,10 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(False)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtGui.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, -2, 1100, 849))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1161, 849))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.layoutWidget = QtGui.QWidget(self.scrollAreaWidgetContents)
-        self.layoutWidget.setGeometry(QtCore.QRect(0, 0, 991, 851))
+        self.layoutWidget.setGeometry(QtCore.QRect(0, 0, 1161, 851))
         self.layoutWidget.setObjectName("layoutWidget")
         self.horizontalLayout_3 = QtGui.QHBoxLayout(self.layoutWidget)
         self.horizontalLayout_3.setContentsMargins(0, 0, 0, 0)

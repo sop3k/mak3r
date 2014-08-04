@@ -60,12 +60,13 @@ class OmniApp(object):
             self.after_splash()
         else:
             self.set_splash_screen()
-            # self.splash.show()
+            self.splash.show()
             app.processEvents()
             self.after_splash()
-        if self.main_window:
-            self.splash.finish(self.main_window)
-            sys.exit(app.exec_())
+        self.main_window = MainWindow()
+        self.splash.finish(self.main_window)
+        self.main_window.show()
+        sys.exit(app.exec_())
 
     def set_splash_screen(self):
         from omni3dapp.util.resources import getPathForImage
@@ -139,8 +140,6 @@ class OmniApp(object):
             return 
 
         # self.mainWindow.OnDropFiles(self.loadFiles)
-        self.main_window = MainWindow()
-        self.main_window.show()
         # TODO: load files on drop
 
         # app_version = version.getVersion(False)

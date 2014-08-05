@@ -14,6 +14,7 @@ numpy.seterr(all='ignore')
 
 from omni3dapp.util import polygon
 
+
 class printableObject(object):
     """
     A printable object is an object that can be printed and is on the build platform.

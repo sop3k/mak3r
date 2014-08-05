@@ -284,7 +284,7 @@ def glDrawQuad(x, y, w, h):
     glEnd()
     glPopMatrix()
 
-def glDrawTexturedQuad(x, y, w, h, texID, mirror = 0):
+def glDrawTexturedQuad(x, y, w, h, texID, mirror=0):
     tx = float(texID % 4) / 4
     ty = float(int(texID / 4)) / 8
     tsx = 0.25

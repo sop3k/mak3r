@@ -91,9 +91,9 @@ class glGuiContainer(glGuiControl):
         self._glGuiControlList.append(ctrl)
         self.updateLayout()
 
-    def OnMouseDown(self, x, y, button):
+    def onMousePressEvent(self, x, y, button):
         for ctrl in self._glGuiControlList:
-            if ctrl.OnMouseDown(x, y, button):
+            if ctrl.onMousePressEvent(x, y, button):
                 return True
         return False
 
@@ -103,10 +103,10 @@ class glGuiContainer(glGuiControl):
                 return True
         return False
 
-    def OnMouseMotion(self, x, y):
+    def onMouseMoveEvent(self, x, y):
         handled = False
         for ctrl in self._glGuiControlList:
-            if ctrl.OnMouseMotion(x, y):
+            if ctrl.onMouseMoveEvent(x, y):
                 handled = True
         return handled
 
@@ -192,7 +192,7 @@ class glGuiLayoutGrid(object):
         return self._size
 
 class glButton(glGuiControl):
-    def __init__(self, parent, imageID, tooltip, pos, callback, size = None):
+    def __init__(self, parent, imageID, tooltip, pos, callback, size=None):
         self._buttonSize = size
         self._hidden = False
         super(glButton, self).__init__(parent, pos)
@@ -246,8 +246,6 @@ class glButton(glGuiControl):
         if self._hidden:
             return
 
-        cx = (self._imageID % 4) / 4
-        cy = int(self._imageID / 4) / 4
         bs = self.getMinSize()[0]
         pos = self._getPixelPos()
 
@@ -327,14 +325,14 @@ class glButton(glGuiControl):
         pos = self._getPixelPos()
         return -bs * 0.5 <= x - pos[0] <= bs * 0.5 and -bs * 0.5 <= y - pos[1] <= bs * 0.5
 
-    def OnMouseMotion(self, x, y):
+    def onMouseMoveEvent(self, x, y):
         if self._checkHit(x, y):
             self._focus = True
             return True
         self._focus = False
         return False
 
-    def OnMouseDown(self, x, y, button):
+    def onMousePressEvent(self, x, y, button):
         if self._checkHit(x, y):
             self._callback(button)
             return True
@@ -483,8 +481,8 @@ class glFrame(glGuiContainer):
         w, h = self._layout.getLayoutSize()
         return 0 <= x - pos[0] <= w and 0 <= y - pos[1] <= h
 
-    def OnMouseMotion(self, x, y):
-        super(glFrame, self).OnMouseMotion(x, y)
+    def onMouseMoveEvent(self, x, y):
+        super(glFrame, self).onMouseMoveEvent(x, y)
         if self._checkHit(x, y):
             self._focus = True
             return True
@@ -584,7 +582,7 @@ class glLabel(glGuiControl):
     def _checkHit(self, x, y):
         return False
 
-    def OnMouseMotion(self, x, y):
+    def onMouseMoveEvent(self, x, y):
         return False
 
     def OnMouseDown(self, x, y, button):
@@ -645,7 +643,7 @@ class glNumberCtrl(glGuiControl):
         x1, y1, w, h = self.getSize()
         return 0 <= x - x1 <= w and 0 <= y - y1 <= h
 
-    def OnMouseMotion(self, x, y):
+    def onMouseMoveEvent(self, x, y):
         return False
 
     def OnMouseDown(self, x, y, button):
@@ -746,7 +744,7 @@ class glCheckbox(glGuiControl):
         x1, y1, w, h = self.getSize()
         return 0 <= x - x1 <= w and 0 <= y - y1 <= h
 
-    def OnMouseMotion(self, x, y):
+    def onMouseMoveEvent(self, x, y):
         return False
 
     def OnMouseDown(self, x, y, button):
@@ -855,7 +853,7 @@ class glSlider(glGuiControl):
         self._base._focus = self
         return True
 
-    def OnMouseMotion(self, x, y):
+    def onMouseMoveEvent(self, x, y):
         if self.hasFocus():
             w, h = self.getMinSize()
             scrollLength = h - w
@@ -872,7 +870,7 @@ class glSlider(glGuiControl):
     def OnMouseDown(self, x, y, button):
         if self._checkHit(x, y):
             self.setFocus()
-            self.OnMouseMotion(x, y)
+            self.onMouseMoveEvent(x, y)
             return True
         return False
 

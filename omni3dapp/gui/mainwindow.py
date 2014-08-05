@@ -253,6 +253,13 @@ class MainWindow(QtGui.QMainWindow):
     #     if self._callback is not None:
     #         self._callback()
 
+    def add_to_model_mru(self, filename):
+        action_file = QtGui.QAction(self)
+        # action_file.setText(QtGui.QApplication.translate("MainWindow", filename, None, QtGui.QApplication.UnicodeUTF8))
+        action_file.setText(filename)
+        self.ui.menuRecent_Model_Files.addAction(action_file)
+        # TODO: connect action
+
 
 class NormalModeValidator(QtGui.QValidator):
     def validate(self):

@@ -25,6 +25,7 @@ from omni3dapp.util import removableStorage
 from omni3dapp.gui.util import openglscene, openglHelpers
 from omni3dapp.gui.util import previewTools
 from omni3dapp.gui.util import engineResultView
+from omni3dapp.gui.tools import imageToMesh
 from omni3dapp.util.printerConnection import printerConnectionManager
 from omni3dapp.logger import log
 
@@ -33,7 +34,6 @@ from omni3dapp.logger import log
 # from Cura.util import pluginInfo
 # from Cura.util import explorer
 # from Cura.gui.tools import youmagineGui
-# from Cura.gui.tools import imageToMesh
 
 
 class SceneView(QtOpenGL.QGLWidget):
@@ -57,16 +57,9 @@ class SceneView(QtOpenGL.QGLWidget):
         self._idleCalled = False
 
         # wx.EVT_ERASE_BACKGROUND(self, self._OnEraseBackground)
-        # wx.EVT_LEFT_DOWN(self, self._OnGuiMouseDown)
-        # wx.EVT_LEFT_DCLICK(self, self._OnGuiMouseDown)
         # wx.EVT_LEFT_UP(self, self._OnGuiMouseUp)
-        # wx.EVT_RIGHT_DOWN(self, self._OnGuiMouseDown)
-        # wx.EVT_RIGHT_DCLICK(self, self._OnGuiMouseDown)
         # wx.EVT_RIGHT_UP(self, self._OnGuiMouseUp)
-        # wx.EVT_MIDDLE_DOWN(self, self._OnGuiMouseDown)
-        # wx.EVT_MIDDLE_DCLICK(self, self._OnGuiMouseDown)
         # wx.EVT_MIDDLE_UP(self, self._OnGuiMouseUp)
-        # wx.EVT_MOTION(self, self._OnGuiMouseMotion)
         # wx.EVT_CHAR(self, self._OnGuiKeyChar)
         # wx.EVT_KILL_FOCUS(self, self.OnFocusLost)
         # wx.EVT_IDLE(self, self._OnIdle)
@@ -132,13 +125,13 @@ class SceneView(QtOpenGL.QGLWidget):
                 '1.0', (1,2), lambda value: self.OnScaleEntry(value, 2))
         openglscene.glLabel(self.scaleForm, _("Size X (mm)"), (0,4))
         self.scaleXmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,4), lambda value: self.OnScaleEntryMM(value, 0))
+                '0.0', (1,4), lambda value: self.OnScaleEntryMM(value, 0, True))
         openglscene.glLabel(self.scaleForm, _("Size Y (mm)"), (0,5))
         self.scaleYmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,5), lambda value: self.OnScaleEntryMM(value, 1))
+                '0.0', (1,5), lambda value: self.OnScaleEntryMM(value, 1, True))
         openglscene.glLabel(self.scaleForm, _("Size Z (mm)"), (0,6))
         self.scaleZmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,6), lambda value: self.OnScaleEntryMM(value, 2))
+                '0.0', (1,6), lambda value: self.OnScaleEntryMM(value, 2, True))
         openglscene.glLabel(self.scaleForm, _("Uniform scale"), (0,8))
         self.scaleUniform = openglscene.glCheckbox(self.scaleForm, True,
                 (1,8), None)
@@ -149,6 +142,7 @@ class SceneView(QtOpenGL.QGLWidget):
 
         # self.youMagineButton = openglscene.glButton(self, 26, _("Share on YouMagine"), (2,0), lambda button: youmagineGui.youmagineManager(self.GetTopLevelParent(), self._scene))
         # self.youMagineButton.setDisabled(True)
+        #         lambda button: youmagineGui.youmagineManager(self.GetTopLevelParent(), self._scene))
 
         # self.notification = openglGui.glNotification(self, (0, 0))
 
@@ -157,16 +151,16 @@ class SceneView(QtOpenGL.QGLWidget):
 
         self._sceneUpdateTimer = QtCore.QTimer(self)
         self._sceneUpdateTimer.timeout.connect(self._onRunEngine)
-        # self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
-        # self.Bind(wx.EVT_LEAVE_WINDOW, self.OnMouseLeave)
 
         self.OnViewChange()
         self.OnToolSelect(0)
         self.updateToolButtons()
         self.updateProfileToControls()
 
+        self.setMouseTracking(True)
+
     def minimumSizeHint(self):
-        return QtCore.QSize(700, 100)
+        return QtCore.QSize(700, 50)
 
     def _init3DView(self):
         # set viewing projection
@@ -248,6 +242,7 @@ class SceneView(QtOpenGL.QGLWidget):
                 glTranslated(10.0, self.height() - 30.0, -1.0)
                 glColor4f(0.2,0.2,0.2,0.5)
                 openglHelpers.glDrawStringLeft("fps:%d" % (1 / renderTime))
+            self._context.swapBuffers()
         except:
             # When an exception happens, catch it and show a message box. If the exception is not caught the draw function bugs out.
             # Only show this exception once so we do not overload the user with popups.
@@ -268,8 +263,6 @@ class SceneView(QtOpenGL.QGLWidget):
     def resizeGL(self, width, height):
         self._container.setSize(0, 0, width, height)
         self._container.updateLayout()
-        # glViewport(0, 0, width, height)
-        # glLoadIdentity()
 
     def _drawScene(self):
         if self._glButtonsTexture is None:
@@ -778,7 +771,6 @@ class SceneView(QtOpenGL.QGLWidget):
 
     def queueRefresh(self):
         if self._idleCalled:
-            # wx.CallAfter(self.Refresh)
             self.updateGL()
         else:
             self._refreshQueued = True
@@ -794,12 +786,142 @@ class SceneView(QtOpenGL.QGLWidget):
             self.scaleYmmctrl.setValue(round(size[1], 2))
             self.scaleZmmctrl.setValue(round(size[2], 2))
 
-    def _onRunEngine(self, *args, **kwargs):
+    def _onRunEngine(self):
         if self._isSimpleMode:
             self._parent.setupSlice()
         self._engine.runEngine(self._scene)
         if self._isSimpleMode:
             profile.resetTempOverride()
+
+    def wheelEvent(self, evt):
+        delta = evt.delta()
+        delta = delta/abs(delta)
+        self._zoom *= 1.0 - delta / 10.0
+        if self._zoom < 1.0:
+            self._zoom = 1.0
+        if self._zoom > numpy.max(self._machineSize) * 3:
+            self._zoom = numpy.max(self._machineSize) * 3
+        self.update()
+
+    def mouseMoveEvent(self, evt):
+        self.update()
+        self._container.onMouseMoveEvent(evt.x(), evt.y())
+
+    def mousePressEvent(self, evt):
+        self.setFocus()
+        if self._container.onMousePressEvent(evt.x(), evt.y(), evt.button()):
+            self.updateGL()
+            return
+        self.onMouseDown(evt)
+
+    def mouseDoubleClickEvent(self, evt):
+        self._mouseState = 'doubleClick'
+
+    def onMouseDown(self, evt):
+        self._mouseX = evt.x()
+        self._mouseY = evt.y()
+        self._mouseClick3DPos = self._mouse3Dpos
+        self._mouseClickFocus = self._focusObj
+
+        if self._mouseState == 'dragObject' and self._selectedObj is not None:
+            self._scene.pushFree(self._selectedObj)
+            self.sceneUpdated()
+        self._mouseState = 'dragOrClick'
+
+        p0, p1 = self.getMouseRay(self._mouseX, self._mouseY)
+        p0 -= self.getObjectCenterPos() - self._viewTarget
+        p1 -= self.getObjectCenterPos() - self._viewTarget
+        if self.tool.OnDragStart(p0, p1):
+            self._mouseState = 'tool'
+        if self._mouseState == 'dragOrClick' and evt.button() == 1 \
+                and self._focusObj is not None:
+                    self._selectObject(self._focusObj, False)
+                    self.queueRefresh()
+
+    # def OnMouseUp(self, e):
+    #     if e.LeftIsDown() or e.MiddleIsDown() or e.RightIsDown():
+    #         return
+    #     if self._mouseState == 'dragOrClick':
+    #         if e.GetButton() == 1:
+    #             self._selectObject(self._focusObj)
+    #         if e.GetButton() == 3:
+    #                 menu = wx.Menu()
+    #                 if self._focusObj is not None:
+
+    #                     self.Bind(wx.EVT_MENU, self.OnCenter, menu.Append(-1, _("Center on platform")))
+    #                     self.Bind(wx.EVT_MENU, lambda e: self._deleteObject(self._focusObj), menu.Append(-1, _("Delete object")))
+    #                     self.Bind(wx.EVT_MENU, self.OnMultiply, menu.Append(-1, _("Multiply object")))
+    #                     self.Bind(wx.EVT_MENU, self.OnSplitObject, menu.Append(-1, _("Split object into parts")))
+    #                 if ((self._selectedObj != self._focusObj and self._focusObj is not None and self._selectedObj is not None) or len(self._scene.objects()) == 2) and int(profile.getMachineSetting('extruder_amount')) > 1:
+    #                     self.Bind(wx.EVT_MENU, self.OnMergeObjects, menu.Append(-1, _("Dual extrusion merge")))
+    #                 if len(self._scene.objects()) > 0:
+    #                     self.Bind(wx.EVT_MENU, self.OnDeleteAll, menu.Append(-1, _("Delete all objects")))
+    #                     self.Bind(wx.EVT_MENU, self.reloadScene, menu.Append(-1, _("Reload all objects")))
+    #                 if menu.MenuItemCount > 0:
+    #                     self.PopupMenu(menu)
+    #                 menu.Destroy()
+    #     elif self._mouseState == 'dragObject' and self._selectedObj is not None:
+    #         self._scene.pushFree(self._selectedObj)
+    #         self.sceneUpdated()
+    #     elif self._mouseState == 'tool':
+    #         if self.tempMatrix is not None and self._selectedObj is not None:
+    #             self._selectedObj.applyMatrix(self.tempMatrix)
+    #             self._scene.pushFree(self._selectedObj)
+    #             self._selectObject(self._selectedObj)
+    #         self.tempMatrix = None
+    #         self.tool.OnDragEnd()
+    #         self.sceneUpdated()
+    #     self._mouseState = None
+
+    # def OnMouseMotion(self,e):
+    #     p0, p1 = self.getMouseRay(e.GetX(), e.GetY())
+    #     p0 -= self.getObjectCenterPos() - self._viewTarget
+    #     p1 -= self.getObjectCenterPos() - self._viewTarget
+
+    #     if e.Dragging() and self._mouseState is not None:
+    #         if self._mouseState == 'tool':
+    #             self.tool.OnDrag(p0, p1)
+    #         elif not e.LeftIsDown() and e.RightIsDown():
+    #             self._mouseState = 'drag'
+    #             if wx.GetKeyState(wx.WXK_SHIFT):
+    #                 a = math.cos(math.radians(self._yaw)) / 3.0
+    #                 b = math.sin(math.radians(self._yaw)) / 3.0
+    #                 self._viewTarget[0] += float(e.GetX() - self._mouseX) * -a
+    #                 self._viewTarget[1] += float(e.GetX() - self._mouseX) * b
+    #                 self._viewTarget[0] += float(e.GetY() - self._mouseY) * b
+    #                 self._viewTarget[1] += float(e.GetY() - self._mouseY) * a
+    #             else:
+    #                 self._yaw += e.GetX() - self._mouseX
+    #                 self._pitch -= e.GetY() - self._mouseY
+    #             if self._pitch > 170:
+    #                 self._pitch = 170
+    #             if self._pitch < 10:
+    #                 self._pitch = 10
+    #         elif (e.LeftIsDown() and e.RightIsDown()) or e.MiddleIsDown():
+    #             self._mouseState = 'drag'
+    #             self._zoom += e.GetY() - self._mouseY
+    #             if self._zoom < 1:
+    #                 self._zoom = 1
+    #             if self._zoom > numpy.max(self._machineSize) * 3:
+    #                 self._zoom = numpy.max(self._machineSize) * 3
+    #         elif e.LeftIsDown() and self._selectedObj is not None and self._selectedObj == self._mouseClickFocus:
+    #             self._mouseState = 'dragObject'
+    #             z = max(0, self._mouseClick3DPos[2])
+    #             p0, p1 = self.getMouseRay(self._mouseX, self._mouseY)
+    #             p2, p3 = self.getMouseRay(e.GetX(), e.GetY())
+    #             p0[2] -= z
+    #             p1[2] -= z
+    #             p2[2] -= z
+    #             p3[2] -= z
+    #             cursorZ0 = p0 - (p1 - p0) * (p0[2] / (p1[2] - p0[2]))
+    #             cursorZ1 = p2 - (p3 - p2) * (p2[2] / (p3[2] - p2[2]))
+    #             diff = cursorZ1 - cursorZ0
+    #             self._selectedObj.setPosition(self._selectedObj.getPosition() + diff[0:2])
+    #     if not e.Dragging() or self._mouseState != 'tool':
+    #         self.tool.OnMouseMove(p0, p1)
+
+    #     self._mouseX = e.GetX()
+    #     self._mouseY = e.GetY()
 
     def OnViewChange(self):
         if self.viewSelection.getValue() == 4:
@@ -928,6 +1050,23 @@ class SceneView(QtOpenGL.QGLWidget):
         self._selectedObj.mirror(axis)
         self.sceneUpdated()
 
+    def OnScaleEntry(self, value, axis, is_mm=False):
+        if self._selectedObj is None:
+            return
+        try:
+            value = float(value)
+        except (ValueError, TypeError), e:
+            log.error("Error: {0}; could not scale.".format(e))
+            return
+        if is_mm:
+            self._selectedObj.setSize(value, axis, self.scaleUniform.getValue())
+        else:
+            self._selectedObj.setScale(value, axis, self.scaleUniform.getValue())
+        self.updateProfileToControls()
+        self._scene.pushFree(self._selectedObj)
+        self._selectObject(self._selectedObj)
+        self.sceneUpdated()
+
     def OnPrintButton(self, button):
         print "Entered OnPrintButton method"
         # if button == 1:
@@ -972,31 +1111,101 @@ class SceneView(QtOpenGL.QGLWidget):
         #     self.PopupMenu(menu)
         #     menu.Destroy()
 
-    def showLoadModel(self, button = 1):
-        print "Entered showLoadModel method"
-        # if button == 1:
-        #     dlg=wx.FileDialog(self, _("Open 3D model"), os.path.split(profile.getPreference('lastFile'))[0], style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST|wx.FD_MULTIPLE)
+    def showLoadModel(self, button):
+        if button is not QtCore.Qt.MouseButton.LeftButton:
+            return
 
-        #     wildcardList = ';'.join(map(lambda s: '*' + s, meshLoader.loadSupportedExtensions() + imageToMesh.supportedExtensions() + ['.g', '.gcode']))
-        #     wildcardFilter = "All (%s)|%s;%s" % (wildcardList, wildcardList, wildcardList.upper())
-        #     wildcardList = ';'.join(map(lambda s: '*' + s, meshLoader.loadSupportedExtensions()))
-        #     wildcardFilter += "|Mesh files (%s)|%s;%s" % (wildcardList, wildcardList, wildcardList.upper())
-        #     wildcardList = ';'.join(map(lambda s: '*' + s, imageToMesh.supportedExtensions()))
-        #     wildcardFilter += "|Image files (%s)|%s;%s" % (wildcardList, wildcardList, wildcardList.upper())
-        #     wildcardList = ';'.join(map(lambda s: '*' + s, ['.g', '.gcode']))
-        #     wildcardFilter += "|GCode files (%s)|%s;%s" % (wildcardList, wildcardList, wildcardList.upper())
+        img_extentions = imageToMesh.supportedExtensions()
+        mesh_extentions = meshLoader.loadSupportedExtensions()
 
-        #     dlg.SetWildcard(wildcardFilter)
-        #     if dlg.ShowModal() != wx.ID_OK:
-        #         dlg.Destroy()
-        #         return
-        #     filenames = dlg.GetPaths()
-        #     dlg.Destroy()
-        #     if len(filenames) < 1:
-        #         return False
-        #     profile.putPreference('lastFile', filenames[0])
-        #     self.loadFiles(filenames)
+        wildcard_filter = ';;'.join([
+            "All ({0})",
+            "Mesh files ({1})",
+            "Image files ({2})",
+            "GCode files ({3})"]).format(
+                ' '.join(map(lambda s: '*' + s,
+                        mesh_extentions + img_extentions + \
+                        ['.g', '.gcode'])),
+                ' '.join(map(lambda s: '*' + s, mesh_extentions)),
+                ' '.join(map(lambda s: '*' + s,img_extentions)),
+                ' '.join(map(lambda s: '*' + s, ['.g', '.gcode'])))
+
+        chosen = QtGui.QFileDialog.getOpenFileNames(
+            self,
+            _("Open 3D model"),
+            os.path.split(profile.getPreference('lastFile'))[0],
+            wildcard_filter)
+        filenames, used_filter = chosen
+
+        if len(filenames) < 1:
+            return False
+        profile.putPreference('lastFile', filenames[0])
+        self.loadFiles(filenames)
 
     def loadGLTexture(self, filename):
         filepath = resources.getPathForImage(filename)
-        return self.bindTexture(QtGui.QPixmap(filepath))
+        return self.bindTexture(QtGui.QPixmap(filepath), GL_TEXTURE_2D, GL_RGBA,
+                QtOpenGL.QGLContext.NoBindOption)
+
+    def loadSceneFiles(self, filenames):
+        # self.youMagineButton.setDisabled(False)
+        self.loadScene(filenames)
+
+    def loadFiles(self, filenames):
+        # mainWindow = self.GetParent().GetParent().GetParent()
+        main_window = self._parent
+        # only one GCODE file can be active
+        # so if single gcode file, process this
+        # otherwise ignore all gcode files
+        gcodeFilename = None
+        if len(filenames) == 1:
+            filename = filenames[0]
+            ext = os.path.splitext(filename)[1].lower()
+            if ext == '.g' or ext == '.gcode':
+                gcodeFilename = filename
+                main_window.add_to_model_mru(filename)
+        if gcodeFilename is not None:
+            self.loadGCodeFile(gcodeFilename)
+        else:
+            # process directories and special file types
+            # and keep scene files for later processing
+            scene_filenames = []
+            ignored_types = dict()
+            # use file list as queue
+            # pop first entry for processing and append new files at end
+            while filenames:
+                filename = filenames.pop(0)
+                if os.path.isdir(filename):
+                    # directory: queue all included files and directories
+                    filenames.extend(os.path.join(filename, f) for f in os.listdir(filename))
+                else:
+                    ext = os.path.splitext(filename)[1].lower()
+                    if ext == '.ini':
+                        profile.loadProfile(filename)
+                        main_window.addToProfileMRU(filename)
+                    elif ext in meshLoader.loadSupportedExtensions() or ext in imageToMesh.supportedExtensions():
+                        scene_filenames.append(filename)
+                        main_window.add_to_model_mru(filename)
+                    else:
+                        ignored_types[ext] = 1
+            if ignored_types:
+                ignored_types = ignored_types.keys()
+                ignored_types.sort()
+                # self.notification.message("ignored: " + " ".join("*" + type for type in ignored_types))
+            main_window.update_profile_to_controls_all()
+            # now process all the scene files
+            if scene_filenames:
+                self.loadSceneFiles(scene_filenames)
+                self._selectObject(None)
+                self.sceneUpdated()
+                newZoom = numpy.max(self._machineSize)
+                self._animView = openglGui.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
+                self._animZoom = openglGui.animation(self, self._zoom, newZoom, 0.5)
+
+    def reloadScene(self, e):
+        # Copy the list before DeleteAll clears it
+        fileList = []
+        for obj in self._scene.objects():
+            fileList.append(obj.getOriginFilename())
+        self.OnDeleteAll(None)
+        self.loadScene(fileList)

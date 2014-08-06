@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import re
+
 from PySide import QtCore, QtGui
 
 from mainwindow_ui import Ui_MainWindow
@@ -11,6 +13,7 @@ from omni3dapp.logger import log
 
 class MainWindow(QtGui.QMainWindow):
 
+    MAX_MRU_FILES = 5
     NORMAL_MODE_ONLY_ITEMS = [
             'Open_Profile',
             'Save_Profile',
@@ -21,6 +24,13 @@ class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
+        # self.model_files_history = QtCore.QSettings('Omni3DApp', 'Model Files History')
+        self.model_files_history = QtCore.QSettings('mru_filelist.ini',
+                QtCore.QSettings.IniFormat)
+        self.model_files_history.setPath(QtCore.QSettings.IniFormat,
+                QtCore.QSettings.UserScope, profile.getBasePath())
+        self.model_files_history_actions = []
+
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
@@ -70,6 +80,15 @@ class MainWindow(QtGui.QMainWindow):
                 elem.setToolTip(val.getTooltip())
             except Exception, e:
                 log.debug('Could not set value to field {0}: {1}'.format(key, e))
+
+            # Set recent MRU files list
+            for elem in xrange(MainWindow.MAX_MRU_FILES):
+                action = QtGui.QAction(self, visible=False,
+                        triggered=self.open_model_file)
+                action.setObjectName("recent_model_file_{0}".format(elem))
+                self.model_files_history_actions.append(action)
+                self.ui.menuRecent_Model_Files.addAction(action)
+            self.update_mru_files_actions()
 
     def connect_actions(self):
         self.ui.actionSwitch_to_quickprint.triggered.connect(self.on_simple_switch)
@@ -215,7 +234,8 @@ class MainWindow(QtGui.QMainWindow):
     #         print "Unable to read from clipboard"
 
     def update_profile_to_controls_normal_panel(self):
-        super(normalSettingsPanel, self).updateProfileToControls()
+        pass
+        # super(normalSettingsPanel, self).updateProfileToControls()
 
         # TODO - loading files to start_end_gcode panel:
         # if self.alterationPanel is not None:
@@ -228,7 +248,7 @@ class MainWindow(QtGui.QMainWindow):
         self.scene.updateProfileToControls()
         self.update_profile_to_controls_normal_panel()
 
-    def on_setting_change(self, *args, **kwargs):
+    def on_setting_change(self):
         # profile.settingsDictionary
         elem = QtCore.QObject.sender(self)
         if isinstance(elem, (QtGui.QLineEdit, QtGui.QTextEdit)):
@@ -253,12 +273,64 @@ class MainWindow(QtGui.QMainWindow):
     #     if self._callback is not None:
     #         self._callback()
 
+    def get_model_files_history(self):
+        files = self.model_files_history.value('modelFilesHistory') or []
+        if not isinstance(files, list):
+            files = [files]
+        return files
+
+    def open_model_file(self):
+        sender = QtCore.QObject.sender(self)
+        try:
+            file_ix = re.match('recent_model_file_(\d)',
+                    sender.objectName()).group(1)
+        except AttributeError, e:
+            log.error('Failed to open model file: {0}'.format(e))
+            return
+
+        files = self.get_model_files_history()
+        try:
+            filename = files[int(file_ix)]
+        except (IndexError, ValueError), e:
+            log.error("Failed to open model file: {0}".format(e))
+            return
+        self.add_to_model_mru(filename)
+
+        # load model
+        profile.putPreference('lastFile', filename)
+        self.scene.loadFiles([filename])
+
     def add_to_model_mru(self, filename):
-        action_file = QtGui.QAction(self)
-        # action_file.setText(QtGui.QApplication.translate("MainWindow", filename, None, QtGui.QApplication.UnicodeUTF8))
-        action_file.setText(filename)
-        self.ui.menuRecent_Model_Files.addAction(action_file)
-        # TODO: connect action
+        files = self.get_model_files_history()
+        try:
+            files.remove(filename)
+        except ValueError:
+            pass
+        files.insert(0, filename)
+        del files[MainWindow.MAX_MRU_FILES:]
+        self.model_files_history.setValue('modelFilesHistory', files)
+        self.update_mru_files_actions()
+
+    def update_mru_files_actions(self):
+        files = self.get_model_files_history()
+        files_no = len(files) or 0
+        recent_files_no = min(files_no, MainWindow.MAX_MRU_FILES)
+        if recent_files_no < 1:
+            return
+
+        for i in xrange(recent_files_no):
+            filename = files[i]
+            action = self.model_files_history_actions[i]
+            text = "{0} {1}".format(i + 1, self.stripped_name(filename))
+            action.setText(text)
+            action.setData(filename)
+            action.setVisible(True)
+
+        for j in range(recent_files_no, MainWindow.MAX_MRU_FILES):
+            self.model_files_history_actions[j].setVisible(False)
+
+    def stripped_name(self, full_filename):
+        return QtCore.QFileInfo(full_filename).fileName()
 
 
 class NormalModeValidator(QtGui.QValidator):

@@ -688,9 +688,6 @@ class Ui_MainWindow(object):
         self.actionReport_a_problem.setObjectName("actionReport_a_problem")
         self.actionCheck_for_update = QtGui.QAction(MainWindow)
         self.actionCheck_for_update.setObjectName("actionCheck_for_update")
-        self.actionSample_file = QtGui.QAction(MainWindow)
-        self.actionSample_file.setObjectName("actionSample_file")
-        self.menuRecent_Model_Files.addAction(self.actionSample_file)
         self.menu_File.addAction(self.actionLoad_model_file_tCTRL_L)
         self.menu_File.addAction(self.actionSave_model)
         self.menu_File.addAction(self.actionReload_platform)
@@ -857,5 +854,4 @@ class Ui_MainWindow(object):
         self.actionOnline_documentation.setText(QtGui.QApplication.translate("MainWindow", "Online documentation...", None, QtGui.QApplication.UnicodeUTF8))
         self.actionReport_a_problem.setText(QtGui.QApplication.translate("MainWindow", "Report a problem...", None, QtGui.QApplication.UnicodeUTF8))
         self.actionCheck_for_update.setText(QtGui.QApplication.translate("MainWindow", "Check for update...", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionSample_file.setText(QtGui.QApplication.translate("MainWindow", "Sample file", None, QtGui.QApplication.UnicodeUTF8))
 

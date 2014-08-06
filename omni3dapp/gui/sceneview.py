@@ -1152,7 +1152,6 @@ class SceneView(QtOpenGL.QGLWidget):
         self.loadScene(filenames)
 
     def loadFiles(self, filenames):
-        # mainWindow = self.GetParent().GetParent().GetParent()
         main_window = self._parent
         # only one GCODE file can be active
         # so if single gcode file, process this
@@ -1183,7 +1182,8 @@ class SceneView(QtOpenGL.QGLWidget):
                     if ext == '.ini':
                         profile.loadProfile(filename)
                         main_window.addToProfileMRU(filename)
-                    elif ext in meshLoader.loadSupportedExtensions() or ext in imageToMesh.supportedExtensions():
+                    elif ext in meshLoader.loadSupportedExtensions() or \
+                            ext in imageToMesh.supportedExtensions():
                         scene_filenames.append(filename)
                         main_window.add_to_model_mru(filename)
                     else:
@@ -1201,6 +1201,34 @@ class SceneView(QtOpenGL.QGLWidget):
                 newZoom = numpy.max(self._machineSize)
                 self._animView = openglGui.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
                 self._animZoom = openglGui.animation(self, self._zoom, newZoom, 0.5)
+
+    def loadScene(self, filelist):
+        print "Entered scene loading method"
+    #     for filename in filelist:
+    #         try:
+    #             ext = os.path.splitext(filename)[1].lower()
+    #             if ext in imageToMesh.supportedExtensions():
+    #                 imageToMesh.convertImageDialog(self, filename).Show()
+    #                 objList = []
+    #             else:
+    #                 objList = meshLoader.loadMeshes(filename)
+    #         except Exception, e:
+    #             traceback.print_exc()
+    #             log.error(e)
+    #         else:
+    #             for obj in objList:
+    #                 if self._objectLoadShader is not None:
+    #                     obj._loadAnim = openglscene.animation(self, 1, 0, 1.5)
+    #                 else:
+    #                     obj._loadAnim = None
+    #                 self._scene.add(obj)
+    #                 if not self._scene.checkPlatform(obj):
+    #                     self._scene.centerAll()
+    #                 self._selectObject(obj)
+    #                 if obj.getScale()[0] < 1.0:
+    #                     # self.notification.message("Warning: Object scaled down.")
+    #                     pass
+    #     self.sceneUpdated()
 
     def reloadScene(self, e):
         # Copy the list before DeleteAll clears it

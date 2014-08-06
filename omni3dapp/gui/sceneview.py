@@ -51,7 +51,6 @@ class SceneView(QtOpenGL.QGLWidget):
         self._glRobotTexture = None
         self._buttonSize = 64
 
-        self._animationList = []
         self.glReleaseList = []
         self._refreshQueued = False
         self._idleCalled = False
@@ -69,13 +68,13 @@ class SceneView(QtOpenGL.QGLWidget):
         self._zoom = 300
         self._scene = objectscene.Scene()
         self._objectShader = None
-        self._objectLoadShader = None
         self._focusObj = None
         self._selectedObj = None
         self._objColors = [None,None,None,None]
         self._mouseX = -1
         self._mouseY = -1
         self._mouseState = None
+        self._mouse3Dpos = None
         self._viewTarget = numpy.array([0,0,0], numpy.float32)
         self._animView = None
         self._animZoom = None
@@ -354,35 +353,10 @@ class SceneView(QtOpenGL.QGLWidget):
                         }
                     }
                                     """)
-                self._objectLoadShader = openglHelpers.GLShader("""
-                    uniform float intensity;
-                    uniform float scale;
-                    varying float light_amount;
-
-                    void main(void)
-                    {
-                        vec4 tmp = gl_Vertex;
-                        tmp.x += sin(tmp.z/5.0+intensity*30.0) * scale * intensity;
-                        tmp.y += sin(tmp.z/3.0+intensity*40.0) * scale * intensity;
-                        gl_Position = gl_ModelViewProjectionMatrix * tmp;
-                        gl_FrontColor = gl_Color;
-
-                        light_amount = abs(dot(normalize(gl_NormalMatrix * gl_Normal), normalize(gl_LightSource[0].position.xyz)));
-                        light_amount += 0.2;
-                    }
-            ""","""
-                uniform float intensity;
-                varying float light_amount;
-
-                void main(void)
-                {
-                    gl_FragColor = vec4(gl_Color.xyz * light_amount, 1.0-intensity);
-                }
-                """)
+                
             if self._objectShader is None or not self._objectShader.isValid(): #Could not make shader.
                 self._objectShader = openglHelpers.GLFakeShader()
                 self._objectOverhangShader = openglHelpers.GLFakeShader()
-                self._objectLoadShader = None
         self._init3DView()
         glTranslate(0.0, 0.0, -self._zoom)
         glRotate(-self._pitch, 1.0, 0.0, 0.0)
@@ -505,17 +479,6 @@ class SceneView(QtOpenGL.QGLWidget):
 
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
             glEnable(GL_BLEND)
-            if self._objectLoadShader is not None:
-                self._objectLoadShader.bind()
-                glColor4f(0.2, 0.6, 1.0, 1.0)
-                for obj in self._scene.objects():
-                    if obj._loadAnim is None:
-                        continue
-                    self._objectLoadShader.setUniform('intensity', obj._loadAnim.getPosition())
-                    self._objectLoadShader.setUniform('scale', obj.getBoundaryCircle() / 10)
-                    self._renderObject(obj)
-                self._objectLoadShader.unbind()
-                glDisable(GL_BLEND)
 
         self._drawMachine()
 
@@ -564,7 +527,7 @@ class SceneView(QtOpenGL.QGLWidget):
                 self._renderObject(self._selectedObj)
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
-                glViewport(0, 0, self.GetSize().GetWidth(), self.GetSize().GetHeight())
+                glViewport(0, 0, self.width(), self.height())
                 glDisable(GL_STENCIL_TEST)
                 glDisable(GL_CULL_FACE)
                 glEnable(GL_DEPTH_TEST)
@@ -789,9 +752,31 @@ class SceneView(QtOpenGL.QGLWidget):
     def _onRunEngine(self):
         if self._isSimpleMode:
             self._parent.setupSlice()
-        self._engine.runEngine(self._scene)
+        # self._engine.runEngine(self._scene)
         if self._isSimpleMode:
             profile.resetTempOverride()
+
+    def getMouseRay(self, x, y):
+        if self._viewport is None:
+            return numpy.array([0,0,0],numpy.float32),\
+                    numpy.array([0,0,1],numpy.float32)
+        p0 = openglHelpers.unproject(x,
+                self._viewport[1] + self._viewport[3] - y, 0,
+                self._modelMatrix, self._projMatrix, self._viewport)
+        p1 = openglHelpers.unproject(x,
+                self._viewport[1] + self._viewport[3] - y, 1,
+                self._modelMatrix, self._projMatrix, self._viewport)
+        p0 -= self._viewTarget
+        p1 -= self._viewTarget
+        return p0, p1
+
+    def getObjectCenterPos(self):
+        if self._selectedObj is None:
+            return [0.0, 0.0, 0.0]
+        pos = self._selectedObj.getPosition()
+        size = self._selectedObj.getSize()
+        return [pos[0], pos[1],
+                size[2]/2 - profile.getProfileSettingFloat('object_sink')]
 
     def wheelEvent(self, evt):
         delta = evt.delta()
@@ -804,7 +789,7 @@ class SceneView(QtOpenGL.QGLWidget):
         self.update()
 
     def mouseMoveEvent(self, evt):
-        self.update()
+        self.updateGL()
         self._container.onMouseMoveEvent(evt.x(), evt.y())
 
     def mousePressEvent(self, evt):
@@ -838,40 +823,40 @@ class SceneView(QtOpenGL.QGLWidget):
                     self._selectObject(self._focusObj, False)
                     self.queueRefresh()
 
-    # def OnMouseUp(self, e):
-    #     if e.LeftIsDown() or e.MiddleIsDown() or e.RightIsDown():
-    #         return
-    #     if self._mouseState == 'dragOrClick':
-    #         if e.GetButton() == 1:
-    #             self._selectObject(self._focusObj)
-    #         if e.GetButton() == 3:
-    #                 menu = wx.Menu()
-    #                 if self._focusObj is not None:
+    def mouseReleaseEvent(self, evt):
+        button = evt.button()
+        if self._mouseState == 'dragOrClick':
+            if button is QtCore.Qt.MouseButton.LeftButton:
+                self._selectObject(self._focusObj)
+            elif button is QtCore.Qt.MouseButton.RightButton:
+                pass
+                #     menu = wx.Menu()
+                #     if self._focusObj is not None:
 
-    #                     self.Bind(wx.EVT_MENU, self.OnCenter, menu.Append(-1, _("Center on platform")))
-    #                     self.Bind(wx.EVT_MENU, lambda e: self._deleteObject(self._focusObj), menu.Append(-1, _("Delete object")))
-    #                     self.Bind(wx.EVT_MENU, self.OnMultiply, menu.Append(-1, _("Multiply object")))
-    #                     self.Bind(wx.EVT_MENU, self.OnSplitObject, menu.Append(-1, _("Split object into parts")))
-    #                 if ((self._selectedObj != self._focusObj and self._focusObj is not None and self._selectedObj is not None) or len(self._scene.objects()) == 2) and int(profile.getMachineSetting('extruder_amount')) > 1:
-    #                     self.Bind(wx.EVT_MENU, self.OnMergeObjects, menu.Append(-1, _("Dual extrusion merge")))
-    #                 if len(self._scene.objects()) > 0:
-    #                     self.Bind(wx.EVT_MENU, self.OnDeleteAll, menu.Append(-1, _("Delete all objects")))
-    #                     self.Bind(wx.EVT_MENU, self.reloadScene, menu.Append(-1, _("Reload all objects")))
-    #                 if menu.MenuItemCount > 0:
-    #                     self.PopupMenu(menu)
-    #                 menu.Destroy()
-    #     elif self._mouseState == 'dragObject' and self._selectedObj is not None:
-    #         self._scene.pushFree(self._selectedObj)
-    #         self.sceneUpdated()
-    #     elif self._mouseState == 'tool':
-    #         if self.tempMatrix is not None and self._selectedObj is not None:
-    #             self._selectedObj.applyMatrix(self.tempMatrix)
-    #             self._scene.pushFree(self._selectedObj)
-    #             self._selectObject(self._selectedObj)
-    #         self.tempMatrix = None
-    #         self.tool.OnDragEnd()
-    #         self.sceneUpdated()
-    #     self._mouseState = None
+                #         self.Bind(wx.EVT_MENU, self.OnCenter, menu.Append(-1, _("Center on platform")))
+                #         self.Bind(wx.EVT_MENU, lambda e: self._deleteObject(self._focusObj), menu.Append(-1, _("Delete object")))
+                #         self.Bind(wx.EVT_MENU, self.OnMultiply, menu.Append(-1, _("Multiply object")))
+                #         self.Bind(wx.EVT_MENU, self.OnSplitObject, menu.Append(-1, _("Split object into parts")))
+                #     if ((self._selectedObj != self._focusObj and self._focusObj is not None and self._selectedObj is not None) or len(self._scene.objects()) == 2) and int(profile.getMachineSetting('extruder_amount')) > 1:
+                #         self.Bind(wx.EVT_MENU, self.OnMergeObjects, menu.Append(-1, _("Dual extrusion merge")))
+                #     if len(self._scene.objects()) > 0:
+                #         self.Bind(wx.EVT_MENU, self.OnDeleteAll, menu.Append(-1, _("Delete all objects")))
+                #         self.Bind(wx.EVT_MENU, self.reloadScene, menu.Append(-1, _("Reload all objects")))
+                #     if menu.MenuItemCount > 0:
+                #         self.PopupMenu(menu)
+                #     menu.Destroy()
+        elif self._mouseState == 'dragObject' and self._selectedObj is not None:
+            self._scene.pushFree(self._selectedObj)
+            self.sceneUpdated()
+        elif self._mouseState == 'tool':
+            if self.tempMatrix is not None and self._selectedObj is not None:
+                self._selectedObj.applyMatrix(self.tempMatrix)
+                self._scene.pushFree(self._selectedObj)
+                self._selectObject(self._selectedObj)
+            self.tempMatrix = None
+            self.tool.OnDragEnd()
+            self.sceneUpdated()
+        self._mouseState = None
 
     # def OnMouseMotion(self,e):
     #     p0, p1 = self.getMouseRay(e.GetX(), e.GetY())
@@ -1111,6 +1096,19 @@ class SceneView(QtOpenGL.QGLWidget):
         #     self.PopupMenu(menu)
         #     menu.Destroy()
 
+    def _selectObject(self, obj, zoom = True):
+        if obj != self._selectedObj:
+            self._selectedObj = obj
+            self.updateModelSettingsToControls()
+            self.updateToolButtons()
+        if zoom and obj is not None:
+            newViewPos = numpy.array([obj.getPosition()[0], obj.getPosition()[1], obj.getSize()[2] / 2])
+            # self._animView = openglscene.animation(self, self._viewTarget.copy(), newViewPos, 0.5)
+            newZoom = obj.getBoundaryCircle() * 6
+            if newZoom > numpy.max(self._machineSize) * 3:
+                newZoom = numpy.max(self._machineSize) * 3
+            # self._animZoom = openglscene.animation(self, self._zoom, newZoom, 0.5)
+
     def showLoadModel(self, button):
         if button is not QtCore.Qt.MouseButton.LeftButton:
             return
@@ -1199,36 +1197,31 @@ class SceneView(QtOpenGL.QGLWidget):
                 self._selectObject(None)
                 self.sceneUpdated()
                 newZoom = numpy.max(self._machineSize)
-                self._animView = openglGui.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
-                self._animZoom = openglGui.animation(self, self._zoom, newZoom, 0.5)
+                # self._animView = openglscene.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
+                # self._animZoom = openglscene.animation(self, self._zoom, newZoom, 0.5)
 
     def loadScene(self, filelist):
-        print "Entered scene loading method"
-    #     for filename in filelist:
-    #         try:
-    #             ext = os.path.splitext(filename)[1].lower()
-    #             if ext in imageToMesh.supportedExtensions():
-    #                 imageToMesh.convertImageDialog(self, filename).Show()
-    #                 objList = []
-    #             else:
-    #                 objList = meshLoader.loadMeshes(filename)
-    #         except Exception, e:
-    #             traceback.print_exc()
-    #             log.error(e)
-    #         else:
-    #             for obj in objList:
-    #                 if self._objectLoadShader is not None:
-    #                     obj._loadAnim = openglscene.animation(self, 1, 0, 1.5)
-    #                 else:
-    #                     obj._loadAnim = None
-    #                 self._scene.add(obj)
-    #                 if not self._scene.checkPlatform(obj):
-    #                     self._scene.centerAll()
-    #                 self._selectObject(obj)
-    #                 if obj.getScale()[0] < 1.0:
-    #                     # self.notification.message("Warning: Object scaled down.")
-    #                     pass
-    #     self.sceneUpdated()
+        for filename in filelist:
+            try:
+                ext = os.path.splitext(filename)[1].lower()
+                if ext in imageToMesh.supportedExtensions():
+                    imageToMesh.convertImageDialog(self, filename).Show()
+                    objList = []
+                else:
+                    objList = meshLoader.loadMeshes(filename)
+            except Exception, e:
+                traceback.print_exc()
+                log.error(e)
+            else:
+                for obj in objList:
+                    self._scene.add(obj)
+                    if not self._scene.checkPlatform(obj):
+                        self._scene.centerAll()
+                    self._selectObject(obj)
+                    if obj.getScale()[0] < 1.0:
+                        # self.notification.message("Warning: Object scaled down.")
+                        pass
+        self.sceneUpdated()
 
     def reloadScene(self, e):
         # Copy the list before DeleteAll clears it

@@ -11,26 +11,26 @@ from OpenGL.GL import *
 from omni3dapp.util import version
 from omni3dapp.gui.util import openglHelpers
 
-class animation(object):
-    def __init__(self, gui, start, end, runTime):
-        self._start = start
-        self._end = end
-        self._startTime = time.time()
-        self._runTime = runTime
-        gui._animationList.append(self)
-
-    def isDone(self):
-        return time.time() > self._startTime + self._runTime
-
-    def getPosition(self):
-        if self.isDone():
-            return self._end
-        f = (time.time() - self._startTime) / self._runTime
-        ts = f*f
-        tc = f*f*f
-        #f = 6*tc*ts + -15*ts*ts + 10*tc
-        f = tc + -3*ts + 3*f
-        return self._start + (self._end - self._start) * f
+# class animation(object):
+#     def __init__(self, gui, start, end, runTime):
+#         self._start = start
+#         self._end = end
+#         self._startTime = time.time()
+#         self._runTime = runTime
+#         gui._animationList.append(self)
+# 
+#     def isDone(self):
+#         return time.time() > self._startTime + self._runTime
+# 
+#     def getPosition(self):
+#         if self.isDone():
+#             return self._end
+#         f = (time.time() - self._startTime) / self._runTime
+#         ts = f*f
+#         tc = f*f*f
+#         #f = 6*tc*ts + -15*ts*ts + 10*tc
+#         f = tc + -3*ts + 3*f
+#         return self._start + (self._end - self._start) * f
 
 class glGuiControl(object):
     def __init__(self, parent, pos):
@@ -74,9 +74,6 @@ class glGuiControl(object):
     def hasFocus(self):
         return self._base._focus == self
 
-    def OnMouseUp(self, x, y):
-        pass
-
     def OnKeyChar(self, key):
         pass
 
@@ -94,12 +91,6 @@ class glGuiContainer(glGuiControl):
     def onMousePressEvent(self, x, y, button):
         for ctrl in self._glGuiControlList:
             if ctrl.onMousePressEvent(x, y, button):
-                return True
-        return False
-
-    def OnMouseUp(self, x, y):
-        for ctrl in self._glGuiControlList:
-            if ctrl.OnMouseUp(x, y):
                 return True
         return False
 
@@ -423,7 +414,7 @@ class glComboButton(glButton):
         self._imageID = self._imageIDs[self._selection]
         self._comboCallback()
 
-    def OnMouseDown(self, x, y, button):
+    def onMousePressEvent(self, x, y, button):
         if self._hidden or self._disabled:
             return False
         if self.hasFocus():
@@ -435,7 +426,7 @@ class glComboButton(glButton):
                 self._base._focus = None
                 self._comboCallback()
                 return True
-        return super(glComboButton, self).OnMouseDown(x, y, button)
+        return super(glComboButton, self).onMousePressEvent(x, y, button)
 
 class glFrame(glGuiContainer):
     def __init__(self, parent, pos):
@@ -489,9 +480,9 @@ class glFrame(glGuiContainer):
         self._focus = False
         return False
 
-    def OnMouseDown(self, x, y, button):
+    def onMousePressEvent(self, x, y, button):
         if self._checkHit(x, y):
-            super(glFrame, self).OnMouseDown(x, y, button)
+            super(glFrame, self).onMousePressEvent(x, y, button)
             return True
         return False
 
@@ -585,7 +576,7 @@ class glLabel(glGuiControl):
     def onMouseMoveEvent(self, x, y):
         return False
 
-    def OnMouseDown(self, x, y, button):
+    def onMousePressEvent(self, x, y, button):
         return False
 
 class glNumberCtrl(glGuiControl):
@@ -646,7 +637,7 @@ class glNumberCtrl(glGuiControl):
     def onMouseMoveEvent(self, x, y):
         return False
 
-    def OnMouseDown(self, x, y, button):
+    def onMousePressEvent(self, x, y, button):
         if self._checkHit(x, y):
             self.setFocus()
             return True
@@ -747,7 +738,7 @@ class glCheckbox(glGuiControl):
     def onMouseMoveEvent(self, x, y):
         return False
 
-    def OnMouseDown(self, x, y, button):
+    def onMousePressEvent(self, x, y, button):
         if self._checkHit(x, y):
             self._value = not self._value
             return True
@@ -867,15 +858,9 @@ class glSlider(glGuiControl):
         self._focus = False
         return False
 
-    def OnMouseDown(self, x, y, button):
+    def onMousePressEvent(self, x, y, button):
         if self._checkHit(x, y):
             self.setFocus()
             self.onMouseMoveEvent(x, y)
-            return True
-        return False
-
-    def OnMouseUp(self, x, y):
-        if self.hasFocus():
-            self._base._focus = None
             return True
         return False

@@ -11,26 +11,26 @@ from OpenGL.GL import *
 from omni3dapp.util import version
 from omni3dapp.gui.util import openglHelpers
 
-# class animation(object):
-#     def __init__(self, gui, start, end, runTime):
-#         self._start = start
-#         self._end = end
-#         self._startTime = time.time()
-#         self._runTime = runTime
-#         gui._animationList.append(self)
-# 
-#     def isDone(self):
-#         return time.time() > self._startTime + self._runTime
-# 
-#     def getPosition(self):
-#         if self.isDone():
-#             return self._end
-#         f = (time.time() - self._startTime) / self._runTime
-#         ts = f*f
-#         tc = f*f*f
-#         #f = 6*tc*ts + -15*ts*ts + 10*tc
-#         f = tc + -3*ts + 3*f
-#         return self._start + (self._end - self._start) * f
+class animation(object):
+    def __init__(self, gui, start, end, runTime):
+        self._start = start
+        self._end = end
+        self._startTime = time.time()
+        self._runTime = runTime
+        gui._animationList.append(self)
+
+    def isDone(self):
+        return time.time() > self._startTime + self._runTime
+
+    def getPosition(self):
+        if self.isDone():
+            return self._end
+        f = (time.time() - self._startTime) / self._runTime
+        ts = f*f
+        tc = f*f*f
+        #f = 6*tc*ts + -15*ts*ts + 10*tc
+        f = tc + -3*ts + 3*f
+        return self._start + (self._end - self._start) * f
 
 class glGuiControl(object):
     def __init__(self, parent, pos):

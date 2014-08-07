@@ -55,6 +55,7 @@ class SceneView(QtOpenGL.QGLWidget):
         self._glRobotTexture = None
         self._buttonSize = 64
 
+        self._animationList = []
         self.glReleaseList = []
         self._refreshQueued = False
         self._idleCalled = False
@@ -62,13 +63,13 @@ class SceneView(QtOpenGL.QGLWidget):
         # wx.EVT_ERASE_BACKGROUND(self, self._OnEraseBackground)
         # wx.EVT_CHAR(self, self._OnGuiKeyChar)
         # wx.EVT_KILL_FOCUS(self, self.OnFocusLost)
-        # wx.EVT_IDLE(self, self._OnIdle)
 
         self._yaw = 30
         self._pitch = 60
         self._zoom = 300
         self._scene = objectscene.Scene()
         self._objectShader = None
+        # self._objectLoadShader = None
         self._focusObj = None
         self._selectedObj = None
         self._objColors = [None,None,None,None]
@@ -152,12 +153,25 @@ class SceneView(QtOpenGL.QGLWidget):
         self._sceneUpdateTimer = QtCore.QTimer(self)
         self._sceneUpdateTimer.timeout.connect(self._onRunEngine)
 
+        self._idleTimer = QtCore.QTimer(self)
+        self._idleTimer.timeout.connect(self._onIdle)
+        self._idleTimer.start(0)
+
         self.onViewChange()
         self.onToolSelect(0)
         self.updateToolButtons()
         self.updateProfileToControls()
 
         self.setMouseTracking(True)
+
+    def _onIdle(self):
+        self._idleCalled = True
+        if len(self._animationList) > 0 or self._refreshQueued:
+            self._refreshQueued = False
+            for anim in self._animationList:
+                if anim.isDone():
+                    self._animationList.remove(anim)
+            self.updateGL()
 
     def _updateEngineProgress(self, progressValue):
         result = self._engine.getResult()
@@ -410,11 +424,11 @@ class SceneView(QtOpenGL.QGLWidget):
             self.updateToolButtons()
         if zoom and obj is not None:
             newViewPos = numpy.array([obj.getPosition()[0], obj.getPosition()[1], obj.getSize()[2] / 2])
-            # self._animView = openglscene.animation(self, self._viewTarget.copy(), newViewPos, 0.5)
+            self._animView = openglscene.animation(self, self._viewTarget.copy(), newViewPos, 0.5)
             newZoom = obj.getBoundaryCircle() * 6
             if newZoom > numpy.max(self._machineSize) * 3:
                 newZoom = numpy.max(self._machineSize) * 3
-            # self._animZoom = openglscene.animation(self, self._zoom, newZoom, 0.5)
+            self._animZoom = openglscene.animation(self, self._zoom, newZoom, 0.5)
 
     def _deleteObject(self, obj=None):
         if not obj:
@@ -585,6 +599,7 @@ class SceneView(QtOpenGL.QGLWidget):
             if self._objectShader is None or not self._objectShader.isValid(): #Could not make shader.
                 self._objectShader = openglHelpers.GLFakeShader()
                 self._objectOverhangShader = openglHelpers.GLFakeShader()
+                # self._objectLoadShader = None
         self._init3DView()
         glTranslate(0.0, 0.0, -self._zoom)
         glRotate(-self._pitch, 1.0, 0.0, 0.0)
@@ -707,6 +722,17 @@ class SceneView(QtOpenGL.QGLWidget):
 
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
             glEnable(GL_BLEND)
+            # if self._objectLoadShader is not None:
+            #     self._objectLoadShader.bind()
+            #     glColor4f(0.2, 0.6, 1.0, 1.0)
+            #     for obj in self._scene.objects():
+            #         if obj._loadAnim is None:
+            #             continue
+            #         self._objectLoadShader.setUniform('intensity', obj._loadAnim.getPosition())
+            #         self._objectLoadShader.setUniform('scale', obj.getBoundaryCircle() / 10)
+            #         self._renderObject(obj)
+            #     self._objectLoadShader.unbind()
+            #     glDisable(GL_BLEND)
 
         self._drawMachine()
 
@@ -924,15 +950,15 @@ class SceneView(QtOpenGL.QGLWidget):
         p1 -= self.getObjectCenterPos() - self._viewTarget
         if self.tool.OnDragStart(p0, p1):
             self._mouseState = 'tool'
-        if self._mouseState == 'dragOrClick' and evt.button() == 1 \
+        if self._mouseState == 'dragOrClick' and evt.buttons() == LEFT_BUTTON \
                 and self._focusObj is not None:
                     self._selectObject(self._focusObj, False)
                     self.queueRefresh()
 
     def mouseReleaseEvent(self, evt):
-        button = evt.button()
+        buttons = evt.buttons()
         if self._mouseState == 'dragOrClick':
-            if button is LEFT_BUTTON:
+            if buttons == LEFT_BUTTON:
                 self._selectObject(self._focusObj)
         elif self._mouseState == 'dragObject' and self._selectedObj is not None:
             self._scene.pushFree(self._selectedObj)
@@ -1006,7 +1032,7 @@ class SceneView(QtOpenGL.QGLWidget):
         self._focusObj.setPosition(numpy.array([0.0, 0.0]))
         self._scene.pushFree(self._selectedObj)
         newViewPos = numpy.array([self._focusObj.getPosition()[0], self._focusObj.getPosition()[1], self._focusObj.getSize()[2] / 2])
-        # self._animView = openglGui.animation(self, self._viewTarget.copy(), newViewPos, 0.5)
+        self._animView = openglscene.animation(self, self._viewTarget.copy(), newViewPos, 0.5)
         self.sceneUpdated()
 
     def onMultiply(self):
@@ -1037,6 +1063,7 @@ class SceneView(QtOpenGL.QGLWidget):
     def onDeleteAll(self):
         while len(self._scene.objects()) > 0:
             self._deleteObject(self._scene.objects()[0])
+        self._animView = openglGui.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
         self._engineResultView.setResult(None)
 
     def onSplitObject(self):
@@ -1295,8 +1322,8 @@ class SceneView(QtOpenGL.QGLWidget):
                 self._selectObject(None)
                 self.sceneUpdated()
                 newZoom = numpy.max(self._machineSize)
-                # self._animView = openglscene.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
-                # self._animZoom = openglscene.animation(self, self._zoom, newZoom, 0.5)
+                self._animView = openglscene.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
+                self._animZoom = openglscene.animation(self, self._zoom, newZoom, 0.5)
 
     def loadScene(self, filelist):
         for filename in filelist:
@@ -1312,6 +1339,10 @@ class SceneView(QtOpenGL.QGLWidget):
                 log.error(e)
             else:
                 for obj in objList:
+                    # if self._objectLoadShader is not None:
+                    #     obj._loadAnim = openglscene.animation(self, 1, 0, 1.5)
+                    # else:
+                    #     obj._loadAnim = None
                     self._scene.add(obj)
                     if not self._scene.checkPlatform(obj):
                         self._scene.centerAll()

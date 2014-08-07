@@ -24,11 +24,9 @@ class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
-        # self.model_files_history = QtCore.QSettings('Omni3DApp', 'Model Files History')
-        self.model_files_history = QtCore.QSettings('mru_filelist.ini',
+        self.model_files_history = QtCore.QSettings(
+                '/'.join([profile.getBasePath(), 'mru_filelist.ini']),
                 QtCore.QSettings.IniFormat)
-        self.model_files_history.setPath(QtCore.QSettings.IniFormat,
-                QtCore.QSettings.UserScope, profile.getBasePath())
         self.model_files_history_actions = []
 
         self.ui = Ui_MainWindow()

@@ -58,7 +58,7 @@ class engineResultView(object):
 		self._parent.updateGL()
 		return False
 
-	def OnDraw(self):
+	def onDraw(self):
 		if not self._enabled:
 			return
 
@@ -282,7 +282,7 @@ class engineResultView(object):
 					indices = numpy.concatenate((indices, i))
 		return openglHelpers.GLVBO(GL_LINES, verts, indicesArray=indices)
 
-	def OnKeyChar(self, keyCode):
+	def onKeyChar(self, keyCode):
 		if not self._enabled:
 			return
 		#TODO: This is strange behaviour. Overloaded functionality of keyboard buttons!

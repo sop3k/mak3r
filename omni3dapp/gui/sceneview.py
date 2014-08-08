@@ -27,6 +27,7 @@ from omni3dapp.gui.util import previewTools
 from omni3dapp.gui.util import engineResultView
 from omni3dapp.gui.tools import imageToMesh
 from omni3dapp.util.printerConnection import printerConnectionManager
+from omni3dapp.util.shortcuts import *
 from omni3dapp.logger import log
 
 
@@ -35,10 +36,6 @@ from omni3dapp.logger import log
 # from Cura.util import explorer
 # from Cura.gui.tools import youmagineGui
 
-LEFT_BUTTON = QtCore.Qt.MouseButton.LeftButton
-MIDDLE_BUTTON = QtCore.Qt.MouseButton.MiddleButton
-RIGHT_BUTTON = QtCore.Qt.MouseButton.RightButton
-NO_BUTTON = QtCore.Qt.MouseButton.NoButton
 
 class SceneView(QtOpenGL.QGLWidget):
     def __init__(self, parent=None):
@@ -126,13 +123,13 @@ class SceneView(QtOpenGL.QGLWidget):
                 '1.0', (1,2), lambda value: self.onScaleEntry(value, 2))
         openglscene.glLabel(self.scaleForm, _("Size X (mm)"), (0,4))
         self.scaleXmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,4), lambda value: self.OnScaleEntryMM(value, 0, True))
+                '0.0', (1,4), lambda value: self.onScaleEntryMM(value, 0, True))
         openglscene.glLabel(self.scaleForm, _("Size Y (mm)"), (0,5))
         self.scaleYmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,5), lambda value: self.OnScaleEntryMM(value, 1, True))
+                '0.0', (1,5), lambda value: self.onScaleEntryMM(value, 1, True))
         openglscene.glLabel(self.scaleForm, _("Size Z (mm)"), (0,6))
         self.scaleZmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,6), lambda value: self.OnScaleEntryMM(value, 2, True))
+                '0.0', (1,6), lambda value: self.onScaleEntryMM(value, 2, True))
         openglscene.glLabel(self.scaleForm, _("Uniform scale"), (0,8))
         self.scaleUniform = openglscene.glCheckbox(self.scaleForm, True,
                 (1,8), None)
@@ -409,7 +406,7 @@ class SceneView(QtOpenGL.QGLWidget):
     def _onRunEngine(self):
         if self._isSimpleMode:
             self._parent.setupSlice()
-        # self._engine.runEngine(self._scene)
+        self._engine.runEngine(self._scene)
         if self._isSimpleMode:
             profile.resetTempOverride()
 
@@ -486,7 +483,6 @@ class SceneView(QtOpenGL.QGLWidget):
             self._container.updateLayout()
 
         try:
-            self._context.makeCurrent()
             for obj in self.glReleaseList:
                 obj.release()
             # del self.glReleaseList
@@ -638,7 +634,7 @@ class SceneView(QtOpenGL.QGLWidget):
         glTranslate(-self._viewTarget[0],-self._viewTarget[1],-self._viewTarget[2])
 
         self._objectShader.unbind()
-        self._engineResultView.OnDraw()
+        self._engineResultView.onDraw()
         if self.viewMode != 'gcode':
             glStencilFunc(GL_ALWAYS, 1, 1)
             glStencilOp(GL_INCR, GL_INCR, GL_INCR)
@@ -790,7 +786,7 @@ class SceneView(QtOpenGL.QGLWidget):
                 glPushMatrix()
                 pos = self.getObjectCenterPos()
                 glTranslate(pos[0], pos[1], pos[2])
-                self.tool.OnDraw()
+                self.tool.onDraw()
                 glPopMatrix()
         if self.viewMode == 'overhang' and not openglHelpers.hasShaderSupport():
             glDisable(GL_DEPTH_TEST)
@@ -882,7 +878,22 @@ class SceneView(QtOpenGL.QGLWidget):
         return [pos[0], pos[1],
                 size[2]/2 - profile.getProfileSettingFloat('object_sink')]
 
-    def contextMenuEvent(self, evt):
+    def getObjectBoundaryCircle(self):
+        if self._selectedObj is None:
+            return 0.0
+        return self._selectedObj.getBoundaryCircle()
+
+    def getObjectSize(self):
+        if self._selectedObj is None:
+            return [0.0, 0.0, 0.0]
+        return self._selectedObj.getSize()
+
+    def getObjectMatrix(self):
+        if self._selectedObj is None:
+            return numpy.matrix(numpy.identity(3))
+        return self._selectedObj.getMatrix()
+
+    def create_context_menu(self, evt):
         menu = QtGui.QMenu(self)
         if self._focusObj is not None:
             menu.addAction(QtGui.QAction(_("Center on platform"), menu,
@@ -920,9 +931,9 @@ class SceneView(QtOpenGL.QGLWidget):
             self._zoom = numpy.max(self._machineSize) * 3
         self.update()
 
-    # def mouseMoveEvent(self, evt):
-    #     self.updateGL()
-    #     self._container.onMouseMoveEvent(evt.x(), evt.y())
+    def guiMouseMoveEvent(self, evt):
+        self.updateGL()
+        self._container.onMouseMoveEvent(evt.x(), evt.y())
 
     def mousePressEvent(self, evt):
         self.setFocus()
@@ -948,7 +959,7 @@ class SceneView(QtOpenGL.QGLWidget):
         p0, p1 = self.getMouseRay(self._mouseX, self._mouseY)
         p0 -= self.getObjectCenterPos() - self._viewTarget
         p1 -= self.getObjectCenterPos() - self._viewTarget
-        if self.tool.OnDragStart(p0, p1):
+        if self.tool.onDragStart(p0, p1):
             self._mouseState = 'tool'
         if self._mouseState == 'dragOrClick' and evt.buttons() == LEFT_BUTTON \
                 and self._focusObj is not None:
@@ -956,10 +967,15 @@ class SceneView(QtOpenGL.QGLWidget):
                     self.queueRefresh()
 
     def mouseReleaseEvent(self, evt):
-        buttons = evt.buttons()
+        curr_buttons = evt.buttons()
+        last_button = evt.button()
+        if not curr_buttons == NO_BUTTON:
+            return
         if self._mouseState == 'dragOrClick':
-            if buttons == LEFT_BUTTON:
+            if last_button == LEFT_BUTTON:
                 self._selectObject(self._focusObj)
+            elif last_button == RIGHT_BUTTON:
+                self.create_context_menu(evt)
         elif self._mouseState == 'dragObject' and self._selectedObj is not None:
             self._scene.pushFree(self._selectedObj)
             self.sceneUpdated()
@@ -969,7 +985,7 @@ class SceneView(QtOpenGL.QGLWidget):
                 self._scene.pushFree(self._selectedObj)
                 self._selectObject(self._selectedObj)
             self.tempMatrix = None
-            self.tool.OnDragEnd()
+            self.tool.onDragEnd()
             self.sceneUpdated()
         self._mouseState = None
 
@@ -981,10 +997,10 @@ class SceneView(QtOpenGL.QGLWidget):
         buttons = evt.buttons()
         if buttons != NO_BUTTON and self._mouseState is not None:
             if self._mouseState == 'tool':
-                self.tool.OnDrag(p0, p1)
+                self.tool.onDrag(p0, p1, evt)
             elif buttons == RIGHT_BUTTON:
                 self._mouseState = 'drag'
-                if evt.modifiers() == QtCore.Qt.ShiftModifier:
+                if evt.modifiers() == SHIFT_KEY:
                     a = math.cos(math.radians(self._yaw)) / 3.0
                     b = math.sin(math.radians(self._yaw)) / 3.0
                     self._viewTarget[0] += float(evt.x() - self._mouseX) * -a
@@ -1021,10 +1037,12 @@ class SceneView(QtOpenGL.QGLWidget):
                 self._selectedObj.setPosition(
                         self._selectedObj.getPosition() + diff[0:2])
         if buttons == NO_BUTTON or self._mouseState != 'tool':
-            self.tool.OnMouseMove(p0, p1)
+            self.tool.onMouseMove(p0, p1)
 
         self._mouseX = evt.x()
         self._mouseY = evt.y()
+
+        self.guiMouseMoveEvent(evt)
 
     def onCenter(self):
         if self._focusObj is None:
@@ -1063,7 +1081,7 @@ class SceneView(QtOpenGL.QGLWidget):
     def onDeleteAll(self):
         while len(self._scene.objects()) > 0:
             self._deleteObject(self._scene.objects()[0])
-        self._animView = openglGui.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
+        self._animView = openglscene.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
         self._engineResultView.setResult(None)
 
     def onSplitObject(self):

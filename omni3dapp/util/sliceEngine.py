@@ -9,7 +9,7 @@ import math
 import numpy
 import os
 import warnings
-import threading
+# import threading
 import traceback
 import platform
 import sys
@@ -20,6 +20,8 @@ import socket
 import struct
 import errno
 import cStringIO as StringIO
+
+from PySide import QtCore
 
 from omni3dapp.util import profile
 from omni3dapp.util import pluginInfo
@@ -133,9 +135,10 @@ class EngineResult(object):
             return None
         if self._gcodeInterpreter.layerList is None and self._gcodeLoadThread is None:
             self._gcodeInterpreter.progressCallback = self._gcodeInterpreterCallback
-            self._gcodeLoadThread = threading.Thread(target=lambda : self._gcodeInterpreter.load(self._gcodeData))
+            self._gcodeLoadThread = EngineThread(func=lambda : self._gcodeInterpreter.load(self._gcodeData))
+            # self._gcodeLoadThread = threading.Thread(target=lambda : self._gcodeInterpreter.load(self._gcodeData))
             self._gcodeLoadCallback = loadCallback
-            self._gcodeLoadThread.daemon = True
+            # self._gcodeLoadThread.daemon = True
             self._gcodeLoadThread.start()
         return self._gcodeInterpreter.layerList
 
@@ -166,6 +169,22 @@ class EngineResult(object):
             import traceback
             traceback.print_exc()
 
+
+class EngineThread(QtCore.QThread):
+    def __init__(self, func, *args, **kwargs):
+        super(EngineThread, self).__init__()
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def __del__(self):
+        self.wait()
+
+    def run(self):
+        self.func(*self.args, **self.kwargs)
+        return
+
+
 class Engine(object):
     """
     Class used to communicate with the CuraEngine.
@@ -186,20 +205,26 @@ class Engine(object):
 
         self._serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._serverPortNr = 0xC20A
+
+        self.bind_server_socket()
+
+        thread = EngineThread(self._socketListenThread)
+        # thread = threading.Thread(target=self._socketListenThread)
+        # thread.daemon = True
+        thread.start()
+
+    def bind_server_socket(self):
         while True:
             try:
                 self._serversocket.bind(('127.0.0.1', self._serverPortNr))
-            except:
-                print "Failed to listen on port: %d" % (self._serverPortNr)
+            except socket.error:
+                log.error("Failed to listen on port: %d" % (self._serverPortNr))
                 self._serverPortNr += 1
                 if self._serverPortNr > 0xFFFF:
-                    print "Failed to listen on any port..."
-                    break
+                    log.error("Failed to listen on any port...")
+                    return
             else:
-                break
-        thread = threading.Thread(target=self._socketListenThread)
-        thread.daemon = True
-        thread.start()
+                return
 
     def _socketListenThread(self):
         self._serversocket.listen(1)
@@ -207,8 +232,9 @@ class Engine(object):
         while True:
             try:
                 sock, _ = self._serversocket.accept()
-                thread = threading.Thread(target=self._socketConnectionThread, args=(sock,))
-                thread.daemon = True
+                thread = EngineThread(func=self._socketConnectionThread, args=(sock,))
+                # thread = threading.Thread(target=self._socketConnectionThread, args=(sock,))
+                # thread.daemon = True
                 thread.start()
             except socket.error, e:
                 if e.errno != errno.EINTR:
@@ -275,12 +301,14 @@ class Engine(object):
             except:
                 pass
         if self._thread is not None:
-            self._thread.join()
+            # self._thread.join()
+            self._thread.wait()
         self._thread = None
 
     def wait(self):
         if self._thread is not None:
-            self._thread.join()
+            # self._thread.join()
+            self._thread.wait()
 
     def getResult(self):
         return self._result
@@ -360,15 +388,17 @@ class Engine(object):
                 self._objCount += 1
         modelHash = hash.hexdigest()
         if self._objCount > 0:
-            self._thread = threading.Thread(target=self._watchProcess, args=(commandList, self._thread, engineModelData, modelHash))
-            self._thread.daemon = True
+            self._thread = EngineThread(func=self._watchProcess, args=(commandList, self._thread, engineModelData, modelHash))
+            # self._thread = threading.Thread(target=self._watchProcess, args=(commandList, self._thread, engineModelData, modelHash))
+            # self._thread.daemon = True
             self._thread.start()
 
     def _watchProcess(self, commandList, oldThread, engineModelData, modelHash):
         if oldThread is not None:
             if self._process is not None:
                 self._process.terminate()
-            oldThread.join()
+            # oldThread.join()
+            oldThread.wait()
         self._callback(-1.0)
         self._modelData = engineModelData
         try:
@@ -376,7 +406,8 @@ class Engine(object):
         except OSError:
             traceback.print_exc()
             return
-        if self._thread != threading.currentThread():
+        # if self._thread != threading.currentThread():
+        if self._thread != QtCore.QThread.currentThread():
             self._process.terminate()
 
         self._result = EngineResult()
@@ -384,8 +415,9 @@ class Engine(object):
         self._result.setHash(modelHash)
         self._callback(0.0)
 
-        logThread = threading.Thread(target=self._watchStderr, args=(self._process.stderr,))
-        logThread.daemon = True
+        logThread = EngineThread(func=self._watchStderr, args=(self._process.stderr,))
+        # logThread = threading.Thread(target=self._watchStderr, args=(self._process.stderr,))
+        # logThread.daemon = True
         logThread.start()
 
         data = self._process.stdout.read(4096)
@@ -394,7 +426,8 @@ class Engine(object):
             data = self._process.stdout.read(4096)
 
         returnCode = self._process.wait()
-        logThread.join()
+        # logThread.join()
+        logThread.wait()
         if returnCode == 0:
             pluginError = pluginInfo.runPostProcessingPlugins(self._result)
             if pluginError is not None:

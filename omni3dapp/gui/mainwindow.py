@@ -47,13 +47,6 @@ class MainWindow(QtGui.QMainWindow):
 
     def setup_scene(self):
         self.scene = sceneview.SceneView(self)
-        # sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Preferred)
-        # sizePolicy.setHorizontalStretch(0)
-        # sizePolicy.setVerticalStretch(0)
-        # sizePolicy.setHeightForWidth(self.ui.right_widget.sizePolicy().hasHeightForWidth())
-        # self.scene.setSizePolicy(sizePolicy)
-        # self.scene.setObjectName("scene")
-        # self.ui.horizontalLayout_3.removeWidget(self.ui.right_widget)
         self.ui.horizontalLayout_3.addWidget(self.scene)
 
     def set_up_fields(self):

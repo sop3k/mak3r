@@ -25,6 +25,7 @@ from omni3dapp.util import profile
 from omni3dapp.util import pluginInfo
 from omni3dapp.util import version
 from omni3dapp.util import gcodeInterpreter
+from omni3dapp.logger import log
 
 
 def getEngineFilename():
@@ -169,7 +170,7 @@ class Engine(object):
     """
     Class used to communicate with the CuraEngine.
     The CuraEngine is ran as a 2nd process and reports back information trough stderr.
-    GCode trough stdout and has a socket connection for polygon information and loading the 3D model into the engine.
+    GCode through stdout and has a socket connection for polygon information and loading the 3D model into the engine.
     """
     GUI_CMD_REQUEST_MESH = 0x01
     GUI_CMD_SEND_POLYGONS = 0x02
@@ -212,6 +213,8 @@ class Engine(object):
             except socket.error, e:
                 if e.errno != errno.EINTR:
                     raise
+                else:
+                    log.error(e)
 
     def _socketConnectionThread(self, sock):
         layerNrOffset = 0
@@ -415,16 +418,17 @@ class Engine(object):
                 if line[1] == 'process':
                     objectNr += 1
                 elif line[1] in self._progressSteps:
-                    progressValue = float(line[2]) / float(line[3])
-                    progressValue /= len(self._progressSteps)
-                    progressValue += 1.0 / len(self._progressSteps) * self._progressSteps.index(line[1])
-
-                    progressValue /= self._objCount
-                    progressValue += 1.0 / self._objCount * objectNr
                     try:
+                        progressValue = float(line[2]) / float(line[3])
+                        progressValue /= len(self._progressSteps)
+                        progressValue += 1.0 / len(self._progressSteps) * self._progressSteps.index(line[1])
+
+                        progressValue /= self._objCount
+                        progressValue += 1.0 / self._objCount * objectNr
+
                         self._callback(progressValue)
-                    except:
-                        pass
+                    except Exception, e:
+                        log.error(e)
             elif line.startswith('Print time:'):
                 self._result._printTimeSeconds = int(line.split(':')[1].strip())
             elif line.startswith('Filament:'):

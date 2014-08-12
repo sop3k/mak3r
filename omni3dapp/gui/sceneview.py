@@ -28,6 +28,7 @@ from omni3dapp.gui.util import engineResultView
 from omni3dapp.gui.tools import imageToMesh
 from omni3dapp.util.printerConnection import printerConnectionManager
 from omni3dapp.util.shortcuts import *
+from omni3dapp.gui.shadereditor_ui import Ui_ShaderEditor
 from omni3dapp.logger import log
 
 
@@ -148,7 +149,6 @@ class SceneView(QtOpenGL.QGLWidget):
         self._engineResultView = engineResultView.engineResultView(self)
 
         self._sceneUpdateTimer = QtCore.QTimer(self)
-        self._sceneUpdateTimer.timeout.connect(self._onRunEngine)
 
         self._idleTimer = QtCore.QTimer(self)
         self._idleTimer.timeout.connect(self._onIdle)
@@ -483,6 +483,7 @@ class SceneView(QtOpenGL.QGLWidget):
             self._container.updateLayout()
 
         try:
+            # self._context.makeCurrent()
             for obj in self.glReleaseList:
                 obj.release()
             # del self.glReleaseList
@@ -498,7 +499,7 @@ class SceneView(QtOpenGL.QGLWidget):
                 glTranslated(10.0, self.height() - 30.0, -1.0)
                 glColor4f(0.2,0.2,0.2,0.5)
                 openglHelpers.glDrawStringLeft("fps:%d" % (1 / renderTime))
-            self._context.swapBuffers()
+            # self._context.swapBuffers()
         except:
             # When an exception happens, catch it and show a message box. If the exception is not caught the draw function bugs out.
             # Only show this exception once so we do not overload the user with popups.
@@ -845,10 +846,19 @@ class SceneView(QtOpenGL.QGLWidget):
             self.scaleZmmctrl.setValue(round(size[2], 2))
 
     def sceneUpdated(self):
-        self._sceneUpdateTimer.start(500)
+        self._sceneUpdateTimer.singleShot(500, self._onRunEngine)
         self._engine.abortEngine()
         self._scene.updateSizeOffsets()
         self.queueRefresh()
+
+    def shaderUpdate(self, v, f):
+        s = openglHelpers.GLShader(v, f)
+        if s.isValid():
+            self._objectLoadShader.release()
+            self._objectLoadShader = s
+            for obj in self._scene.objects():
+                obj._loadAnim = openglGui.animation(self, 1, 0, 1.5)
+            self.queueRefresh()
 
     def queueRefresh(self):
         if self._idleCalled:
@@ -1044,6 +1054,84 @@ class SceneView(QtOpenGL.QGLWidget):
 
         self.guiMouseMoveEvent(evt)
 
+    def keyPressEvent(self, evt):
+        code = evt.key()
+        modifiers = evt.modifiers()
+        if self._engineResultView.onKeyChar(code, modifiers):
+            return
+        if code == QtCore.Qt.Key_Delete or (code == QtCore.Qt.Key_Backspace and sys.platform.startswith("darwin")):
+            if self._selectedObj is not None:
+                self._deleteObject(self._selectedObj)
+                self.queueRefresh()
+        if code == QtCore.Qt.Key_Up:
+            if modifiers == SHIFT_KEY:
+                self._zoom /= 1.2
+                if self._zoom < 1:
+                    self._zoom = 1
+            else:
+                self._pitch -= 15
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_Down:
+            if modifiers == SHIFT_KEY:
+                self._zoom *= 1.2
+                if self._zoom > numpy.max(self._machineSize) * 3:
+                    self._zoom = numpy.max(self._machineSize) * 3
+            else:
+                self._pitch += 15
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_Left:
+            self._yaw -= 15
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_Right:
+            self._yaw += 15
+            self.queueRefresh()
+        elif evt.text == QtCore.Qt.Key_Plus:
+            self._zoom /= 1.2
+            if self._zoom < 1:
+                self._zoom = 1
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_Minus:
+            self._zoom *= 1.2
+            if self._zoom > numpy.max(self._machineSize) * 3:
+                self._zoom = numpy.max(self._machineSize) * 3
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_Home:
+            self._yaw = 30
+            self._pitch = 60
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_PageUp:
+            self._yaw = 0
+            self._pitch = 0
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_PageDown:
+            self._yaw = 0
+            self._pitch = 90
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_End:
+            self._yaw = 90
+            self._pitch = 90
+            self.queueRefresh()
+
+        # if code == QtCore.Qt.Key_F3 and modifiers == SHIFT_KEY:
+        #     ShaderEditor(self, self.shaderUpdate,
+        #             self._objectLoadShader.getVertexShader(),
+        #             self._objectLoadShader.getFragmentShader())
+        if code == QtCore.Qt.Key_F4 and modifiers == SHIFT_KEY:
+            from collections import defaultdict
+            from gc import get_objects
+            self._beforeLeakTest = defaultdict(int)
+            for i in get_objects():
+                self._beforeLeakTest[type(i)] += 1
+        if code == QtCore.Qt.Key_F5 and modifiers == SHIFT_KEY:
+            from collections import defaultdict
+            from gc import get_objects
+            self._afterLeakTest = defaultdict(int)
+            for i in get_objects():
+                self._afterLeakTest[type(i)] += 1
+            for k in self._afterLeakTest:
+                if self._afterLeakTest[k]-self._beforeLeakTest[k]:
+                    print k, self._afterLeakTest[k], self._beforeLeakTest[k], self._afterLeakTest[k] - self._beforeLeakTest[k]
+
     def onCenter(self):
         if self._focusObj is None:
             return
@@ -1169,7 +1257,6 @@ class SceneView(QtOpenGL.QGLWidget):
         machine = profile.getMachineSetting('machine_type')
         self._selectedObj.setPosition(numpy.array([0.0, 0.0]))
         self._scene.pushFree(self._selectedObj)
-        #self.sceneUpdated()
         if machine == "ultimaker2":
             #This is bad and Jaime should feel bad!
             self._selectedObj.setPosition(numpy.array([0.0,-10.0]))
@@ -1338,7 +1425,7 @@ class SceneView(QtOpenGL.QGLWidget):
             if scene_filenames:
                 self.loadSceneFiles(scene_filenames)
                 self._selectObject(None)
-                self.sceneUpdated()
+                # self.sceneUpdated()
                 newZoom = numpy.max(self._machineSize)
                 self._animView = openglscene.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
                 self._animZoom = openglscene.animation(self, self._zoom, newZoom, 0.5)
@@ -1377,3 +1464,22 @@ class SceneView(QtOpenGL.QGLWidget):
             fileList.append(obj.getOriginFilename())
         self.onDeleteAll()
         self.loadScene(fileList)
+
+
+class ShaderEditor(QtGui.QDialog):
+    def __init__(self, parent, callback, vshader, fshader):
+        super(ShaderEditor, self).__init__(parent)
+        self._callback = callback
+        self.ui = Ui_ShaderEditor()
+        self.ui.setupUi(self)
+
+        self.ui._vertex.setPlainText(vshader)
+        self.ui._fragment.setPlainText(fshader)
+        
+        self.ui._vertex.textChanged.connect(self.onText)
+        self.ui._fragment.textChanged.connect(self.onText)
+
+        self.show()
+
+    def onText(self):
+        self._callback(self._vertex.plainText(), self._fragment.plainText())

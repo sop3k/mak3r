@@ -135,7 +135,7 @@ class EngineResult(object):
             return None
         if self._gcodeInterpreter.layerList is None and self._gcodeLoadThread is None:
             self._gcodeInterpreter.progressCallback = self._gcodeInterpreterCallback
-            self._gcodeLoadThread = EngineThread(func=lambda : self._gcodeInterpreter.load(self._gcodeData))
+            self._gcodeLoadThread = EngineThread(parent=self._parent, func=lambda : self._gcodeInterpreter.load(self._gcodeData))
             # self._gcodeLoadThread = threading.Thread(target=lambda : self._gcodeInterpreter.load(self._gcodeData))
             self._gcodeLoadCallback = loadCallback
             # self._gcodeLoadThread.daemon = True
@@ -171,8 +171,9 @@ class EngineResult(object):
 
 
 class EngineThread(QtCore.QThread):
-    def __init__(self, func, *args, **kwargs):
-        super(EngineThread, self).__init__()
+    def __init__(self, parent, func, *args, **kwargs):
+        super(EngineThread, self).__init__(parent)
+        self.parent = parent
         self.func = func
         self.args = args
         self.kwargs = kwargs
@@ -181,9 +182,104 @@ class EngineThread(QtCore.QThread):
         self.wait()
 
     def run(self):
+        print "running thread {0}".format(self.func)
         self.func(*self.args, **self.kwargs)
+        self.finished.emit()
         return
 
+
+class RunProcessSignals(QtCore.QObject):
+    run_process_sig = QtCore.Signal(list)
+    update_progress_sig = QtCore.Signal(float)
+
+
+class WatchProcessThread(QtCore.QThread):
+    def __init__(self, engine, *args, **kwargs):
+        super(WatchProcessThread, self).__init__(engine._parent)
+        self.engine = engine
+        self.signals = RunProcessSignals()
+        self.args = args
+        self.kwargs = kwargs
+
+        self.signals.run_process_sig.connect(engine._parent._runEngineProcess)
+        self.signals.update_progress_sig.connect(engine._callback)
+
+    def __del__(self):
+        self.wait()
+
+    def run(self):
+        print "WatchProcessThread: "
+        print QtCore.QThread.currentThread()
+        self._watchProcess(*self.args, **self.kwargs)
+        self.finished.emit()
+        return
+
+    def _watchProcess(self, commandList, oldThread, engineModelData, modelHash):
+        print "watch process"
+        if oldThread is not None:
+            if self.engine._process is not None:
+                self.engine._process.terminate()
+            # oldThread.join()
+            oldThread.wait()
+        # self.engine._callback(-1.0)
+        self.signals.update_progress_sig.emit(-1.0)
+        self.engine._modelData = engineModelData
+        try:
+            print "trying to set process"
+            # self._process = self._runEngineProcess(commandList)
+            self.signals.run_process_sig.emit(commandList)
+        except OSError:
+            traceback.print_exc()
+            return
+        # if self._thread != threading.currentThread():
+        if self.engine._thread != QtCore.QThread.currentThread():
+            self.engine._process.terminate()
+
+        self.engine._result = EngineResult()
+        self.engine._result.addLog('Running: %s' % (' '.join(commandList)))
+        self.engine._result.setHash(modelHash)
+        # self.engine._callback(0.0)
+        self.signals.update_progress_sig.emit(0.0)
+
+        print "setting up logthread"
+        logThread = EngineThread(self.parent, self.engine._watchStderr,
+                self.engine._process.stderr)
+        # logThread = threading.Thread(target=self._watchStderr, args=(self._process.stderr,))
+        # logThread.daemon = True
+        logThread.start()
+
+        data = self.engine._process.stdout.read(4096)
+        while len(data) > 0:
+            self.engine._result._gcodeData.write(data)
+            data = self.engine._process.stdout.read(4096)
+
+        returnCode = self.engine._process.wait()
+        # logThread.join()
+        logThread.wait()
+        if returnCode == 0:
+            pluginError = pluginInfo.runPostProcessingPlugins(self.engine._result)
+            if pluginError is not None:
+                print pluginError
+                self.engine._result.addLog(pluginError)
+            self.engine._result.setFinished(True)
+            # self.engine._callback(1.0)
+            self.signals.update_progress_sig.emit(1.0)
+        else:
+            for line in self.engine._result.getLog():
+                print line
+            # self.engine._callback(-1.0)
+            self.signals.update_progress_sig.emit(-1.0)
+        self.engine._process = None
+
+    def _runEngineProcess(self, cmdList):
+        kwargs = {}
+        if subprocess.mswindows:
+            su = subprocess.STARTUPINFO()
+            su.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            su.wShowWindow = subprocess.SW_HIDE
+            kwargs['startupinfo'] = su
+            kwargs['creationflags'] = 0x00004000 #BELOW_NORMAL_PRIORITY_CLASS
+        return subprocess.Popen(cmdList, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
 
 class Engine(object):
     """
@@ -195,7 +291,9 @@ class Engine(object):
     GUI_CMD_SEND_POLYGONS = 0x02
     GUI_CMD_FINISH_OBJECT = 0x03
 
-    def __init__(self, progressCallback):
+    def __init__(self, sceneview, progressCallback):
+        self._sceneview = sceneview
+        self._parent = sceneview._parent
         self._process = None
         self._thread = None
         self._callback = progressCallback
@@ -208,7 +306,8 @@ class Engine(object):
 
         self.bind_server_socket()
 
-        thread = EngineThread(self._socketListenThread)
+        print "instantiating socket listen thread"
+        thread = EngineThread(self._parent, self._socketListenThread)
         # thread = threading.Thread(target=self._socketListenThread)
         # thread.daemon = True
         thread.start()
@@ -227,12 +326,13 @@ class Engine(object):
                 return
 
     def _socketListenThread(self):
+        print "socket listen method"
         self._serversocket.listen(1)
         print 'Listening for engine communications on %d' % (self._serverPortNr)
         while True:
             try:
                 sock, _ = self._serversocket.accept()
-                thread = EngineThread(func=self._socketConnectionThread, args=(sock,))
+                thread = EngineThread(self._parent, self._socketConnectionThread, sock)
                 # thread = threading.Thread(target=self._socketConnectionThread, args=(sock,))
                 # thread.daemon = True
                 thread.start()
@@ -388,58 +488,13 @@ class Engine(object):
                 self._objCount += 1
         modelHash = hash.hexdigest()
         if self._objCount > 0:
-            self._thread = EngineThread(func=self._watchProcess, args=(commandList, self._thread, engineModelData, modelHash))
+            print "slice engine: "
+            print QtCore.QThread.currentThread()
+            # self._thread = EngineThread(self._parent, self._watchProcess, commandList, self._thread, engineModelData, modelHash)
+            self._thread = WatchProcessThread(self, commandList, self._thread, engineModelData, modelHash)
             # self._thread = threading.Thread(target=self._watchProcess, args=(commandList, self._thread, engineModelData, modelHash))
             # self._thread.daemon = True
             self._thread.start()
-
-    def _watchProcess(self, commandList, oldThread, engineModelData, modelHash):
-        if oldThread is not None:
-            if self._process is not None:
-                self._process.terminate()
-            # oldThread.join()
-            oldThread.wait()
-        self._callback(-1.0)
-        self._modelData = engineModelData
-        try:
-            self._process = self._runEngineProcess(commandList)
-        except OSError:
-            traceback.print_exc()
-            return
-        # if self._thread != threading.currentThread():
-        if self._thread != QtCore.QThread.currentThread():
-            self._process.terminate()
-
-        self._result = EngineResult()
-        self._result.addLog('Running: %s' % (' '.join(commandList)))
-        self._result.setHash(modelHash)
-        self._callback(0.0)
-
-        logThread = EngineThread(func=self._watchStderr, args=(self._process.stderr,))
-        # logThread = threading.Thread(target=self._watchStderr, args=(self._process.stderr,))
-        # logThread.daemon = True
-        logThread.start()
-
-        data = self._process.stdout.read(4096)
-        while len(data) > 0:
-            self._result._gcodeData.write(data)
-            data = self._process.stdout.read(4096)
-
-        returnCode = self._process.wait()
-        # logThread.join()
-        logThread.wait()
-        if returnCode == 0:
-            pluginError = pluginInfo.runPostProcessingPlugins(self._result)
-            if pluginError is not None:
-                print pluginError
-                self._result.addLog(pluginError)
-            self._result.setFinished(True)
-            self._callback(1.0)
-        else:
-            for line in self._result.getLog():
-                print line
-            self._callback(-1.0)
-        self._process = None
 
     def _watchStderr(self, stderr):
         objectNr = 0
@@ -606,12 +661,17 @@ class Engine(object):
             settings['enableOozeShield'] = 1
         return settings
 
-    def _runEngineProcess(self, cmdList):
-        kwargs = {}
-        if subprocess.mswindows:
-            su = subprocess.STARTUPINFO()
-            su.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            su.wShowWindow = subprocess.SW_HIDE
-            kwargs['startupinfo'] = su
-            kwargs['creationflags'] = 0x00004000 #BELOW_NORMAL_PRIORITY_CLASS
-        return subprocess.Popen(cmdList, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+    # def run_engine_process(self, cmdList):
+    #     print "run engine process: "
+    #     print QtCore.QThread.currentThread()
+    #     self._process = self._runEngineProcess(cmdList)
+
+    # def _runEngineProcess(self, cmdList):
+    #     kwargs = {}
+    #     if subprocess.mswindows:
+    #         su = subprocess.STARTUPINFO()
+    #         su.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    #         su.wShowWindow = subprocess.SW_HIDE
+    #         kwargs['startupinfo'] = su
+    #         kwargs['creationflags'] = 0x00004000 #BELOW_NORMAL_PRIORITY_CLASS
+    #     return subprocess.Popen(cmdList, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)

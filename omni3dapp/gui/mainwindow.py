@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import subprocess
 
 from PySide import QtCore, QtGui
 
@@ -322,6 +323,17 @@ class MainWindow(QtGui.QMainWindow):
 
     def stripped_name(self, full_filename):
         return QtCore.QFileInfo(full_filename).fileName()
+
+    def _runEngineProcess(self, cmdList):
+        print "forking subprocess..."
+        kwargs = {}
+        if subprocess.mswindows:
+            su = subprocess.STARTUPINFO()
+            su.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            su.wShowWindow = subprocess.SW_HIDE
+            kwargs['startupinfo'] = su
+            kwargs['creationflags'] = 0x00004000 #BELOW_NORMAL_PRIORITY_CLASS
+        return subprocess.Popen(cmdList, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
 
 
 class NormalModeValidator(QtGui.QValidator):

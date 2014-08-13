@@ -145,7 +145,7 @@ class SceneView(QtOpenGL.QGLWidget):
 
         # self.notification = openglGui.glNotification(self, (0, 0))
 
-        self._engine = sliceEngine.Engine(self._updateEngineProgress)
+        self._engine = sliceEngine.Engine(self, self._updateEngineProgress)
         self._engineResultView = engineResultView.engineResultView(self)
 
         self._sceneUpdateTimer = QtCore.QTimer(self)
@@ -171,6 +171,7 @@ class SceneView(QtOpenGL.QGLWidget):
             self.updateGL()
 
     def _updateEngineProgress(self, progressValue):
+        print "updating engine progress..."
         result = self._engine.getResult()
         finished = result is not None and result.isFinished()
         if not finished:

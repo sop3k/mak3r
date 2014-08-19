@@ -407,7 +407,11 @@ class SceneView(QtOpenGL.QGLWidget):
     def _onRunEngine(self):
         if self._isSimpleMode:
             self._parent.setupSlice()
-        self._engine.runEngine(self._scene)
+        # self._engine.runEngine(self._scene)
+        print "starting engine runner"
+        if len(self._scene.objects()) > 0:
+            self.en_run = sliceEngine.EngineRunner(self._scene, self, self._engine)
+            print "started engine runner"
         if self._isSimpleMode:
             profile.resetTempOverride()
 

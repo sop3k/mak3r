@@ -173,10 +173,13 @@ class SceneView(QtOpenGL.QGLWidget):
     def _updateEngineProgress(self, progressValue):
         print "updating engine progress..."
         result = self._engine.getResult()
-        finished = result is not None and result.isFinished()
+        # finished = result is not None and result.isFinished()
+        finished = result is not None
         if not finished:
+            print "not finished"
             if self.printButton.getProgressBar() is not None and progressValue >= 0.0 and abs(self.printButton.getProgressBar() - progressValue) < 0.01:
                 return
+        print "setting progress"
         self.printButton.setDisabled(not finished)
         if progressValue >= 0.0:
             self.printButton.setProgressBar(progressValue)
@@ -197,8 +200,8 @@ class SceneView(QtOpenGL.QGLWidget):
             self.printButton.setBottomText(text)
         else:
             self.printButton.setBottomText('')
+        print "finished updating engine progress, queuing refresh"
         self.queueRefresh()
-
 
     def _init3DView(self):
         # set viewing projection
@@ -407,11 +410,7 @@ class SceneView(QtOpenGL.QGLWidget):
     def _onRunEngine(self):
         if self._isSimpleMode:
             self._parent.setupSlice()
-        # self._engine.runEngine(self._scene)
-        print "starting engine runner"
-        if len(self._scene.objects()) > 0:
-            self.en_run = sliceEngine.EngineRunner(self._scene, self, self._engine)
-            print "started engine runner"
+        self._engine.runEngine(self._scene)
         if self._isSimpleMode:
             profile.resetTempOverride()
 
@@ -468,6 +467,7 @@ class SceneView(QtOpenGL.QGLWidget):
         glEnable(GL_BLEND)
 
     def paintGL(self):
+        print "starting print GL..."
         self._idleCalled = False
         h = self.height()
         w = self.width()
@@ -870,6 +870,10 @@ class SceneView(QtOpenGL.QGLWidget):
             self.updateGL()
         else:
             self._refreshQueued = True
+
+    @QtCore.Slot()
+    def update_scene(self):
+        self.updateGL()
 
     def getMouseRay(self, x, y):
         if self._viewport is None:

@@ -59,7 +59,6 @@ class EngineResult(object):
         self._gcodeData = StringIO.StringIO()
         self._polygons = []
         self._replaceInfo = {}
-        self._success = False
         self._printTimeSeconds = None
         self._filamentMM = [0.0] * 4
         self._modelHash = None
@@ -129,6 +128,11 @@ class EngineResult(object):
     def isFinished(self):
         return self._finished
 
+    def _gcodeInterpreterCallback(self, progress):
+        if len(self._gcodeInterpreter.layerList) % 5 == 0:
+            time.sleep(0.1)
+        return self._gcodeLoadCallback(self, progress)
+
     def getGCodeLayers(self, loadCallback):
         if not self._finished:
             return None
@@ -146,31 +150,26 @@ class EngineResult(object):
             self._gcodeLoadThread.start()
         return self._gcodeInterpreter.layerList
 
-    def _gcodeInterpreterCallback(self, progress):
-        if len(self._gcodeInterpreter.layerList) % 5 == 0:
-            time.sleep(0.1)
-        return self._gcodeLoadCallback(self, progress)
-
-    def submitInfoOnline(self):
-        if profile.getPreference('submit_slice_information') != 'True':
-            return
-        if version.isDevVersion():
-            return
-        data = {
-            'processor': platform.processor(),
-            'machine': platform.machine(),
-            'platform': platform.platform(),
-            'profile': self._profileString,
-            'preferences': self._preferencesString,
-            'modelhash': self._modelHash,
-            'version': version.getVersion(),
-        }
-        try:
-            f = urllib2.urlopen("https://www.youmagine.com/curastats/", data = urllib.urlencode(data), timeout = 1)
-            f.read()
-            f.close()
-        except:
-            traceback.print_exc()
+    # def submitInfoOnline(self):
+    #     if profile.getPreference('submit_slice_information') != 'True':
+    #         return
+    #     if version.isDevVersion():
+    #         return
+    #     data = {
+    #         'processor': platform.processor(),
+    #         'machine': platform.machine(),
+    #         'platform': platform.platform(),
+    #         'profile': self._profileString,
+    #         'preferences': self._preferencesString,
+    #         'modelhash': self._modelHash,
+    #         'version': version.getVersion(),
+    #     }
+    #     try:
+    #         f = urllib2.urlopen("https://www.youmagine.com/curastats/", data = urllib.urlencode(data), timeout = 1)
+    #         f.read()
+    #         f.close()
+    #     except:
+    #         traceback.print_exc()
 
 
 class GCodeInterpreterSignal(QtCore.QObject):
@@ -178,29 +177,29 @@ class GCodeInterpreterSignal(QtCore.QObject):
 
 
 class SocketListener(QtCore.QObject):
+    start_socket_connector_sig = QtCore.Signal(socket._socketobject)
+    finished = QtCore.Signal()
+
     def __init__(self, parent, server_socket, server_port_nr):
         super(SocketListener, self).__init__()
         self.parent = parent
         self.server_socket = server_socket
         self.server_port_nr = server_port_nr
-        self.start_socket_connector_sig = QtCore.Signal(list)
 
     def socketListen(self):
-        print "in socket listen thread"
         self.server_socket.listen(1)
         print 'Listening for engine communications on %d' % (self.server_port_nr)
         while True:
-            print "inside while loop"
             try:
-                print "accepting on socket"
                 sock, _ = self.server_socket.accept()
-                print type(sock)
-                self.start_socket_connector_sig.emit((sock))
+                print "starting connector"
+                self.start_socket_connector_sig.emit(sock)
             except socket.error, e:
                 if e.errno != errno.EINTR:
                     raise
                 else:
                     log.error(e)
+        self.finished.emit()
 
 
 class SocketConnector(QtCore.QObject):
@@ -208,30 +207,31 @@ class SocketConnector(QtCore.QObject):
     GUI_CMD_SEND_POLYGONS = 0x02
     GUI_CMD_FINISH_OBJECT = 0x03
 
-    def __init__(self, sock, model_data, result_polygons):
+    finished = QtCore.Signal()
+
+    def __init__(self, engine, sock, model_data):
         super(SocketConnector, self).__init__()
+        self.engine = engine
         self.sock = sock
         self.model_data = model_data
-        self.result_polygons = result_polygons
-        self.set_polygons_sig = QtCore.Signal(dict)
 
     def socketConnect(self):
         print "inside socket connect"
         layer_nr_offset = 0
         while True:
             try:
-                print "receive more"
                 data = self.sock.recv(4)
-            except:
+            except Exception, e:
+                log.error(e)
                 data = ''
             if len(data) == 0:
                 self.sock.close()
+                self.finished.emit()
                 return
             cmd = struct.unpack('@i', data)[0]
             if cmd == self.GUI_CMD_REQUEST_MESH:
                 try:
                     mesh_info = self.model_data[0]
-                    print "changing model data"
                     self.model_data = self.model_data[1:]
                     self.sock.sendall(struct.pack('@i', mesh_info[0]))
                     self.sock.sendall(mesh_info[1].tostring())
@@ -245,42 +245,44 @@ class SocketConnector(QtCore.QObject):
                 z = float(z) / 1000.0
                 type_name_len = struct.unpack('@i', self.sock.recv(4))[0]
                 type_name = self.sock.recv(type_name_len)
-                while len(self.result_polygons) < layer_nr + 1:
-                    self.result_polygons.append({})
-                polygons = self.result_polygons[layer_nr]
-                if type_name not in polygons:
-                    polygons[type_name] = []
-                for n in xrange(0, cnt):
-                    length = struct.unpack('@i', self.sock.recv(4))[0]
-                    data = ''
-                    while len(data) < length * 8 * 2:
-                        recv_data = self.sock.recv(length * 8 * 2 - len(data))
-                        if len(recv_data) < 1:
-                            return
-                        data += recv_data
-                    polygon2d = numpy.array(numpy.fromstring(data, numpy.int64), numpy.float32) / 1000.0
-                    polygon2d = polygon2d.reshape((len(polygon2d) / 2, 2))
-                    polygon = numpy.empty((len(polygon2d), 3), numpy.float32)
-                    polygon[:,:-1] = polygon2d
-                    polygon[:,2] = z
-                    polygons[type_name].append(polygon)
-                self.set_polygons_sig.emit({'polygons': polygons, 'layer_nr':
-                    layer_nr})
+
+                if self.engine._result is not None:
+                    while len(self.engine._result._polygons) < layer_nr + 1:
+                        self.engine._result._polygons.append({})
+                    polygons = self.engine._result._polygons[layer_nr]
+                    if type_name not in polygons:
+                        polygons[type_name] = []
+                    for n in xrange(0, cnt):
+                        length = struct.unpack('@i', self.sock.recv(4))[0]
+                        data = ''
+                        while len(data) < length * 8 * 2:
+                            recv_data = self.sock.recv(length * 8 * 2 - len(data))
+                            if len(recv_data) < 1:
+                                return
+                            data += recv_data
+                        polygon2d = numpy.array(numpy.fromstring(data, numpy.int64), numpy.float32) / 1000.0
+                        polygon2d = polygon2d.reshape((len(polygon2d) / 2, 2))
+                        polygon = numpy.empty((len(polygon2d), 3), numpy.float32)
+                        polygon[:,:-1] = polygon2d
+                        polygon[:,2] = z
+                        polygons[type_name].append(polygon)
             elif cmd == self.GUI_CMD_FINISH_OBJECT:
-                layer_nr_offset = len(self.result_polygons)
+                layer_nr_offset = len(self.engine._result._polygons)
             else:
                 log.debug("Unknown command on socket: %x" % (cmd))
 
 
 class ProcessObserver(QtCore.QObject):
     set_process_sig = QtCore.Signal(list)
-    stop_process_sig = QtCore.Signal(list)
+    stop_process_sig = QtCore.Signal()
     update_progress_sig = QtCore.Signal(float)
-    update_result_sig = QtCore.Signal(EngineResult)
+    start_log_thread_sig = QtCore.Signal(file)
+    stop_log_thread_sig = QtCore.Signal()
+    finished = QtCore.Signal()
 
-    def __init__(self, old_thread, command_list, model_hash):
+    def __init__(self, engine, command_list, model_hash):
         super(ProcessObserver, self).__init__()
-        self.old_thread = old_thread
+        self.engine = engine
         self.command_list = command_list
         self.model_hash = model_hash
 
@@ -296,58 +298,109 @@ class ProcessObserver(QtCore.QObject):
         return subprocess.Popen(cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
 
     def watchProcess(self):
-        print "inside watch process"
-        # if self.old_thread is not None:
-        #     self.stop_process_sig.emit([self.old_thread,])
-        # self.update_progress_sig.emit(-1.0)
-        # try:
-        #     self.process = self.run_engine_process(self.command_list)
-        #     self.set_process_sig.emit([self.process,])
-        # except OSError:
-        #     traceback.print_exc()
-        #     return
-        # # if self._thread != QtCore.QThread.currentThread() and self._process:
-        # #     self._process.terminate()
+        self.stop_process_sig.emit()
+        self.update_progress_sig.emit(-1.0)
+        try:
+            self.process = self.run_engine_process(self.command_list)
+            self.set_process_sig.emit([self.process,])
+        except OSError, e:
+            log.error(e)
+            traceback.print_exc()
+            self.finished.emit()
+            return
+        # if self._thread != QtCore.QThread.currentThread() and self._process:
+        #     self._process.terminate()
 
-        # print "setting up result"
-        # self.result = EngineResult()
-        # self.result.addLog('Running: %s' % (''.join(self.command_list)))
-        # print "setting hash"
-        # self.result.setHash(self.model_hash)
-        # print "updating result"
-        # self.update_result_sig.emit(self.result)
-        # print "updating progress"
-        # self.update_progress_sig.emit(0.0)
+        self.engine._result = EngineResult()
+        self.engine._result.addLog('Running: %s' % (''.join(self.command_list)))
+        self.engine._result.setHash(self.model_hash)
+        self.update_progress_sig.emit(0.0)
 
-        # # signal = WatchStdErrSignal()
-        # # logThread = EngineThread(self._parent, signal.watch_stderr_sig,
-        # #         {'stderr': self._process.stderr})
-        # # logThread.signal = signal
-        # # logThread.signal.watch_stderr_sig.connect(self._watchStderr) 
-        # # logThread.start()
+        self.start_log_thread_sig.emit(self.process.stderr)
 
-        # data = self.process.stdout.read(4096)
-        # while len(data) > 0:
-        #     self.result._gcodeData.write(data)
-        #     data = self.process.stdout.read(4096)
-        # self.update_result_sig.emit(self.result)
+        data = self.process.stdout.read(4096)
+        while len(data) > 0:
+            self.engine._result._gcodeData.write(data)
+            data = self.process.stdout.read(4096)
 
-        # returnCode = self.process.wait()
-        # # logThread.wait()
-        # if returnCode == 0:
-        # #     pluginError = pluginInfo.runPostProcessingPlugins(self._result)
-        # #     if pluginError is not None:
-        # #         print pluginError
-        # #         self._result.addLog(pluginError)
-        #     self.result.setFinished(True)
-        #     self.update_result_sig.emit(self.result)
-        #     self.update_progress_sig.emit(1.0)
-        # else:
-        #     for line in self.result.getLog():
-        #         print line
-        #     self.update_progress_sig.emit(-1.0)
-        # self.process = None
-        # self.set_process_sig.emit([self.process,])
+        returnCode = self.process.wait()
+        self.stop_log_thread_sig.emit()
+        if returnCode == 0:
+            pluginError = pluginInfo.runPostProcessingPlugins(self.engine._result)
+            if pluginError is not None:
+                print pluginError
+                self.engine._result.addLog(pluginError)
+            self.engine._result.setFinished(True)
+            self.update_progress_sig.emit(1.0)
+        else:
+            for line in self.engine._result.getLog():
+                print line
+            self.update_progress_sig.emit(-1.0)
+        self.process = None
+        self.set_process_sig.emit([self.process,])
+        self.finished.emit()
+
+
+class StdErrObserver(QtCore.QObject):
+    _progress_steps = ['inset', 'skin', 'export']
+    update_progress_sig = QtCore.Signal(float)
+    finished = QtCore.Signal()
+    
+    def __init__(self, engine, stderr):
+        super(StdErrObserver, self).__init__()
+        self.engine = engine
+        self.stderr = stderr
+
+    def watchStdErr(self):
+        print "in watch std err"
+        object_nr = 0
+        print "get obj count"
+        obj_count = self.engine.getObjCount()
+        print "reading line and parsing it..."
+        line = self.stderr.readline()
+        while len(line) > 0:
+            line = line.strip()
+            if line.startswith('Progress:'):
+                line = line.split(':')
+                if line[1] == 'process':
+                    object_nr += 1
+                elif line[1] in self._progress_steps:
+                    try:
+                        progress_value = float(line[2]) / float(line[3])
+                        progress_value /= len(self._progress_steps)
+                        progress_value += 1.0 / len(self._progress_steps) * self._progress_steps.index(line[1])
+
+                        progress_value /= obj_count
+                        progress_value += 1.0 / obj_count * object_nr
+
+                        # self.engine._callback(progress_value)
+                        print "scheduling update"
+                        # QtCore.QMetaObject.invokeMethod(self.engine._sceneview,
+                        #         self.engine._callback.__name__,
+                        #         QtCore.Qt.BlockingQueuedConnection)
+                        self.update_progress_sig.emit(progress_value)
+                    except Exception, e:
+                        print "oops, error: ", e
+                        log.error(e)
+            elif line.startswith('Print time:'):
+                self.engine._result._printTimeSeconds = int(line.split(':')[1].strip())
+            elif line.startswith('Filament:'):
+                self.engine._result._filamentMM[0] = int(line.split(':')[1].strip())
+                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
+                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
+                    self.engine._result._filamentMM[0] /= (math.pi * radius * radius)
+            elif line.startswith('Filament2:'):
+                self.engine._result._filamentMM[1] = int(line.split(':')[1].strip())
+                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
+                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
+                    self.engine._result._filamentMM[1] /= (math.pi * radius * radius)
+            elif line.startswith('Replace:'):
+                self.engine._result._replaceInfo[line.split(':')[1].strip()] = line.split(':')[2].strip()
+            else:
+                self.engine._result.addLog(line)
+            print "getting new line"
+            line = self.stderr.readline()
+            self.finished.emit()
 
 
 class Engine(QtCore.QObject):
@@ -364,10 +417,10 @@ class Engine(QtCore.QObject):
         self._process = None
         self._thread = None
         self._callback = progressCallback
-        self._progressSteps = ['inset', 'skin', 'export']
         self._objCount = 0
         self._result = None
         self._modelData = None
+        self.runner = None
 
         self._serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._serverPortNr = 0xC20A
@@ -379,21 +432,16 @@ class Engine(QtCore.QObject):
         thread = QtCore.QThread(self._parent)
         worker.moveToThread(thread)
 
-        QtCore.QObject.connect(thread, QtCore.SIGNAL('started()'), worker,
-                QtCore.SLOT('socketListen()'))
-        QtCore.QObject.connect(thread,
-                QtCore.SIGNAL('start_socket_connector_sig(list)'), self,
-                QtCore.SLOT('startSocketConnector(list)'))
-        QtCore.QObject.connect(worker, QtCore.SIGNAL('finished()'), thread,
-                QtCore.SLOT('quit()'))
-        QtCore.QObject.connect(worker, QtCore.SIGNAL('finished()'), worker,
-                QtCore.SLOT('deleteLater()'))
-        QtCore.QObject.connect(thread, QtCore.SIGNAL('finished()'), thread,
-                QtCore.SLOT('deleteLater()'))
-        # thread.start()
+        thread.started.connect(worker.socketListen) 
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        worker.start_socket_connector_sig.connect(self.startSocketConnector)
+        thread.finished.connect(thread.deleteLater)
+
+        thread.start()
+        time.sleep(0.5)
 
     def bind_server_socket(self):
-        print "binding server socket"
         while True:
             try:
                 self._serversocket.bind(('127.0.0.1', self._serverPortNr))
@@ -406,52 +454,56 @@ class Engine(QtCore.QObject):
             else:
                 return
 
-    @QtCore.Slot(list)
-    def startSocketConnector(self, attrs):
+    def startSocketConnector(self, sock):
         print "in start socket connector"
-        sock = attrs[0]
-        if not hasattr(self._result, '_polygons'):
-            return
-        worker = SocketConnector(sock, self._modelData, self._result._polygons)
-        thread = QtCore.QThread(self.parent)
+        worker = SocketConnector(self, sock, self._modelData)
+        thread = QtCore.QThread(self._parent)
         worker.moveToThread(thread)
-        QtCore.QObject.connect(thread, QtCore.SIGNAL('started()'), worker,
-                QtCore.SLOT('socketConnect()'))
-        QtCore.QObject.connect(worker,
-                QtCore.SIGNAL('set_polygons_sig(dict)'), self,
-                QtCore.SLOT('setPolygons(dict)'))
-        QtCore.QObject.connect(worker, QtCore.SIGNAL('finished()'), thread,
-                QtCore.SLOT('quit()'))
-        QtCore.QObject.connect(worker, QtCore.SIGNAL('finished()'), worker,
-                QtCore.SLOT('deleteLater()'))
-        QtCore.QObject.connect(thread, QtCore.SIGNAL('finished()'), thread,
-                QtCore.SLOT('deleteLater()'))
+
+        thread.started.connect(worker.socketConnect)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+
         thread.start()
+        time.sleep(0.5)
 
-    @QtCore.Slot(dict)
-    def setPolygons(self, attr_dict):
-        print "setting polygons"
-        polygons = attr_dict['polygons']
-        layer_nr = attr_dict['layer_nr']
-        self._result._polygons[layer_nr] = polygons
+    def startLogThread(self, stderr):
+        print "in start log thread"
+        self.log_thread = QtCore.QThread(self._parent)
+        worker = StdErrObserver(self, stderr)
+        worker.moveToThread(self.log_thread)
 
-    @QtCore.Slot(list)
-    def stopProcess(self, attrs):
-        old_thread = attrs[0]
-        if self._process is not None:
-            self._process.terminate()
-        old_thread.wait()
+        self.log_thread.started.connect(worker.watchStdErr)
+        worker.update_progress_sig.connect(self._callback)
+        worker.finished.connect(self.log_thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        self.log_thread.finished.connect(self.log_thread.deleteLater)
+
+        self.log_thread.start()
+        time.sleep(5)
+
+    def stopLogThread(self):
+        print "in stop log thread"
+        if hasattr(self, 'log_thread'):
+            self.log_thread.terminate()
+            print "log thread stoppeed"
 
     @QtCore.Slot(list)
     def setProcess(self, attrs):
+        print "inside set process"
         self._process = attrs[0]
 
-    @QtCore.Slot(EngineResult)
-    def updateResult(self, engine_result):
-        self._result = engine_result
+    def stopProcess(self):
+        print "inside stop process"
+        if self._process is not None:
+            self._process.terminate()
 
     def setModelData(self, model_data):
         self._modelData = model_data
+
+    def getObjCount(self):
+        return self._objCount
 
     def setObjCount(self, obj_count):
         self._objCount = obj_count
@@ -464,15 +516,16 @@ class Engine(QtCore.QObject):
         if self._process is not None:
             try:
                 self._process.terminate()
-            except:
-                pass
-        if self._thread is not None:
-            self._thread.wait()
-        self._thread = None
+            except Exception, e:
+                log.error(e)
+                print "failed to terminate process"
+        if self.runner and self.runner._thread:
+            self.runner._thread.terminate()
+            self.runner._thread = None
 
     def wait(self):
-        if self._thread is not None:
-            self._thread.wait()
+        if self.runner and self.runner._thread:
+            self.runner._thread.terminate()
 
     def getResult(self):
         return self._result
@@ -481,147 +534,9 @@ class Engine(QtCore.QObject):
         return self._serverPortNr
 
     def runEngine(self, scene):
-        print "in run engine"
         if len(scene.objects()) < 1:
             return
-        extruderCount = 1
-        for obj in scene.objects():
-            if scene.checkPlatform(obj):
-                extruderCount = max(extruderCount, len(obj._meshList))
-
-        extruderCount = max(extruderCount, profile.minimalExtruderCount())
-
-        commandList = [getEngineFilename(), '-v', '-p']
-        for k, v in self._engineSettings(extruderCount).iteritems():
-            commandList += ['-s', '%s=%s' % (k, str(v))]
-        commandList += ['-g', '%d' % (self._serverPortNr)]
-        self._objCount = 0
-        engineModelData = []
-        hash = hashlib.sha512()
-        order = scene.printOrder()
-        if order is None:
-            pos = numpy.array(profile.getMachineCenterCoords()) * 1000
-            objMin = None
-            objMax = None
-            for obj in scene.objects():
-                if scene.checkPlatform(obj):
-                    oMin = obj.getMinimum()[0:2] + obj.getPosition()
-                    oMax = obj.getMaximum()[0:2] + obj.getPosition()
-                    if objMin is None:
-                        objMin = oMin
-                        objMax = oMax
-                    else:
-                        objMin[0] = min(oMin[0], objMin[0])
-                        objMin[1] = min(oMin[1], objMin[1])
-                        objMax[0] = max(oMax[0], objMax[0])
-                        objMax[1] = max(oMax[1], objMax[1])
-            if objMin is None:
-                return
-            pos += (objMin + objMax) / 2.0 * 1000
-            commandList += ['-s', 'posx=%d' % int(pos[0]), '-s', 'posy=%d' % int(pos[1])]
-
-            vertexTotal = [0] * 4
-            meshMax = 1
-            for obj in scene.objects():
-                if scene.checkPlatform(obj):
-                    meshMax = max(meshMax, len(obj._meshList))
-                    for n in xrange(0, len(obj._meshList)):
-                        vertexTotal[n] += obj._meshList[n].vertexCount
-
-            for n in xrange(0, meshMax):
-                verts = numpy.zeros((0, 3), numpy.float32)
-                for obj in scene.objects():
-                    if scene.checkPlatform(obj):
-                        if n < len(obj._meshList):
-                            vertexes = (numpy.matrix(obj._meshList[n].vertexes, copy = False) * numpy.matrix(obj._matrix, numpy.float32)).getA()
-                            vertexes -= obj._drawOffset
-                            vertexes += numpy.array([obj.getPosition()[0], obj.getPosition()[1], 0.0])
-                            verts = numpy.concatenate((verts, vertexes))
-                            hash.update(obj._meshList[n].vertexes.tostring())
-                engineModelData.append((vertexTotal[n], verts))
-
-            commandList += ['$' * meshMax]
-            self._objCount = 1
-        else:
-            for n in order:
-                obj = scene.objects()[n]
-                for mesh in obj._meshList:
-                    engineModelData.append((mesh.vertexCount, mesh.vertexes))
-                    hash.update(mesh.vertexes.tostring())
-                pos = obj.getPosition() * 1000
-                pos += numpy.array(profile.getMachineCenterCoords()) * 1000
-                commandList += ['-m', ','.join(map(str, obj._matrix.getA().flatten()))]
-                commandList += ['-s', 'posx=%d' % int(pos[0]), '-s', 'posy=%d' % int(pos[1])]
-                commandList += ['$' * len(obj._meshList)]
-                self._objCount += 1
-        modelHash = hash.hexdigest()
-        if self._objCount > 0:
-            self._modelData = engineModelData
-            # self._thread = QtCore.QThread(self._parent)
-            # worker = ProcessObserver(self._thread, commandList, modelHash)
-            # worker.moveToThread(self._thread)
-            # QtCore.QObject.connect(self._thread, QtCore.SIGNAL('started()'), worker,
-            #         QtCore.SLOT('watchProcess()'))
-            # QtCore.QObject.connect(self._thread,
-            #         QtCore.SIGNAL('stop_process_sig(list)'), self,
-            #         QtCore.SLOT('stopProcess(list)'))
-            # QtCore.QObject.connect(self._thread,
-            #         QtCore.SIGNAL('set_process_sig(list)'), self,
-            #         QtCore.SLOT('setProcess(list)'))
-            # QtCore.QObject.connect(self._thread,
-            #         QtCore.SIGNAL('update_progress_sig(float)'), self,
-            #         QtCore.SLOT('_callback(float)'))
-            # QtCore.QObject.connect(self._thread,
-            #         QtCore.SIGNAL('update_result_sig(EngineResult)'), self,
-            #         QtCore.SLOT('updateResult(EngineResult)'))
-            # QtCore.QObject.connect(worker, QtCore.SIGNAL('finished()'), self._thread,
-            #         QtCore.SLOT('quit()'))
-            # QtCore.QObject.connect(worker, QtCore.SIGNAL('finished()'), worker,
-            #         QtCore.SLOT('deleteLater()'))
-            # QtCore.QObject.connect(self._thread, QtCore.SIGNAL('finished()'),
-            #         self._thread, QtCore.SLOT('deleteLater()'))
-            # self._thread.start()
-
-    def _watchStderr(self, attr_dict):
-        print "in watch std err"
-        stderr = attr_dict['stderr']
-        objectNr = 0
-        # line = stderr.readline()
-        # while len(line) > 0:
-        #     line = line.strip()
-        #     if line.startswith('Progress:'):
-        #         line = line.split(':')
-        #         if line[1] == 'process':
-        #             objectNr += 1
-        #         elif line[1] in self._progressSteps:
-        #             try:
-        #                 progressValue = float(line[2]) / float(line[3])
-        #                 progressValue /= len(self._progressSteps)
-        #                 progressValue += 1.0 / len(self._progressSteps) * self._progressSteps.index(line[1])
-
-        #                 progressValue /= self._objCount
-        #                 progressValue += 1.0 / self._objCount * objectNr
-
-        #                 self._callback(progressValue)
-        #             except Exception, e:
-        #                 log.error(e)
-        #     elif line.startswith('Print time:'):
-        #         self._result._printTimeSeconds = int(line.split(':')[1].strip())
-        #     elif line.startswith('Filament:'):
-        #         self._result._filamentMM[0] = int(line.split(':')[1].strip())
-        #         if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
-        #             radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
-        #             self._result._filamentMM[0] /= (math.pi * radius * radius)
-        #     elif line.startswith('Filament2:'):
-        #         self._result._filamentMM[1] = int(line.split(':')[1].strip())
-        #         if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
-        #             radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
-        #             self._result._filamentMM[1] /= (math.pi * radius * radius)
-        #     elif line.startswith('Replace:'):
-        #         self._result._replaceInfo[line.split(':')[1].strip()] = line.split(':')[2].strip()
-        #     else:
-        #         self._result.addLog(line)
-        #     line = stderr.readline()
+        self.runner = EngineRunner(scene, self)
 
     def _engineSettings(self, extruderCount):
         settings = {
@@ -750,44 +665,39 @@ class Engine(QtCore.QObject):
         return settings
 
 
-class EngineRunner(QtCore.QObject):
-    def __init__(self, scene, sceneview, engine):
-        super(EngineRunner, self).__init__(sceneview)
+class EngineRunner(object):
+    def __init__(self, scene, engine):
         self.scene = scene
         self.engine = engine
+        self.obj_count = 0
         self.command_list = []
         self.model_hash = None
+        self._thread = None
 
         self.setup()
 
         if self.obj_count > 0:
-            self._thread = QtCore.QThread(sceneview._parent)
-            worker = ProcessObserver(self._thread, self.command_list,
-                    self.model_hash)
+            self._thread = QtCore.QThread(engine._sceneview)
+            worker = ProcessObserver(self.engine, self.command_list, self.model_hash)
             worker.moveToThread(self._thread)
-            QtCore.QObject.connect(self._thread, QtCore.SIGNAL('started()'), worker,
-                    QtCore.SLOT('watchProcess()'))
-            QtCore.QObject.connect(self._thread,
-                    QtCore.SIGNAL('stop_process_sig(list)'), engine,
-                    QtCore.SLOT('stopProcess(list)'))
-            QtCore.QObject.connect(self._thread,
-                    QtCore.SIGNAL('set_process_sig(list)'), engine,
-                    QtCore.SLOT('setProcess(list)'))
-            QtCore.QObject.connect(self._thread,
-                    QtCore.SIGNAL('update_progress_sig(float)'), engine,
-                    QtCore.SLOT('_callback(float)'))
-            QtCore.QObject.connect(self._thread,
-                    QtCore.SIGNAL('update_result_sig(EngineResult)'), engine,
-                    QtCore.SLOT('updateResult(EngineResult)'))
-            QtCore.QObject.connect(worker, QtCore.SIGNAL('finished()'), self._thread,
-                    QtCore.SLOT('quit()'))
-            QtCore.QObject.connect(worker, QtCore.SIGNAL('finished()'), worker,
-                    QtCore.SLOT('deleteLater()'))
-            QtCore.QObject.connect(self._thread, QtCore.SIGNAL('finished()'),
-                    self._thread, QtCore.SLOT('deleteLater()'))
-            print "starting thread"
+
+            self._thread.started.connect(worker.watchProcess)
+            worker.stop_process_sig.connect(engine.stopProcess)
+            worker.set_process_sig.connect(engine.setProcess)
+            worker.update_progress_sig.connect(engine._callback)
+            worker.start_log_thread_sig.connect(engine.startLogThread)
+            worker.stop_log_thread_sig.connect(engine.stopLogThread)
+            worker.finished.connect(self._thread.quit)
+            worker.finished.connect(worker.deleteLater)
+            worker.finished.connect(self.delete_thread)
+            self._thread.finished.connect(self._thread.deleteLater)
+
             self._thread.start()
-            print "started thread"
+            time.sleep(0.5)
+
+    def delete_thread(self):
+        print "deleting thread"
+        self._thread = None
 
     def get_extruder_count(self):
         extruderCount = 1

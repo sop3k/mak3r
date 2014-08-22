@@ -170,16 +170,13 @@ class SceneView(QtOpenGL.QGLWidget):
                     self._animationList.remove(anim)
             self.updateGL()
 
+    @QtCore.Slot(float)
     def _updateEngineProgress(self, progressValue):
-        print "updating engine progress..."
         result = self._engine.getResult()
-        # finished = result is not None and result.isFinished()
-        finished = result is not None
+        finished = result is not None and result.isFinished()
         if not finished:
-            print "not finished"
             if self.printButton.getProgressBar() is not None and progressValue >= 0.0 and abs(self.printButton.getProgressBar() - progressValue) < 0.01:
                 return
-        print "setting progress"
         self.printButton.setDisabled(not finished)
         if progressValue >= 0.0:
             self.printButton.setProgressBar(progressValue)
@@ -200,7 +197,6 @@ class SceneView(QtOpenGL.QGLWidget):
             self.printButton.setBottomText(text)
         else:
             self.printButton.setBottomText('')
-        print "finished updating engine progress, queuing refresh"
         self.queueRefresh()
 
     def _init3DView(self):
@@ -529,14 +525,14 @@ class SceneView(QtOpenGL.QGLWidget):
     def onPaint(self):
         connectionGroup = self._printerConnectionManager.getAvailableGroup()
         if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
-          self.printButton._imageID = 2
-          self.printButton._tooltip = _("Toolpath to SD")
+            self.printButton._imageID = 2
+            self.printButton._tooltip = _("Toolpath to SD")
         elif connectionGroup is not None:
-          self.printButton._imageID = connectionGroup.getIconID()
-          self.printButton._tooltip = _("Print with %s") % (connectionGroup.getName())
+            self.printButton._imageID = connectionGroup.getIconID()
+            self.printButton._tooltip = _("Print with %s") % (connectionGroup.getName())
         else:
-          self.printButton._imageID = 3
-          self.printButton._tooltip = _("Save toolpath")
+            self.printButton._imageID = 3
+            self.printButton._tooltip = _("Save toolpath")
 
         if self._animView is not None:
             self._viewTarget = self._animView.getPosition()

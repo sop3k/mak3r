@@ -192,7 +192,6 @@ class SocketListener(QtCore.QObject):
         while True:
             try:
                 sock, _ = self.server_socket.accept()
-                print "starting connector"
                 self.start_socket_connector_sig.emit(sock)
             except socket.error, e:
                 if e.errno != errno.EINTR:
@@ -216,7 +215,6 @@ class SocketConnector(QtCore.QObject):
         self.model_data = model_data
 
     def socketConnect(self):
-        print "inside socket connect"
         layer_nr_offset = 0
         while True:
             try:
@@ -287,7 +285,6 @@ class ProcessObserver(QtCore.QObject):
         self.model_hash = model_hash
 
     def run_engine_process(self, cmd_list):
-        print "running engine process"
         kwargs = {}
         if subprocess.mswindows:
             su = subprocess.STARTUPINFO()
@@ -324,14 +321,14 @@ class ProcessObserver(QtCore.QObject):
             data = self.process.stdout.read(4096)
 
         returnCode = self.process.wait()
-        self.stop_log_thread_sig.emit()
+        # self.stop_log_thread_sig.emit()
         if returnCode == 0:
             pluginError = pluginInfo.runPostProcessingPlugins(self.engine._result)
             if pluginError is not None:
                 print pluginError
                 self.engine._result.addLog(pluginError)
-            self.engine._result.setFinished(True)
-            self.update_progress_sig.emit(1.0)
+            # self.engine._result.setFinished(True)
+            # self.update_progress_sig.emit(1.0)
         else:
             for line in self.engine._result.getLog():
                 print line
@@ -352,11 +349,8 @@ class StdErrObserver(QtCore.QObject):
         self.stderr = stderr
 
     def watchStdErr(self):
-        print "in watch std err"
         object_nr = 0
-        print "get obj count"
         obj_count = self.engine.getObjCount()
-        print "reading line and parsing it..."
         line = self.stderr.readline()
         while len(line) > 0:
             line = line.strip()
@@ -373,14 +367,10 @@ class StdErrObserver(QtCore.QObject):
                         progress_value /= obj_count
                         progress_value += 1.0 / obj_count * object_nr
 
-                        # self.engine._callback(progress_value)
-                        print "scheduling update"
-                        # QtCore.QMetaObject.invokeMethod(self.engine._sceneview,
-                        #         self.engine._callback.__name__,
-                        #         QtCore.Qt.BlockingQueuedConnection)
                         self.update_progress_sig.emit(progress_value)
+                        # TODO: fix the workoround below
+                        time.sleep(0.01)
                     except Exception, e:
-                        print "oops, error: ", e
                         log.error(e)
             elif line.startswith('Print time:'):
                 self.engine._result._printTimeSeconds = int(line.split(':')[1].strip())
@@ -398,9 +388,10 @@ class StdErrObserver(QtCore.QObject):
                 self.engine._result._replaceInfo[line.split(':')[1].strip()] = line.split(':')[2].strip()
             else:
                 self.engine._result.addLog(line)
-            print "getting new line"
             line = self.stderr.readline()
-            self.finished.emit()
+        self.engine._result.setFinished(True)
+        self.update_progress_sig.emit(1.0)
+        self.finished.emit()
 
 
 class Engine(QtCore.QObject):
@@ -427,19 +418,18 @@ class Engine(QtCore.QObject):
 
         self.bind_server_socket()
 
-        worker = SocketListener(self._parent, self._serversocket,
+        self.socket_listener = SocketListener(self._parent, self._serversocket,
                 self._serverPortNr)
         thread = QtCore.QThread(self._parent)
-        worker.moveToThread(thread)
+        self.socket_listener.moveToThread(thread)
 
-        thread.started.connect(worker.socketListen) 
-        worker.finished.connect(thread.quit)
-        worker.finished.connect(worker.deleteLater)
-        worker.start_socket_connector_sig.connect(self.startSocketConnector)
+        thread.started.connect(self.socket_listener.socketListen) 
+        self.socket_listener.finished.connect(thread.quit)
+        self.socket_listener.finished.connect(self.socket_listener.deleteLater)
+        self.socket_listener.start_socket_connector_sig.connect(self.startSocketConnector)
         thread.finished.connect(thread.deleteLater)
 
         thread.start()
-        time.sleep(0.5)
 
     def bind_server_socket(self):
         while True:
@@ -455,47 +445,44 @@ class Engine(QtCore.QObject):
                 return
 
     def startSocketConnector(self, sock):
-        print "in start socket connector"
-        worker = SocketConnector(self, sock, self._modelData)
+        self.socket_connector = SocketConnector(self, sock, self._modelData)
         thread = QtCore.QThread(self._parent)
-        worker.moveToThread(thread)
+        self.socket_connector.moveToThread(thread)
 
-        thread.started.connect(worker.socketConnect)
-        worker.finished.connect(thread.quit)
-        worker.finished.connect(worker.deleteLater)
+        thread.started.connect(self.socket_connector.socketConnect)
+        self.socket_connector.finished.connect(thread.quit)
+        self.socket_connector.finished.connect(self.socket_connector.deleteLater)
         thread.finished.connect(thread.deleteLater)
 
         thread.start()
-        time.sleep(0.5)
 
     def startLogThread(self, stderr):
-        print "in start log thread"
         self.log_thread = QtCore.QThread(self._parent)
-        worker = StdErrObserver(self, stderr)
-        worker.moveToThread(self.log_thread)
+        self.stderr_observer = StdErrObserver(self, stderr)
+        self.stderr_observer.moveToThread(self.log_thread)
 
-        self.log_thread.started.connect(worker.watchStdErr)
-        worker.update_progress_sig.connect(self._callback)
-        worker.finished.connect(self.log_thread.quit)
-        worker.finished.connect(worker.deleteLater)
+        self.log_thread.started.connect(self.stderr_observer.watchStdErr)
+        self.stderr_observer.update_progress_sig.connect(self._callback,
+                QtCore.Qt.QueuedConnection)
+        self.stderr_observer.finished.connect(self.log_thread.quit)
+        self.stderr_observer.finished.connect(self.stderr_observer.deleteLater)
         self.log_thread.finished.connect(self.log_thread.deleteLater)
 
         self.log_thread.start()
-        time.sleep(5)
 
     def stopLogThread(self):
-        print "in stop log thread"
-        if hasattr(self, 'log_thread'):
-            self.log_thread.terminate()
-            print "log thread stoppeed"
+        if getattr(self, 'log_thread', None):
+            try:
+                self.log_thread.terminate()
+            except RuntimeError, e:
+                log.error(e)
+        self.log_thread = None
 
     @QtCore.Slot(list)
     def setProcess(self, attrs):
-        print "inside set process"
         self._process = attrs[0]
 
     def stopProcess(self):
-        print "inside stop process"
         if self._process is not None:
             self._process.terminate()
 
@@ -518,7 +505,6 @@ class Engine(QtCore.QObject):
                 self._process.terminate()
             except Exception, e:
                 log.error(e)
-                print "failed to terminate process"
         if self.runner and self.runner._thread:
             self.runner._thread.terminate()
             self.runner._thread = None
@@ -678,25 +664,24 @@ class EngineRunner(object):
 
         if self.obj_count > 0:
             self._thread = QtCore.QThread(engine._sceneview)
-            worker = ProcessObserver(self.engine, self.command_list, self.model_hash)
-            worker.moveToThread(self._thread)
+            self.process_observer = ProcessObserver(self.engine, self.command_list, self.model_hash)
+            self.process_observer.moveToThread(self._thread)
 
-            self._thread.started.connect(worker.watchProcess)
-            worker.stop_process_sig.connect(engine.stopProcess)
-            worker.set_process_sig.connect(engine.setProcess)
-            worker.update_progress_sig.connect(engine._callback)
-            worker.start_log_thread_sig.connect(engine.startLogThread)
-            worker.stop_log_thread_sig.connect(engine.stopLogThread)
-            worker.finished.connect(self._thread.quit)
-            worker.finished.connect(worker.deleteLater)
-            worker.finished.connect(self.delete_thread)
+            self._thread.started.connect(self.process_observer.watchProcess)
+            self.process_observer.stop_process_sig.connect(engine.stopProcess)
+            self.process_observer.set_process_sig.connect(engine.setProcess)
+            self.process_observer.update_progress_sig.connect(engine._callback)
+            self.process_observer.start_log_thread_sig.connect(engine.startLogThread)
+            self.process_observer.stop_log_thread_sig.connect(engine.stopLogThread,
+                    QtCore.Qt.DirectConnection)
+            self.process_observer.finished.connect(self._thread.quit)
+            self.process_observer.finished.connect(self.process_observer.deleteLater)
+            self.process_observer.finished.connect(self.delete_thread)
             self._thread.finished.connect(self._thread.deleteLater)
 
             self._thread.start()
-            time.sleep(0.5)
 
     def delete_thread(self):
-        print "deleting thread"
         self._thread = None
 
     def get_extruder_count(self):

@@ -172,6 +172,7 @@ class SceneView(QtOpenGL.QGLWidget):
 
     @QtCore.Slot(float)
     def _updateEngineProgress(self, progressValue):
+        print "CURA: updating engine progress"
         result = self._engine.getResult()
         finished = result is not None and result.isFinished()
         if not finished:
@@ -463,7 +464,6 @@ class SceneView(QtOpenGL.QGLWidget):
         glEnable(GL_BLEND)
 
     def paintGL(self):
-        print "starting print GL..."
         self._idleCalled = False
         h = self.height()
         w = self.width()
@@ -866,10 +866,6 @@ class SceneView(QtOpenGL.QGLWidget):
             self.updateGL()
         else:
             self._refreshQueued = True
-
-    @QtCore.Slot()
-    def update_scene(self):
-        self.updateGL()
 
     def getMouseRay(self, x, y):
         if self._viewport is None:

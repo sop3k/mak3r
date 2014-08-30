@@ -172,7 +172,6 @@ class SceneView(QtOpenGL.QGLWidget):
 
     @QtCore.Slot(float)
     def _updateEngineProgress(self, progressValue):
-        print "CURA: updating engine progress"
         result = self._engine.getResult()
         finished = result is not None and result.isFinished()
         if not finished:

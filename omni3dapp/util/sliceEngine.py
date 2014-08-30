@@ -3,13 +3,10 @@ Slice engine communication.
 This module handles all communication with the slicing engine.
 """
 __copyright__ = "Copyright (C) 2013 David Braam - Released under terms of the AGPLv3 License"
-import subprocess
 import time
 import math
 import numpy
 import os
-import warnings
-import traceback
 import platform
 import sys
 import urllib
@@ -48,6 +45,7 @@ def getEngineFilename():
     if os.path.isdir(tempPath):
         tempPath = os.path.join(tempPath,'CuraEngine')
     return tempPath
+
 
 class EngineResult(object):
     """
@@ -134,6 +132,7 @@ class EngineResult(object):
         return self._gcodeLoadCallback(self, progress)
 
     def getGCodeLayers(self, loadCallback):
+        print "INSIDE GET GCODE LAYERS - FIX THREADING"
         if not self._finished:
             return None
         if self._gcodeInterpreter.layerList is None and self._gcodeLoadThread is None:
@@ -187,16 +186,15 @@ class SocketListener(QtCore.QObject):
         self.server_port_nr = server_port_nr
 
     def socketListen(self):
-        print "inside socket listen"
         self.server_socket.listen(1)
         print 'Listening for engine communications on %d' % (self.server_port_nr)
         while True:
-            print "looping inside socket listen"
             try:
                 sock, _ = self.server_socket.accept()
                 self.start_socket_connector_sig.emit(sock)
             except socket.error, e:
                 if e.errno != errno.EINTR:
+                    log.error(e)
                     raise
                 else:
                     log.error(e)
@@ -217,10 +215,8 @@ class SocketConnector(QtCore.QObject):
         self.model_data = model_data
 
     def socketConnect(self):
-        print "inside socket connector"
         layer_nr_offset = 0
         while True:
-            print "looping inside socket connector"
             try:
                 data = self.sock.recv(4)
             except Exception, e:
@@ -275,239 +271,6 @@ class SocketConnector(QtCore.QObject):
             self.finished.emit()
 
 
-class ProcessObserver(QtCore.QObject):
-    # set_process_sig = QtCore.Signal(list)
-    # stop_process_sig = QtCore.Signal()
-    update_progress_sig = QtCore.Signal(float)
-    start_log_thread_sig = QtCore.Signal(file)
-    stop_log_thread_sig = QtCore.Signal()
-    finished = QtCore.Signal()
-
-    _progress_steps = ['inset', 'skin', 'export']
-
-    def __init__(self, engine, command_list, model_hash):
-        super(ProcessObserver, self).__init__()
-        self.engine = engine
-        self.command_list = command_list
-        self.model_hash = model_hash
-        self.process = None
-
-    # def run_engine_process(self, cmd_list):
-        # kwargs = {}
-        # if subprocess.mswindows:
-        #     su = subprocess.STARTUPINFO()
-        #     su.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        #     su.wShowWindow = subprocess.SW_HIDE
-        #     kwargs['startupinfo'] = su
-        #     kwargs['creationflags'] = 0x00004000 #BELOW_NORMAL_PRIORITY_CLASS
-        # return subprocess.Popen(cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
-
-    def start_process(self):
-        try:
-            process = QtCore.QProcess()
-            process.readyReadStandardOutput.connect(self.read_data)
-            process.readyReadStandardError.connect(self.read_err)
-            process.finished.connect(self.slicing_finished)
-            process.start(getEngineFilename(), self.command_list,
-                    QtCore.QIODevice.ReadWrite)
-        except Exception, e:
-            log.error(e)
-            return None
-        else:
-            return process
-
-    @QtCore.Slot()
-    def stop_process(self):
-        if not self.process:
-            return
-        self.process.kill()
-        self.process.waitForFinished(1000)
-        self.process = None
-
-    def watchProcess(self):
-        print "inside watch process"
-        # self.stop_process_sig.emit()
-        self.update_progress_sig.emit(-1.0)
-
-        self.process = self.start_process()
-        if not self.process:
-            self.finished.emit()
-            return
-        if not self.process.waitForStarted(2000):
-            # TODO: Add dialog or text warning that slicer process could not
-            # start
-            log.error("Process could not start: {0}".format(self.process.exitStatus()))
-            # self.stop_process()
-            self.finished.emit()
-            return
-            # self.process = self.run_engine_process(self.command_list)
-            # self.engine._process = self.process
-            # self.set_process_sig.emit([self.process,])
-
-        self.engine._result = EngineResult()
-        self.engine._result.addLog('Running: %s' % (''.join(self.command_list)))
-        self.engine._result.setHash(self.model_hash)
-        self.update_progress_sig.emit(0.0)
-
-        # print "starting log thread"
-        # self.start_log_thread_sig.emit(self.process.stderr)
-        # print "log thread started"
-
-        # data = self.process.read(4096)
-        # while len(data) > 0:
-        #     self.engine._result._gcodeData.write(data)
-        #     data = self.process.read(4096)
-        # print "data: ", data
-
-        # while not self.process.atEnd():
-        #     print "still running"
-        # self.process.finished.emit()
-        # return_code = self.process.exitCode()
-        # # self.stop_log_thread_sig.emit()
-        # if self.process.atEnd():
-        #     print "process is at end"
-        #     self.process.finished.emit()
-        # if returnCode == 0:
-        #     pluginError = pluginInfo.runPostProcessingPlugins(self.engine._result)
-        #     if pluginError is not None:
-        #         print pluginError
-        #         self.engine._result.addLog(pluginError)
-        #     # self.engine._result.setFinished(True)
-        #     # self.update_progress_sig.emit(1.0)
-        # else:
-        #     for line in self.engine._result.getLog():
-        #         print line
-        #     self.update_progress_sig.emit(-1.0)
-        # self.process.finished.emit()
-        # self.process = None
-        # # self.set_process_sig.emit([self.process,])
-        # self.engine._process = self.process
-        # self.finished.emit()
-
-    def read_data(self):
-        print "inside read data"
-        self.process.setReadChannel(
-                QtCore.QProcess.ProcessChannel.StandardOutput)
-        data = self.process.read(4096)
-        while len(data) > 0:
-            print "looping inside read data"
-            self.engine._result._gcodeData.write(data)
-            data = self.process.read(4096)
-
-    def read_err(self):
-        print "inside read err"
-        self.process.setReadChannel(
-                QtCore.QProcess.ProcessChannel.StandardError)
-        object_nr = 0
-        obj_count = self.engine.getObjCount()
-        line = self.process.readLine()
-        while len(line) > 0:
-            print "looping inside read err"
-            try:
-                line = line.data()
-            except AttributeError:
-                pass
-
-            line = line.strip()
-            if line.startswith('Progress:'):
-                line = line.split(':')
-                if line[1] == 'process':
-                    object_nr += 1
-                elif line[1] in self._progress_steps:
-                    try:
-                        progress_value = float(line[2]) / float(line[3])
-                        progress_value /= len(self._progress_steps)
-                        progress_value += 1.0 / len(self._progress_steps) * self._progress_steps.index(line[1])
-
-                        progress_value /= obj_count
-                        progress_value += 1.0 / obj_count * object_nr
-
-                        # TODO: force synchronous calls
-                        print "CURA: scheduling progress update"
-                        self.update_progress_sig.emit(progress_value)
-                    except Exception, e:
-                        log.error(e)
-            elif line.startswith('Print time:'):
-                self.engine._result._printTimeSeconds = int(line.split(':')[1].strip())
-            elif line.startswith('Filament:'):
-                self.engine._result._filamentMM[0] = int(line.split(':')[1].strip())
-                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
-                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
-                    self.engine._result._filamentMM[0] /= (math.pi * radius * radius)
-            elif line.startswith('Filament2:'):
-                self.engine._result._filamentMM[1] = int(line.split(':')[1].strip())
-                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
-                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
-                    self.engine._result._filamentMM[1] /= (math.pi * radius * radius)
-            elif line.startswith('Replace:'):
-                self.engine._result._replaceInfo[line.split(':')[1].strip()] = line.split(':')[2].strip()
-            else:
-                self.engine._result.addLog(line)
-            line = self.process.readLine()
-
-    def slicing_finished(self):
-        print "CURA: slicing finished"
-        if self.engine._result:
-            self.engine._result.setFinished(True)
-            self.update_progress_sig.emit(1.0)
-        self.finished.emit()
-
-
-class StdErrObserver(QtCore.QObject):
-    _progress_steps = ['inset', 'skin', 'export']
-    update_progress_sig = QtCore.Signal(float)
-    finished = QtCore.Signal()
-    
-    def __init__(self, engine, stderr):
-        super(StdErrObserver, self).__init__()
-        self.engine = engine
-        self.stderr = stderr
-
-    def watchStdErr(self):
-        object_nr = 0
-        obj_count = self.engine.getObjCount()
-        line = self.stderr.readline()
-        while len(line) > 0:
-            line = line.strip()
-            if line.startswith('Progress:'):
-                line = line.split(':')
-                if line[1] == 'process':
-                    object_nr += 1
-                elif line[1] in self._progress_steps:
-                    try:
-                        progress_value = float(line[2]) / float(line[3])
-                        progress_value /= len(self._progress_steps)
-                        progress_value += 1.0 / len(self._progress_steps) * self._progress_steps.index(line[1])
-
-                        progress_value /= obj_count
-                        progress_value += 1.0 / obj_count * object_nr
-
-                        # TODO: force synchronous calls
-                        self.update_progress_sig.emit(progress_value)
-                    except Exception, e:
-                        log.error(e)
-            elif line.startswith('Print time:'):
-                self.engine._result._printTimeSeconds = int(line.split(':')[1].strip())
-            elif line.startswith('Filament:'):
-                self.engine._result._filamentMM[0] = int(line.split(':')[1].strip())
-                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
-                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
-                    self.engine._result._filamentMM[0] /= (math.pi * radius * radius)
-            elif line.startswith('Filament2:'):
-                self.engine._result._filamentMM[1] = int(line.split(':')[1].strip())
-                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
-                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
-                    self.engine._result._filamentMM[1] /= (math.pi * radius * radius)
-            elif line.startswith('Replace:'):
-                self.engine._result._replaceInfo[line.split(':')[1].strip()] = line.split(':')[2].strip()
-            else:
-                self.engine._result.addLog(line)
-            line = self.stderr.readline()
-        self.engine._result.setFinished(True)
-        self.update_progress_sig.emit(1.0)
-        self.finished.emit()
-
-
 class Engine(QtCore.QObject):
     """
     Class used to communicate with the CuraEngine.
@@ -515,16 +278,17 @@ class Engine(QtCore.QObject):
     GCode through stdout and has a socket connection for polygon information and loading the 3D model into the engine.
     """
 
+    _progress_steps = ['inset', 'skin', 'export']
+
     def __init__(self, sceneview, progressCallback):
         super(Engine, self).__init__(sceneview)
         self._sceneview = sceneview
         self._parent = sceneview._parent
-        self._process = None
-        self._thread = None
         self._callback = progressCallback
         self._objCount = 0
         self._result = None
         self._modelData = None
+        self._process = None
 
         self._serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._serverPortNr = 0xC20A
@@ -591,14 +355,6 @@ class Engine(QtCore.QObject):
                 log.error(e)
         self.log_thread = None
 
-    @QtCore.Slot(list)
-    def setProcess(self, attrs):
-        self._process = attrs[0]
-
-    def stopProcess(self):
-        if self._process is not None:
-            self._process.terminate()
-
     def setModelData(self, model_data):
         self._modelData = model_data
 
@@ -610,45 +366,17 @@ class Engine(QtCore.QObject):
         self._serversocket.close()
 
     def abortEngine(self):
-        print "aborting engine..."
-        if self._thread is None:
+        if self._process is None:
             return
         try:
-            self._thread.terminate()
+            self._process.terminate()
         except Exception, e:
             print "Could not terminate thread: {0}".format(e)
             log.error(e)
+        else:
+            self._process = None
         finally:
-            print "setting _thread to None"
-            self._thread = None
-        # if self._process is not None:
-        #     try:
-        #         self._process.terminate()
-        #     except Exception, e:
-        #         print "Exception: ", e
-        #         log.error(e)
-
-        # if self._thread is None:
-        #     return
-        # try:
-        #     self._thread.terminate()
-        # except Exception, e:
-        #     print "Could not terminate thread: {0}".format(e)
-        #     log.error(e)
-        # finally:
-        #     self._thread = None
-
-    def terminate_thread(self):
-        if self._thread is None:
-            return
-        try:
-        #     self.process_observer.stop_process()
-            self._thread.terminate()
-        except Exception, e:
-            print "Could not terminate thread: {0}".format(e)
-            log.error(e)
-        finally:
-            self._thread = None
+            self._callback(-1.0)
 
     def getResult(self):
         return self._result
@@ -721,28 +449,10 @@ class Engine(QtCore.QObject):
                 command_list += ['-s', 'posx=%d' % int(pos[0]), '-s', 'posy=%d' % int(pos[1])]
                 command_list += ['$' * len(obj._meshList)]
                 self._objCount += 1
-        model_hash = hash.hexdigest()
+        self.model_hash = hash.hexdigest()
         if self._objCount > 0:
             self.setModelData(engine_model_data)
-            self._thread = QtCore.QThread(self._parent)
-            self.process_observer = ProcessObserver(self, command_list,
-                    model_hash)
-            self.process_observer.moveToThread(self._thread)
-
-            self._thread.started.connect(self.process_observer.watchProcess)
-            # self.process_observer.stop_process_sig.connect(self.stopProcess)
-            # self.process_observer.set_process_sig.connect(self.setProcess)
-            self.process_observer.update_progress_sig.connect(self._callback)
-            self.process_observer.start_log_thread_sig.connect(self.startLogThread)
-            self.process_observer.stop_log_thread_sig.connect(self.stopLogThread,
-                    QtCore.Qt.DirectConnection)
-            self.process_observer.finished.connect(self._thread.quit)
-            self.process_observer.finished.connect(self.process_observer.deleteLater)
-            # self.process_observer.finished.connect(self.process_observer.stop_process)
-            self.process_observer.finished.connect(self.terminate_thread)
-            self._thread.finished.connect(self._thread.deleteLater)
-
-            self._thread.start()
+            self.watchProcess(command_list)
 
     def get_extruder_count(self, scene):
         extruderCount = 1
@@ -752,6 +462,117 @@ class Engine(QtCore.QObject):
 
         return max(extruderCount, profile.minimalExtruderCount())
 
+    def start_process(self, command_list):
+        try:
+            process = QtCore.QProcess(self._parent)
+            process.readyReadStandardOutput.connect(self.read_data)
+            process.readyReadStandardError.connect(self.read_err)
+            process.finished.connect(self.slicing_finished)
+            process.start(getEngineFilename(), command_list,
+                    QtCore.QIODevice.ReadOnly)
+        except Exception, e:
+            log.error(e)
+            return None
+        else:
+            return process
+
+    def watchProcess(self, command_list):
+        self._callback(-1.0)
+
+        self._process = self.start_process(command_list)
+        if not self._process:
+            return
+        if not self._process.waitForStarted(2000):
+            # TODO: Add dialog or text warning that slicer process could not
+            # start
+            log.error("Process could not start: " +\
+                    "{0}".format(self._process.exitStatus()))
+            self.abortEngine()
+            return
+
+        self._result = EngineResult()
+        self._result.addLog('Running: %s' % (''.join(command_list)))
+        self._result.setHash(self.model_hash)
+        self._callback(0.0)
+
+    def read_data(self):
+        if not self._process:
+            return
+        self._process.setReadChannel(
+                QtCore.QProcess.ProcessChannel.StandardOutput)
+        data = self._process.read(4096)
+        while len(data) > 0:
+            self._result._gcodeData.write(data)
+            data = self._process.read(4096)
+
+    def read_err(self):
+        if not self._process:
+            return
+        self._process.setReadChannel(
+                QtCore.QProcess.ProcessChannel.StandardError)
+        object_nr = 0
+        obj_count = self.getObjCount()
+        line = self._process.readLine()
+        while len(line) > 0:
+            try:
+                line = line.data()
+            except AttributeError:
+                pass
+
+            line = line.strip()
+            if line.startswith('Progress:'):
+                line = line.split(':')
+                if line[1] == 'process':
+                    object_nr += 1
+                elif line[1] in self._progress_steps:
+                    try:
+                        progress_value = float(line[2]) / float(line[3])
+                        progress_value /= len(self._progress_steps)
+                        progress_value += 1.0 / len(self._progress_steps) * self._progress_steps.index(line[1])
+                        progress_value /= obj_count
+                        progress_value += 1.0 / obj_count * object_nr
+                        self._callback(progress_value)
+                    except Exception, e:
+                        log.error(e)
+            elif line.startswith('Print time:'):
+                self._result._printTimeSeconds = int(line.split(':')[1].strip())
+            elif line.startswith('Filament:'):
+                self._result._filamentMM[0] = int(line.split(':')[1].strip())
+                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
+                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
+                    self._result._filamentMM[0] /= (math.pi * radius * radius)
+            elif line.startswith('Filament2:'):
+                self._result._filamentMM[1] = int(line.split(':')[1].strip())
+                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
+                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
+                    self._result._filamentMM[1] /= (math.pi * radius * radius)
+            elif line.startswith('Replace:'):
+                self._result._replaceInfo[line.split(':')[1].strip()] = line.split(':')[2].strip()
+            else:
+                self._result.addLog(line)
+            line = self._process.readLine()
+
+    def slicing_finished(self):
+        if self._process is None:
+            return
+
+        if self._result:
+            self._result.setFinished(True)
+            self._callback(1.0)
+
+        return_code = self._process.exitCode()
+        if return_code == 0:
+            pluginError = pluginInfo.runPostProcessingPlugins(self._result)
+            if pluginError is not None:
+                log.error("plugin error: {0}".format(pluginError))
+                self._result.addLog(pluginError)
+        else:
+            log.error("Engine Result log:")
+            for line in self._result.getLog():
+                log.error(line)
+            self._callback(-1.0)
+
+        self.abortEngine()
 
     def _engineSettings(self, extruderCount):
         settings = {

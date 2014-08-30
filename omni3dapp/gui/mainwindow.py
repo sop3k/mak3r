@@ -91,8 +91,19 @@ class MainWindow(QtGui.QMainWindow):
     def connect_actions(self):
         self.ui.actionSwitch_to_quickprint.triggered.connect(self.on_simple_switch)
         self.ui.actionSwitch_to_expert_mode.triggered.connect(self.on_normal_switch)
+        self.ui.actionLoad_model_file_tCTRL_L.triggered.connect(self.scene.showLoadModel)
+        self.ui.actionSave_model.triggered.connect(self.scene.showSaveModel)
+        self.ui.actionReload_platform.triggered.connect(self.scene.reloadScene)
+        self.ui.actionClear_platform.triggered.connect(self.scene.onDeleteAll)
+        self.ui.actionPrint.triggered.connect(self.scene.onPrintButton)
+        self.ui.actionSave_GCode.triggered.connect(self.scene.showSaveGCode)
 
         # Simple panel actions
+        self.connect_actions_simple_mode()
+        # Normal panel actions
+        self.connect_actions_normal_mode()
+
+    def connect_actions_simple_mode(self):
         self.ui.high_quality.toggled.connect(self.scene.sceneUpdated)
         self.ui.normal_quality.toggled.connect(self.scene.sceneUpdated)
         self.ui.fast_low_quality.toggled.connect(self.scene.sceneUpdated)
@@ -102,9 +113,6 @@ class MainWindow(QtGui.QMainWindow):
                 self.scene.sceneUpdated)
         self.ui.print_support_structure.stateChanged.connect(
                 self.scene.sceneUpdated)
-
-        # Normal panel actions
-        self.connect_actions_normal_mode()
 
     def connect_actions_normal_mode(self):
         # For each element in self.normal or self.tabWidget

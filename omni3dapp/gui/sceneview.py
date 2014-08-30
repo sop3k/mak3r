@@ -12,6 +12,8 @@ OpenGL.ERROR_CHECKING = False
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
+import cStringIO as StringIO
+
 from PySide import QtCore, QtGui
 from PySide import QtOpenGL
 
@@ -34,7 +36,6 @@ from omni3dapp.logger import log
 
 # from Cura.gui import printWindow
 # from Cura.util import pluginInfo
-# from Cura.util import explorer
 # from Cura.gui.tools import youmagineGui
 
 
@@ -1295,7 +1296,7 @@ class SceneView(QtOpenGL.QGLWidget):
         self._selectObject(self._selectedObj)
         self.sceneUpdated()
 
-    def onPrintButton(self, button):
+    def onPrintButton(self, button=LEFT_BUTTON):
         print "Entered onPrintButton method"
         # if button == 1:
         #     connectionGroup = self._printerConnectionManager.getAvailableGroup()
@@ -1339,7 +1340,7 @@ class SceneView(QtOpenGL.QGLWidget):
         #     self.PopupMenu(menu)
         #     menu.Destroy()
 
-    def showLoadModel(self, button):
+    def showLoadModel(self, button=LEFT_BUTTON):
         if button is not LEFT_BUTTON:
             return
 
@@ -1458,12 +1459,110 @@ class SceneView(QtOpenGL.QGLWidget):
         self.sceneUpdated()
 
     def reloadScene(self):
-        # Copy the list before DeleteAll clears it
         fileList = []
         for obj in self._scene.objects():
             fileList.append(obj.getOriginFilename())
         self.onDeleteAll()
         self.loadScene(fileList)
+
+    def showSaveModel(self):
+        if len(self._scene.objects()) < 1:
+            return
+
+        file_extentions = meshLoader.saveSupportedExtensions()
+
+        wildcard_filter = "Mesh files ({0})".format(
+                ' '.join(map(lambda s: '*' + s, file_extentions)))
+
+        chosen = QtGui.QFileDialog.getSaveFileName(
+                self,
+                _("Save 3D model"),
+                os.path.split(profile.getPreference('lastFile'))[0],
+                wildcard_filter)
+
+        filename, used_filter = chosen
+        if filename:
+            meshLoader.saveMeshes(filename, self._scene.objects())
+
+    def showSaveGCode(self):
+        if len(self._scene._objectList) < 1:
+            return
+
+        result = self._engine.getResult()
+        if result is not None and not result.isFinished():
+            print "generating gcode is not finished yet, you cannot save it"
+            # self.notification ...
+            return
+        
+        wildcard_filter = "Toolpath ({0})".format(
+                '*' + profile.getGCodeExtension())
+
+        chosen = QtGui.QFileDialog.getSaveFileName(
+                self,
+                _("Save toolpath"),
+                os.path.dirname(profile.getPreference('lastFile')),
+                wildcard_filter)
+
+        filename, used_filter = chosen
+        if filename:
+            self.save_gcode_worker = SaveGCodeWorker(self._engine, filename)
+            self.save_gcode_thread = QtCore.QThread(self._parent)
+            self.save_gcode_worker.moveToThread(self.save_gcode_thread)
+
+            self.save_gcode_thread.started.connect(self.save_gcode_worker.saveGCode)
+            self.save_gcode_worker.set_progress_bar_sig.connect(self.printButton.setProgressBar)
+            self.save_gcode_worker.queue_refresh_sig.connect(self.queueRefresh)
+
+            self.save_gcode_worker.finished.connect(self.save_gcode_thread.quit)
+            self.save_gcode_worker.finished.connect(self.save_gcode_worker.deleteLater)
+            self.save_gcode_thread.finished.connect(self.save_gcode_thread.deleteLater)
+
+            self.save_gcode_thread.start()
+
+
+class SaveGCodeWorker(QtCore.QObject):
+    set_progress_bar_sig = QtCore.Signal(float)
+    queue_refresh_sig = QtCore.Signal()
+    finished = QtCore.Signal()
+
+    def __init__(self, engine, target, eject_drive=False):
+        super(SaveGCodeWorker, self).__init__()
+        self.engine = engine
+        self.target = target
+        self.eject_drive = eject_drive
+
+    def saveGCode(self):
+        data = self.engine.getResult().getGCode()
+        try:
+            size = float(len(data))
+            fsrc = StringIO.StringIO(data)
+            with open(self.target, 'wb') as fdst:
+                while 1:
+                    buf = fsrc.read(16*1024)
+                    if not buf:
+                        break
+                    fdst.write(buf)
+                    self.set_progress_bar_sig.emit(float(fsrc.tell()) / size)
+                    self.queue_refresh_sig.emit()
+        except Exception, e:
+            log.error(e)
+            # self.notification.message("Failed to save")
+            self.finished.emit()
+        else:
+            print "Saved as %s" % (self.target)
+            # if eject_drive:
+            #     # self.notification.message("Saved as %s" % (targetFilename), lambda : self._doEjectSD(ejectDrive), 31, 'Eject')
+            #     print "Saved as %s" % (self.target)
+            # elif explorer.hasExplorer():
+            #     # self.notification.message("Saved as %s" % (targetFilename), lambda : explorer.openExplorer(targetFilename), 4, 'Open folder')
+            #     print "Saved as %s" % (self.target)
+            # else:
+            #     # self.notification.message("Saved as %s" % (targetFilename))
+            #     print "Saved as %s" % (self.target)
+        # self.printButton.setProgressBar(None)
+        self.set_progress_bar_sig.emit(-1.0)
+        # self.engine.getResult().submitInfoOnline()
+        self.finished.emit()
 
 
 class ShaderEditor(QtGui.QDialog):

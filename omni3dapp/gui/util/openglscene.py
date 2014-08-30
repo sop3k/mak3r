@@ -8,6 +8,8 @@ import OpenGL
 OpenGL.ERROR_CHECKING = False
 from OpenGL.GL import *
 
+from PySide import QtCore
+
 from omni3dapp.util import version
 from omni3dapp.gui.util import openglHelpers
 
@@ -210,7 +212,10 @@ class glButton(glGuiControl):
     def setDisabled(self, value):
         self._disabled = value
 
+    @QtCore.Slot(float)
     def setProgressBar(self, value):
+        if value < 0:
+            value = None
         self._progressBar = value
 
     def getProgressBar(self):

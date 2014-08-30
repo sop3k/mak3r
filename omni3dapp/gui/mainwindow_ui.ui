@@ -1269,12 +1269,11 @@
      <property name="title">
       <string>Recent Model Files</string>
      </property>
-     <addaction name="actionSample_file"/>
     </widget>
     <addaction name="actionLoad_model_file_tCTRL_L"/>
     <addaction name="actionSave_model"/>
     <addaction name="actionReload_platform"/>
-    <addaction name="actionReload_platform_2"/>
+    <addaction name="actionClear_platform"/>
     <addaction name="separator"/>
     <addaction name="actionPrint"/>
     <addaction name="actionSave_GCode"/>
@@ -1358,7 +1357,7 @@
     <string>Reload platform</string>
    </property>
   </action>
-  <action name="actionReload_platform_2">
+  <action name="actionClear_platform">
    <property name="text">
     <string>Clear platform</string>
    </property>
@@ -1500,11 +1499,6 @@
   <action name="actionCheck_for_update">
    <property name="text">
     <string>Check for update...</string>
-   </property>
-  </action>
-  <action name="actionSample_file">
-   <property name="text">
-    <string>Sample file</string>
    </property>
   </action>
  </widget>

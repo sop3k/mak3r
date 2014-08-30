@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'mainwindow_ui.ui'
 #
-# Created: Tue Aug  5 18:54:47 2014
+# Created: Sat Aug 30 18:23:23 2014
 #      by: pyside-uic 0.2.13 running on PySide 1.1.0
 #
 # WARNING! All changes made in this file will be lost!
@@ -631,8 +631,8 @@ class Ui_MainWindow(object):
         self.actionSave_model.setObjectName("actionSave_model")
         self.actionReload_platform = QtGui.QAction(MainWindow)
         self.actionReload_platform.setObjectName("actionReload_platform")
-        self.actionReload_platform_2 = QtGui.QAction(MainWindow)
-        self.actionReload_platform_2.setObjectName("actionReload_platform_2")
+        self.actionClear_platform = QtGui.QAction(MainWindow)
+        self.actionClear_platform.setObjectName("actionClear_platform")
         self.actionPrint = QtGui.QAction(MainWindow)
         self.actionPrint.setObjectName("actionPrint")
         self.actionSave_GCode = QtGui.QAction(MainWindow)
@@ -691,7 +691,7 @@ class Ui_MainWindow(object):
         self.menu_File.addAction(self.actionLoad_model_file_tCTRL_L)
         self.menu_File.addAction(self.actionSave_model)
         self.menu_File.addAction(self.actionReload_platform)
-        self.menu_File.addAction(self.actionReload_platform_2)
+        self.menu_File.addAction(self.actionClear_platform)
         self.menu_File.addSeparator()
         self.menu_File.addAction(self.actionPrint)
         self.menu_File.addAction(self.actionSave_GCode)
@@ -827,7 +827,7 @@ class Ui_MainWindow(object):
         self.actionLoad_model_file_tCTRL_L.setText(QtGui.QApplication.translate("MainWindow", "Load model file...", None, QtGui.QApplication.UnicodeUTF8))
         self.actionSave_model.setText(QtGui.QApplication.translate("MainWindow", "Save model...", None, QtGui.QApplication.UnicodeUTF8))
         self.actionReload_platform.setText(QtGui.QApplication.translate("MainWindow", "Reload platform", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionReload_platform_2.setText(QtGui.QApplication.translate("MainWindow", "Clear platform", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionClear_platform.setText(QtGui.QApplication.translate("MainWindow", "Clear platform", None, QtGui.QApplication.UnicodeUTF8))
         self.actionPrint.setText(QtGui.QApplication.translate("MainWindow", "Print...", None, QtGui.QApplication.UnicodeUTF8))
         self.actionSave_GCode.setText(QtGui.QApplication.translate("MainWindow", "Save GCode...", None, QtGui.QApplication.UnicodeUTF8))
         self.actionShow_slice_engine_log.setText(QtGui.QApplication.translate("MainWindow", "Show slice engine log...", None, QtGui.QApplication.UnicodeUTF8))

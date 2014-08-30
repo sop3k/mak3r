@@ -3,13 +3,10 @@ Slice engine communication.
 This module handles all communication with the slicing engine.
 """
 __copyright__ = "Copyright (C) 2013 David Braam - Released under terms of the AGPLv3 License"
-import subprocess
 import time
 import math
 import numpy
 import os
-import warnings
-import traceback
 import platform
 import sys
 import urllib
@@ -48,6 +45,7 @@ def getEngineFilename():
     if os.path.isdir(tempPath):
         tempPath = os.path.join(tempPath,'CuraEngine')
     return tempPath
+
 
 class EngineResult(object):
     """
@@ -134,6 +132,7 @@ class EngineResult(object):
         return self._gcodeLoadCallback(self, progress)
 
     def getGCodeLayers(self, loadCallback):
+        print "INSIDE GET GCODE LAYERS - FIX THREADING"
         if not self._finished:
             return None
         if self._gcodeInterpreter.layerList is None and self._gcodeLoadThread is None:
@@ -195,6 +194,7 @@ class SocketListener(QtCore.QObject):
                 self.start_socket_connector_sig.emit(sock)
             except socket.error, e:
                 if e.errno != errno.EINTR:
+                    log.error(e)
                     raise
                 else:
                     log.error(e)
@@ -268,130 +268,7 @@ class SocketConnector(QtCore.QObject):
                 layer_nr_offset = len(self.engine._result._polygons)
             else:
                 log.debug("Unknown command on socket: %x" % (cmd))
-
-
-class ProcessObserver(QtCore.QObject):
-    set_process_sig = QtCore.Signal(list)
-    stop_process_sig = QtCore.Signal()
-    update_progress_sig = QtCore.Signal(float)
-    start_log_thread_sig = QtCore.Signal(file)
-    stop_log_thread_sig = QtCore.Signal()
-    finished = QtCore.Signal()
-
-    def __init__(self, engine, command_list, model_hash):
-        super(ProcessObserver, self).__init__()
-        self.engine = engine
-        self.command_list = command_list
-        self.model_hash = model_hash
-
-    def run_engine_process(self, cmd_list):
-        kwargs = {}
-        if subprocess.mswindows:
-            su = subprocess.STARTUPINFO()
-            su.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            su.wShowWindow = subprocess.SW_HIDE
-            kwargs['startupinfo'] = su
-            kwargs['creationflags'] = 0x00004000 #BELOW_NORMAL_PRIORITY_CLASS
-        return subprocess.Popen(cmd_list, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
-
-    def watchProcess(self):
-        self.stop_process_sig.emit()
-        self.update_progress_sig.emit(-1.0)
-        try:
-            self.process = self.run_engine_process(self.command_list)
-            self.set_process_sig.emit([self.process,])
-        except OSError, e:
-            log.error(e)
-            traceback.print_exc()
             self.finished.emit()
-            return
-        # if self._thread != QtCore.QThread.currentThread() and self._process:
-        #     self._process.terminate()
-
-        self.engine._result = EngineResult()
-        self.engine._result.addLog('Running: %s' % (''.join(self.command_list)))
-        self.engine._result.setHash(self.model_hash)
-        self.update_progress_sig.emit(0.0)
-
-        self.start_log_thread_sig.emit(self.process.stderr)
-
-        data = self.process.stdout.read(4096)
-        while len(data) > 0:
-            self.engine._result._gcodeData.write(data)
-            data = self.process.stdout.read(4096)
-
-        returnCode = self.process.wait()
-        # self.stop_log_thread_sig.emit()
-        if returnCode == 0:
-            pluginError = pluginInfo.runPostProcessingPlugins(self.engine._result)
-            if pluginError is not None:
-                print pluginError
-                self.engine._result.addLog(pluginError)
-            # self.engine._result.setFinished(True)
-            # self.update_progress_sig.emit(1.0)
-        else:
-            for line in self.engine._result.getLog():
-                print line
-            self.update_progress_sig.emit(-1.0)
-        self.process = None
-        self.set_process_sig.emit([self.process,])
-        self.finished.emit()
-
-
-class StdErrObserver(QtCore.QObject):
-    _progress_steps = ['inset', 'skin', 'export']
-    update_progress_sig = QtCore.Signal(float)
-    finished = QtCore.Signal()
-    
-    def __init__(self, engine, stderr):
-        super(StdErrObserver, self).__init__()
-        self.engine = engine
-        self.stderr = stderr
-
-    def watchStdErr(self):
-        object_nr = 0
-        obj_count = self.engine.getObjCount()
-        line = self.stderr.readline()
-        while len(line) > 0:
-            line = line.strip()
-            if line.startswith('Progress:'):
-                line = line.split(':')
-                if line[1] == 'process':
-                    object_nr += 1
-                elif line[1] in self._progress_steps:
-                    try:
-                        progress_value = float(line[2]) / float(line[3])
-                        progress_value /= len(self._progress_steps)
-                        progress_value += 1.0 / len(self._progress_steps) * self._progress_steps.index(line[1])
-
-                        progress_value /= obj_count
-                        progress_value += 1.0 / obj_count * object_nr
-
-                        self.update_progress_sig.emit(progress_value)
-                        # TODO: fix the workoround below
-                        time.sleep(0.01)
-                    except Exception, e:
-                        log.error(e)
-            elif line.startswith('Print time:'):
-                self.engine._result._printTimeSeconds = int(line.split(':')[1].strip())
-            elif line.startswith('Filament:'):
-                self.engine._result._filamentMM[0] = int(line.split(':')[1].strip())
-                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
-                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
-                    self.engine._result._filamentMM[0] /= (math.pi * radius * radius)
-            elif line.startswith('Filament2:'):
-                self.engine._result._filamentMM[1] = int(line.split(':')[1].strip())
-                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
-                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
-                    self.engine._result._filamentMM[1] /= (math.pi * radius * radius)
-            elif line.startswith('Replace:'):
-                self.engine._result._replaceInfo[line.split(':')[1].strip()] = line.split(':')[2].strip()
-            else:
-                self.engine._result.addLog(line)
-            line = self.stderr.readline()
-        self.engine._result.setFinished(True)
-        self.update_progress_sig.emit(1.0)
-        self.finished.emit()
 
 
 class Engine(QtCore.QObject):
@@ -401,17 +278,17 @@ class Engine(QtCore.QObject):
     GCode through stdout and has a socket connection for polygon information and loading the 3D model into the engine.
     """
 
+    _progress_steps = ['inset', 'skin', 'export']
+
     def __init__(self, sceneview, progressCallback):
         super(Engine, self).__init__(sceneview)
         self._sceneview = sceneview
         self._parent = sceneview._parent
-        self._process = None
-        self._thread = None
         self._callback = progressCallback
         self._objCount = 0
         self._result = None
         self._modelData = None
-        self.runner = None
+        self._process = None
 
         self._serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._serverPortNr = 0xC20A
@@ -420,16 +297,16 @@ class Engine(QtCore.QObject):
 
         self.socket_listener = SocketListener(self._parent, self._serversocket,
                 self._serverPortNr)
-        thread = QtCore.QThread(self._parent)
-        self.socket_listener.moveToThread(thread)
+        self.socket_listener_thread = QtCore.QThread(self._parent)
+        self.socket_listener.moveToThread(self.socket_listener_thread)
 
-        thread.started.connect(self.socket_listener.socketListen) 
-        self.socket_listener.finished.connect(thread.quit)
+        self.socket_listener_thread.started.connect(self.socket_listener.socketListen) 
+        self.socket_listener.finished.connect(self.socket_listener_thread.quit)
         self.socket_listener.finished.connect(self.socket_listener.deleteLater)
         self.socket_listener.start_socket_connector_sig.connect(self.startSocketConnector)
-        thread.finished.connect(thread.deleteLater)
+        self.socket_listener_thread.finished.connect(self.socket_listener_thread.deleteLater)
 
-        thread.start()
+        self.socket_listener_thread.start()
 
     def bind_server_socket(self):
         while True:
@@ -446,15 +323,15 @@ class Engine(QtCore.QObject):
 
     def startSocketConnector(self, sock):
         self.socket_connector = SocketConnector(self, sock, self._modelData)
-        thread = QtCore.QThread(self._parent)
-        self.socket_connector.moveToThread(thread)
+        self.socket_connector_thread = QtCore.QThread(self._parent)
+        self.socket_connector.moveToThread(self.socket_connector_thread)
 
-        thread.started.connect(self.socket_connector.socketConnect)
-        self.socket_connector.finished.connect(thread.quit)
+        self.socket_connector_thread.started.connect(self.socket_connector.socketConnect)
+        self.socket_connector.finished.connect(self.socket_connector_thread.quit)
         self.socket_connector.finished.connect(self.socket_connector.deleteLater)
-        thread.finished.connect(thread.deleteLater)
+        self.socket_connector_thread.finished.connect(self.socket_connector_thread.deleteLater)
 
-        thread.start()
+        self.socket_connector_thread.start()
 
     def startLogThread(self, stderr):
         self.log_thread = QtCore.QThread(self._parent)
@@ -478,51 +355,224 @@ class Engine(QtCore.QObject):
                 log.error(e)
         self.log_thread = None
 
-    @QtCore.Slot(list)
-    def setProcess(self, attrs):
-        self._process = attrs[0]
-
-    def stopProcess(self):
-        if self._process is not None:
-            self._process.terminate()
-
     def setModelData(self, model_data):
         self._modelData = model_data
 
     def getObjCount(self):
         return self._objCount
 
-    def setObjCount(self, obj_count):
-        self._objCount = obj_count
-
     def cleanup(self):
         self.abortEngine()
         self._serversocket.close()
 
     def abortEngine(self):
-        if self._process is not None:
-            try:
-                self._process.terminate()
-            except Exception, e:
-                log.error(e)
-        if self.runner and self.runner._thread:
-            self.runner._thread.terminate()
-            self.runner._thread = None
-
-    def wait(self):
-        if self.runner and self.runner._thread:
-            self.runner._thread.terminate()
+        if self._process is None:
+            return
+        try:
+            self._process.terminate()
+        except Exception, e:
+            print "Could not terminate thread: {0}".format(e)
+            log.error(e)
+        else:
+            self._process = None
+        finally:
+            self._callback(-1.0)
 
     def getResult(self):
         return self._result
 
-    def getServerPortNr(self):
-        return self._serverPortNr
-
     def runEngine(self, scene):
         if len(scene.objects()) < 1:
             return
-        self.runner = EngineRunner(scene, self)
+        extruder_count = self.get_extruder_count(scene)
+        command_list = ['-v', '-p']
+        for k, v in self._engineSettings(extruder_count).iteritems():
+            command_list += ['-s', '%s=%s' % (k, str(v))]
+        command_list += ['-g', '%d' % (self._serverPortNr)]
+
+        self._objCount = 0
+        engine_model_data = []
+        hash = hashlib.sha512()
+        order = scene.printOrder()
+        if order is None:
+            pos = numpy.array(profile.getMachineCenterCoords()) * 1000
+            objMin = None
+            objMax = None
+            for obj in scene.objects():
+                if scene.checkPlatform(obj):
+                    oMin = obj.getMinimum()[0:2] + obj.getPosition()
+                    oMax = obj.getMaximum()[0:2] + obj.getPosition()
+                    if objMin is None:
+                        objMin = oMin
+                        objMax = oMax
+                    else:
+                        objMin[0] = min(oMin[0], objMin[0])
+                        objMin[1] = min(oMin[1], objMin[1])
+                        objMax[0] = max(oMax[0], objMax[0])
+                        objMax[1] = max(oMax[1], objMax[1])
+            if objMin is None:
+                return
+            pos += (objMin + objMax) / 2.0 * 1000
+            command_list += ['-s', 'posx=%d' % int(pos[0]), '-s', 'posy=%d' % int(pos[1])]
+
+            vertexTotal = [0] * 4
+            meshMax = 1
+            for obj in scene.objects():
+                if scene.checkPlatform(obj):
+                    meshMax = max(meshMax, len(obj._meshList))
+                    for n in xrange(0, len(obj._meshList)):
+                        vertexTotal[n] += obj._meshList[n].vertexCount
+
+            for n in xrange(0, meshMax):
+                verts = numpy.zeros((0, 3), numpy.float32)
+                for obj in scene.objects():
+                    if scene.checkPlatform(obj):
+                        if n < len(obj._meshList):
+                            vertexes = (numpy.matrix(obj._meshList[n].vertexes, copy = False) * numpy.matrix(obj._matrix, numpy.float32)).getA()
+                            vertexes -= obj._drawOffset
+                            vertexes += numpy.array([obj.getPosition()[0], obj.getPosition()[1], 0.0])
+                            verts = numpy.concatenate((verts, vertexes))
+                            hash.update(obj._meshList[n].vertexes.tostring())
+                engine_model_data.append((vertexTotal[n], verts))
+
+            command_list += ['$' * meshMax]
+            self._objCount = 1
+        else:
+            for n in order:
+                obj = scene.objects()[n]
+                for mesh in obj._meshList:
+                    engine_model_data.append((mesh.vertexCount, mesh.vertexes))
+                    hash.update(mesh.vertexes.tostring())
+                pos = obj.getPosition() * 1000
+                pos += numpy.array(profile.getMachineCenterCoords()) * 1000
+                command_list += ['-m', ','.join(map(str, obj._matrix.getA().flatten()))]
+                command_list += ['-s', 'posx=%d' % int(pos[0]), '-s', 'posy=%d' % int(pos[1])]
+                command_list += ['$' * len(obj._meshList)]
+                self._objCount += 1
+        self.model_hash = hash.hexdigest()
+        if self._objCount > 0:
+            self.setModelData(engine_model_data)
+            self.watchProcess(command_list)
+
+    def get_extruder_count(self, scene):
+        extruderCount = 1
+        for obj in scene.objects():
+            if scene.checkPlatform(obj):
+                extruderCount = max(extruderCount, len(obj._meshList))
+
+        return max(extruderCount, profile.minimalExtruderCount())
+
+    def start_process(self, command_list):
+        try:
+            process = QtCore.QProcess(self._parent)
+            process.readyReadStandardOutput.connect(self.read_data)
+            process.readyReadStandardError.connect(self.read_err)
+            process.finished.connect(self.slicing_finished)
+            process.start(getEngineFilename(), command_list,
+                    QtCore.QIODevice.ReadOnly)
+        except Exception, e:
+            log.error(e)
+            return None
+        else:
+            return process
+
+    def watchProcess(self, command_list):
+        self._callback(-1.0)
+
+        self._process = self.start_process(command_list)
+        if not self._process:
+            return
+        if not self._process.waitForStarted(2000):
+            # TODO: Add dialog or text warning that slicer process could not
+            # start
+            log.error("Process could not start: " +\
+                    "{0}".format(self._process.exitStatus()))
+            self.abortEngine()
+            return
+
+        self._result = EngineResult()
+        self._result.addLog('Running: %s' % (''.join(command_list)))
+        self._result.setHash(self.model_hash)
+        self._callback(0.0)
+
+    def read_data(self):
+        if not self._process:
+            return
+        self._process.setReadChannel(
+                QtCore.QProcess.ProcessChannel.StandardOutput)
+        data = self._process.read(4096)
+        while len(data) > 0:
+            self._result._gcodeData.write(data)
+            data = self._process.read(4096)
+
+    def read_err(self):
+        if not self._process:
+            return
+        self._process.setReadChannel(
+                QtCore.QProcess.ProcessChannel.StandardError)
+        object_nr = 0
+        obj_count = self.getObjCount()
+        line = self._process.readLine()
+        while len(line) > 0:
+            try:
+                line = line.data()
+            except AttributeError:
+                pass
+
+            line = line.strip()
+            if line.startswith('Progress:'):
+                line = line.split(':')
+                if line[1] == 'process':
+                    object_nr += 1
+                elif line[1] in self._progress_steps:
+                    try:
+                        progress_value = float(line[2]) / float(line[3])
+                        progress_value /= len(self._progress_steps)
+                        progress_value += 1.0 / len(self._progress_steps) * self._progress_steps.index(line[1])
+                        progress_value /= obj_count
+                        progress_value += 1.0 / obj_count * object_nr
+                        self._callback(progress_value)
+                    except Exception, e:
+                        log.error(e)
+            elif line.startswith('Print time:'):
+                self._result._printTimeSeconds = int(line.split(':')[1].strip())
+            elif line.startswith('Filament:'):
+                self._result._filamentMM[0] = int(line.split(':')[1].strip())
+                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
+                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
+                    self._result._filamentMM[0] /= (math.pi * radius * radius)
+            elif line.startswith('Filament2:'):
+                self._result._filamentMM[1] = int(line.split(':')[1].strip())
+                if profile.getMachineSetting('gcode_flavor') == 'UltiGCode':
+                    radius = profile.getProfileSettingFloat('filament_diameter') / 2.0
+                    self._result._filamentMM[1] /= (math.pi * radius * radius)
+            elif line.startswith('Replace:'):
+                self._result._replaceInfo[line.split(':')[1].strip()] = line.split(':')[2].strip()
+            else:
+                self._result.addLog(line)
+            line = self._process.readLine()
+
+    def slicing_finished(self):
+        if self._process is None:
+            return
+
+        if self._result:
+            self._result.setFinished(True)
+            self._callback(1.0)
+
+        return_code = self._process.exitCode()
+        if return_code == 0:
+            pluginError = pluginInfo.runPostProcessingPlugins(self._result)
+            if pluginError is not None:
+                log.error("plugin error: {0}".format(pluginError))
+                self._result.addLog(pluginError)
+        else:
+            log.error("Engine Result log:")
+            for line in self._result.getLog():
+                log.error(line)
+            self._callback(-1.0)
+
+        self.abortEngine()
 
     def _engineSettings(self, extruderCount):
         settings = {
@@ -649,117 +699,3 @@ class Engine(QtCore.QObject):
         if profile.getProfileSetting('ooze_shield') == 'True':
             settings['enableOozeShield'] = 1
         return settings
-
-
-class EngineRunner(object):
-    def __init__(self, scene, engine):
-        self.scene = scene
-        self.engine = engine
-        self.obj_count = 0
-        self.command_list = []
-        self.model_hash = None
-        self._thread = None
-
-        self.setup()
-
-        if self.obj_count > 0:
-            self._thread = QtCore.QThread(engine._sceneview)
-            self.process_observer = ProcessObserver(self.engine, self.command_list, self.model_hash)
-            self.process_observer.moveToThread(self._thread)
-
-            self._thread.started.connect(self.process_observer.watchProcess)
-            self.process_observer.stop_process_sig.connect(engine.stopProcess)
-            self.process_observer.set_process_sig.connect(engine.setProcess)
-            self.process_observer.update_progress_sig.connect(engine._callback)
-            self.process_observer.start_log_thread_sig.connect(engine.startLogThread)
-            self.process_observer.stop_log_thread_sig.connect(engine.stopLogThread,
-                    QtCore.Qt.DirectConnection)
-            self.process_observer.finished.connect(self._thread.quit)
-            self.process_observer.finished.connect(self.process_observer.deleteLater)
-            self.process_observer.finished.connect(self.delete_thread)
-            self._thread.finished.connect(self._thread.deleteLater)
-
-            self._thread.start()
-
-    def delete_thread(self):
-        self._thread = None
-
-    def get_extruder_count(self):
-        extruderCount = 1
-        for obj in self.scene.objects():
-            if self.scene.checkPlatform(obj):
-                extruderCount = max(extruderCount, len(obj._meshList))
-
-        return max(extruderCount, profile.minimalExtruderCount())
-
-    def setup(self):
-        extruder_count = self.get_extruder_count()
-        self.command_list = [getEngineFilename(), '-v', '-p']
-        for k, v in self.engine._engineSettings(extruder_count).iteritems():
-            self.command_list += ['-s', '%s=%s' % (k, str(v))]
-        self.command_list += ['-g', '%d' % (self.engine.getServerPortNr())]
-
-        objCount = 0
-        engineModelData = []
-        hash = hashlib.sha512()
-        order = self.scene.printOrder()
-        if order is None:
-            pos = numpy.array(profile.getMachineCenterCoords()) * 1000
-            objMin = None
-            objMax = None
-            for obj in self.scene.objects():
-                if self.scene.checkPlatform(obj):
-                    oMin = obj.getMinimum()[0:2] + obj.getPosition()
-                    oMax = obj.getMaximum()[0:2] + obj.getPosition()
-                    if objMin is None:
-                        objMin = oMin
-                        objMax = oMax
-                    else:
-                        objMin[0] = min(oMin[0], objMin[0])
-                        objMin[1] = min(oMin[1], objMin[1])
-                        objMax[0] = max(oMax[0], objMax[0])
-                        objMax[1] = max(oMax[1], objMax[1])
-            if objMin is None:
-                return
-            pos += (objMin + objMax) / 2.0 * 1000
-            self.command_list += ['-s', 'posx=%d' % int(pos[0]), '-s', 'posy=%d' % int(pos[1])]
-
-            vertexTotal = [0] * 4
-            meshMax = 1
-            for obj in self.scene.objects():
-                if self.scene.checkPlatform(obj):
-                    meshMax = max(meshMax, len(obj._meshList))
-                    for n in xrange(0, len(obj._meshList)):
-                        vertexTotal[n] += obj._meshList[n].vertexCount
-
-            for n in xrange(0, meshMax):
-                verts = numpy.zeros((0, 3), numpy.float32)
-                for obj in self.scene.objects():
-                    if self.scene.checkPlatform(obj):
-                        if n < len(obj._meshList):
-                            vertexes = (numpy.matrix(obj._meshList[n].vertexes, copy = False) * numpy.matrix(obj._matrix, numpy.float32)).getA()
-                            vertexes -= obj._drawOffset
-                            vertexes += numpy.array([obj.getPosition()[0], obj.getPosition()[1], 0.0])
-                            verts = numpy.concatenate((verts, vertexes))
-                            hash.update(obj._meshList[n].vertexes.tostring())
-                engineModelData.append((vertexTotal[n], verts))
-
-            self.command_list += ['$' * meshMax]
-            objCount = 1
-        else:
-            for n in order:
-                obj = self.scene.objects()[n]
-                for mesh in obj._meshList:
-                    engineModelData.append((mesh.vertexCount, mesh.vertexes))
-                    hash.update(mesh.vertexes.tostring())
-                pos = obj.getPosition() * 1000
-                pos += numpy.array(profile.getMachineCenterCoords()) * 1000
-                self.command_list += ['-m', ','.join(map(str, obj._matrix.getA().flatten()))]
-                self.command_list += ['-s', 'posx=%d' % int(pos[0]), '-s', 'posy=%d' % int(pos[1])]
-                self.command_list += ['$' * len(obj._meshList)]
-                objCount += 1
-        self.model_hash = hash.hexdigest()
-        self.engine.setObjCount(objCount)
-        self.obj_count = objCount
-        if objCount > 0:
-            self.engine.setModelData(engineModelData)

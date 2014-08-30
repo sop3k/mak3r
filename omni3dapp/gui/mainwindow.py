@@ -22,6 +22,12 @@ class MainWindow(QtGui.QMainWindow):
             'Reset_Profile_to_default',
             'Open_expert_settings',
             ]
+    THREADS = [
+            '_thread',
+            'socket_listener_thread',
+            'socket_connector_thread',
+            'log_thread'
+            ]
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -74,7 +80,7 @@ class MainWindow(QtGui.QMainWindow):
                 log.debug('Could not set value to field {0}: {1}'.format(key, e))
 
             # Set recent MRU files list
-            for elem in xrange(MainWindow.MAX_MRU_FILES):
+            for elem in xrange(self.MAX_MRU_FILES):
                 action = QtGui.QAction(self, visible=False,
                         triggered=self.open_model_file)
                 action.setObjectName("recent_model_file_{0}".format(elem))
@@ -323,6 +329,25 @@ class MainWindow(QtGui.QMainWindow):
 
     def stripped_name(self, full_filename):
         return QtCore.QFileInfo(full_filename).fileName()
+
+    def terminate_thread(self, thread_name):
+        try:
+            thread = getattr(self.scene._engine, thread_name, None)
+            if not thread:
+                return None
+            thread.terminate()
+            del thread
+        except Exception, e:
+            log.debug("Error terminating thread: {0}".format(e))
+
+    def terminate_threads(self):
+        for thread_name in self.THREADS:
+            self.terminate_thread(thread_name)
+
+    def closeEvent(self, evt):
+        # terminate all slicer-related threads
+        self.terminate_threads()
+        super(MainWindow, self).closeEvent(evt)
 
 
 class NormalModeValidator(QtGui.QValidator):

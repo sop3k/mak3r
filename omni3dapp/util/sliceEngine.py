@@ -131,8 +131,10 @@ class EngineResult(object):
         return self._finished
 
     def _gcodeInterpreterCallback(self, progress):
-        # if len(self._gcodeInterpreter.layerList) % 5 == 0:
-        #     time.sleep(0.1)
+        # TODO: synchronous call to update from engine result view; avoid
+        # sleeping
+        if len(self._gcodeInterpreter.layerList) % 5 == 0:
+            time.sleep(0.1)
         # self.update_layers_sig.set_gcode_layers.emit(
         #         self._gcodeInterpreter.layerList)
         return self._gcodeLoadCallback(self, progress, self._gcodeInterpreter.layerList)

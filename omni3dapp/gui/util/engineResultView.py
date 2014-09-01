@@ -17,6 +17,10 @@ from omni3dapp.gui.util import openglscene
 from omni3dapp.util.shortcuts import *
 
 
+class UpdateScene(QtCore.QObject):
+    update = QtCore.Signal()
+
+
 class EngineResultView(object):
 
     def __init__(self, parent):
@@ -27,6 +31,10 @@ class EngineResultView(object):
         self._gcodeLayers = None
         self._layerVBOs = []
         self._layer20VBOs = []
+
+        self.update_scene_sig = UpdateScene()
+        self.update_scene_sig.update.connect(self._parent.updateGL,
+                QtCore.Qt.QueuedConnection)
 
         self.layerSelect = openglscene.glSlider(self._parent, 10000, 0, 1,
                 (-1,-2), lambda : self._parent.updateGL())
@@ -64,6 +72,7 @@ class EngineResultView(object):
             return True
         self._gcodeLoadProgress = progress
         self._gcodeLayers = layers
+        self.update_scene_sig.update.emit()
         return False
 
     @QtCore.Slot(list)

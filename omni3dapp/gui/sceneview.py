@@ -464,7 +464,6 @@ class SceneView(QtOpenGL.QGLWidget):
         glEnable(GL_BLEND)
 
     def paintGL(self):
-        print "repainting"
         self._idleCalled = False
         h = self.height()
         w = self.width()
@@ -1360,16 +1359,24 @@ class SceneView(QtOpenGL.QGLWidget):
                 ' '.join(map(lambda s: '*' + s,img_extentions)),
                 ' '.join(map(lambda s: '*' + s, ['.g', '.gcode'])))
 
-        chosen = QtGui.QFileDialog.getOpenFileNames(
-            self,
-            _("Open 3D model"),
-            os.path.split(profile.getPreference('lastFile'))[0],
-            wildcard_filter)
-        filenames, used_filter = chosen
+        file_dialog = QtGui.QFileDialog(self._parent)
+        file_dialog.setNameFilter(wildcard_filter)
+
+        if (file_dialog.exec_()):
+            filenames = file_dialog.selectedFiles()
+
+        # chosen = file_dialog.getOpenFileNames(
+        # chosen = QtGui.QFileDialog.getOpenFileNames(
+        #     self,
+        #     _("Open 3D model"),
+        #     os.path.split(profile.getPreference('lastFile'))[0],
+        #     wildcard_filter)
+        # filenames, used_filter = chosen
 
         if len(filenames) < 1:
             return False
         profile.putPreference('lastFile', filenames[0])
+        # print "finished show load model method"
 
         self.files_loader = FilesLoader(self, filenames, self._machineSize)
         self.files_loader_thread = QtCore.QThread(self._parent)
@@ -1382,7 +1389,7 @@ class SceneView(QtOpenGL.QGLWidget):
         self.files_loader_thread.finished.connect(self.files_loader_thread.deleteLater)
 
         self.files_loader_thread.start()
-        print "thread started"
+        # print "thread started"
 
         # self.loadFiles(filenames)
 

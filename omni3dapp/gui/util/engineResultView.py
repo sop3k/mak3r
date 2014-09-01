@@ -9,18 +9,22 @@ OpenGL.ERROR_CHECKING = False
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
+from PySide import QtCore
+
 from omni3dapp.util import profile
 from omni3dapp.gui.util import openglHelpers
 from omni3dapp.gui.util import openglscene
 from omni3dapp.util.shortcuts import *
 
-class engineResultView(object):
+
+class EngineResultView(object):
+
     def __init__(self, parent):
         self._parent = parent
         self._result = None
         self._enabled = False
         self._gcodeLoadProgress = 0
-        self._resultLock = threading.Lock()
+        self._gcodeLayers = None
         self._layerVBOs = []
         self._layer20VBOs = []
 
@@ -33,7 +37,6 @@ class engineResultView(object):
         if result is None:
             self.setEnabled(False)
 
-        self._resultLock.acquire()
         self._result = result
 
         #Clean the saved VBO's
@@ -45,34 +48,39 @@ class engineResultView(object):
                 self._parent.glReleaseList.append(layer[typeName])
         self._layerVBOs = []
         self._layer20VBOs = []
-        self._resultLock.release()
 
     def setEnabled(self, enabled):
         self._enabled = enabled
         self.layerSelect.setHidden(not enabled)
+        if not enabled and self._gcodeLayers:
+            self._gcodeLayers = None
 
-    def _gcodeLoadCallback(self, result, progress):
+    def _gcodeLoadCallback(self, result, progress, layers):
+        print "inside load callback"
+        # TODO: test what happens if the result is True
         if result != self._result:
             #Abort loading from this thread.
+            print "aborting"
             return True
         self._gcodeLoadProgress = progress
-        self._parent.updateGL()
+        self._gcodeLayers = layers
         return False
+
+    @QtCore.Slot(list)
+    def setGCodeLayers(self, val):
+        print "setting gcode layers"
+        self._gcodeLayers = val
 
     def onDraw(self):
         if not self._enabled:
             return
 
-        self._resultLock.acquire()
         result = self._result
-        if result is not None:
-            gcodeLayers = result.getGCodeLayers(self._gcodeLoadCallback)
+        if result is not None and self._gcodeLayers is not None:
             if result._polygons is not None and len(result._polygons) > 0:
                 self.layerSelect.setRange(1, len(result._polygons))
-            elif gcodeLayers is not None and len(gcodeLayers) > 0:
-                self.layerSelect.setRange(1, len(gcodeLayers))
-        else:
-            gcodeLayers = None
+            elif self._gcodeLayers is not None and len(self._gcodeLayers) > 0:
+                self.layerSelect.setRange(1, len(self._gcodeLayers))
 
         glPushMatrix()
         glEnable(GL_BLEND)
@@ -134,18 +142,19 @@ class engineResultView(object):
                     while len(self._layerVBOs) < n + 1:
                         self._layerVBOs.append({})
                     layerVBOs = self._layerVBOs[n]
-                    if gcodeLayers is not None and ((layerNr - 10 < n < (len(gcodeLayers) - 1)) or len(result._polygons) < 1):
+                    if self._gcodeLayers is not None and ((layerNr - 10 < n <
+                        (len(self._gcodeLayers) - 1)) or len(result._polygons) < 1):
                         for typeNamePolygons, typeName, color in lineTypeList:
                             if typeName is None:
                                 continue
                             if 'GCODE-' + typeName not in layerVBOs:
-                                layerVBOs['GCODE-' + typeName] = self._gcodeToVBO_quads(gcodeLayers[n+1:n+2], typeName)
+                                layerVBOs['GCODE-' + typeName] = self._gcodeToVBO_quads(self._gcodeLayers[n+1:n+2], typeName)
                             glColor4f(color[0]*c,color[1]*c,color[2]*c,color[3])
                             layerVBOs['GCODE-' + typeName].render()
 
                         if n == layerNr - 1:
                             if 'GCODE-MOVE' not in layerVBOs:
-                                layerVBOs['GCODE-MOVE'] = self._gcodeToVBO_lines(gcodeLayers[n+1:n+2])
+                                layerVBOs['GCODE-MOVE'] = self._gcodeToVBO_lines(self._gcodeLayers[n+1:n+2])
                             glColor4f(0,0,c,1)
                             layerVBOs['GCODE-MOVE'].render()
                     elif n < len(result._polygons):
@@ -161,14 +170,13 @@ class engineResultView(object):
         if generatedVBO:
             self._parent.updateGL()
 
-        if gcodeLayers is not None and self._gcodeLoadProgress != 0.0 and self._gcodeLoadProgress != 1.0:
+        if self._gcodeLayers is not None and self._gcodeLoadProgress != 0.0 and self._gcodeLoadProgress != 1.0:
             glPushMatrix()
             glLoadIdentity()
             glTranslate(0,-0.8,-2)
             glColor4ub(60,60,60,255)
             openglHelpers.glDrawStringCenter(_("Loading toolpath for visualization (%d%%)") % (self._gcodeLoadProgress * 100))
             glPopMatrix()
-        self._resultLock.release()
 
     def _polygonsToVBO_lines(self, polygons):
         verts = numpy.zeros((0, 3), numpy.float32)

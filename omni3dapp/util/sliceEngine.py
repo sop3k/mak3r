@@ -47,12 +47,17 @@ def getEngineFilename():
     return tempPath
 
 
+class UpdateGCodeLayers(QtCore.QObject):
+    set_gcode_layers = QtCore.Signal(list)
+
+
 class EngineResult(object):
     """
     Result from running the CuraEngine.
     Contains the engine log, polygons retrieved from the engine, the GCode and some meta-data.
     """
-    def __init__(self):
+    def __init__(self, sceneview):
+        self._parent = sceneview
         self._engineLog = []
         self._gcodeData = StringIO.StringIO()
         self._polygons = []
@@ -63,7 +68,6 @@ class EngineResult(object):
         self._profileString = profile.getProfileString()
         self._preferencesString = profile.getPreferencesString()
         self._gcodeInterpreter = gcodeInterpreter.gcode()
-        self._gcodeLoadThread = None
         self._finished = False
 
     def getFilamentWeight(self, e=0):
@@ -127,27 +131,34 @@ class EngineResult(object):
         return self._finished
 
     def _gcodeInterpreterCallback(self, progress):
-        if len(self._gcodeInterpreter.layerList) % 5 == 0:
-            time.sleep(0.1)
-        return self._gcodeLoadCallback(self, progress)
+        # if len(self._gcodeInterpreter.layerList) % 5 == 0:
+        #     time.sleep(0.1)
+        # self.update_layers_sig.set_gcode_layers.emit(
+        #         self._gcodeInterpreter.layerList)
+        return self._gcodeLoadCallback(self, progress, self._gcodeInterpreter.layerList)
 
-    def getGCodeLayers(self, loadCallback):
-        print "INSIDE GET GCODE LAYERS - FIX THREADING"
+    def getGCodeLayers(self, engine_results_view):
         if not self._finished:
             return None
-        if self._gcodeInterpreter.layerList is None and self._gcodeLoadThread is None:
-            self._gcodeInterpreter.progressCallback = self._gcodeInterpreterCallback
-            signal = GCodeInterpreterSignal()
-            self._gcodeLoadThread = EngineThread(self._parent,
-                    signal.gcode_interpret_sig, {'gcodeData': self._gcodeData})
-            self._gcodeLoadThread.signal = signal
-            self._gcodeLoadThread.signal.gcode_interpret_sig.connect(self._gcodeInterpreter.load(self._gcodeData))
-            # self._gcodeLoadThread = EngineThread(parent=self._parent, func=lambda : self._gcodeInterpreter.load(self._gcodeData))
-            # self._gcodeLoadThread = threading.Thread(target=lambda : self._gcodeInterpreter.load(self._gcodeData))
-            self._gcodeLoadCallback = loadCallback
-            # self._gcodeLoadThread.daemon = True
-            self._gcodeLoadThread.start()
-        return self._gcodeInterpreter.layerList
+
+        self.update_layers_sig = UpdateGCodeLayers()
+        self.update_layers_sig.set_gcode_layers.connect(
+                engine_results_view.setGCodeLayers, QtCore.Qt.QueuedConnection)
+
+        self._gcodeInterpreter.progressCallback = self._gcodeInterpreterCallback
+        self._gcodeLoadCallback = engine_results_view._gcodeLoadCallback
+
+        self.gcode_layers_worker = GCodeLoader(self._gcodeInterpreter,
+                self._gcodeData)
+        self.gcode_layers_thread = QtCore.QThread(self._parent)
+        self.gcode_layers_worker.moveToThread(self.gcode_layers_thread)
+
+        self.gcode_layers_thread.started.connect(self.gcode_layers_worker.loadGCode)
+        self.gcode_layers_worker.finished.connect(self.gcode_layers_thread.quit)
+        self.gcode_layers_worker.finished.connect(self.gcode_layers_worker.deleteLater)
+        self.gcode_layers_thread.finished.connect(self.gcode_layers_thread.deleteLater)
+
+        self.gcode_layers_thread.start()
 
     # def submitInfoOnline(self):
     #     if profile.getPreference('submit_slice_information') != 'True':
@@ -169,10 +180,6 @@ class EngineResult(object):
     #         f.close()
     #     except:
     #         traceback.print_exc()
-
-
-class GCodeInterpreterSignal(QtCore.QObject):
-    gcode_interpret_sig = QtCore.Signal(dict)
 
 
 class SocketListener(QtCore.QObject):
@@ -271,6 +278,22 @@ class SocketConnector(QtCore.QObject):
             self.finished.emit()
 
 
+class GCodeLoader(QtCore.QObject):
+    finished = QtCore.Signal()
+
+    def __init__(self, interpreter, data):
+        print "initializing GCodeLoader"
+        super(GCodeLoader, self).__init__()
+        self.interpreter = interpreter
+        self.data = data
+
+    def loadGCode(self):
+        print "inside loadGcode"
+        self.interpreter.load(self.data)
+        print "finished loading"
+        self.finished.emit()
+
+
 class Engine(QtCore.QObject):
     """
     Class used to communicate with the CuraEngine.
@@ -301,9 +324,9 @@ class Engine(QtCore.QObject):
         self.socket_listener.moveToThread(self.socket_listener_thread)
 
         self.socket_listener_thread.started.connect(self.socket_listener.socketListen) 
+        self.socket_listener.start_socket_connector_sig.connect(self.startSocketConnector)
         self.socket_listener.finished.connect(self.socket_listener_thread.quit)
         self.socket_listener.finished.connect(self.socket_listener.deleteLater)
-        self.socket_listener.start_socket_connector_sig.connect(self.startSocketConnector)
         self.socket_listener_thread.finished.connect(self.socket_listener_thread.deleteLater)
 
         self.socket_listener_thread.start()
@@ -490,7 +513,7 @@ class Engine(QtCore.QObject):
             self.abortEngine()
             return
 
-        self._result = EngineResult()
+        self._result = EngineResult(self._parent)
         self._result.addLog('Running: %s' % (''.join(command_list)))
         self._result.setHash(self.model_hash)
         self._callback(0.0)

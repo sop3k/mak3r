@@ -147,7 +147,7 @@ class SceneView(QtOpenGL.QGLWidget):
         # self.notification = openglGui.glNotification(self, (0, 0))
 
         self._engine = sliceEngine.Engine(self, self._updateEngineProgress)
-        self._engineResultView = engineResultView.engineResultView(self)
+        self._engineResultView = engineResultView.EngineResultView(self)
 
         self._sceneUpdateTimer = QtCore.QTimer(self)
 
@@ -464,6 +464,7 @@ class SceneView(QtOpenGL.QGLWidget):
         glEnable(GL_BLEND)
 
     def paintGL(self):
+        print "repainting"
         self._idleCalled = False
         h = self.height()
         w = self.width()
@@ -1369,68 +1370,45 @@ class SceneView(QtOpenGL.QGLWidget):
         if len(filenames) < 1:
             return False
         profile.putPreference('lastFile', filenames[0])
-        self.loadFiles(filenames)
+
+        self.files_loader = FilesLoader(self, filenames, self._machineSize)
+        self.files_loader_thread = QtCore.QThread(self._parent)
+        self.files_loader.moveToThread(self.files_loader_thread)
+        self.files_loader_thread.started.connect(self.files_loader.loadFiles)
+        self.files_loader.load_gcode_file_sig.connect(self.loadGCodeFile)
+        self.files_loader.load_scene_sig.connect(self.loadScene)
+        self.files_loader.finished.connect(self.files_loader_thread.quit)
+        self.files_loader.finished.connect(self.files_loader.deleteLater)
+        self.files_loader_thread.finished.connect(self.files_loader_thread.deleteLater)
+
+        self.files_loader_thread.start()
+        print "thread started"
+
+        # self.loadFiles(filenames)
 
     def loadGLTexture(self, filename):
         filepath = resources.getPathForImage(filename)
         return self.bindTexture(QtGui.QPixmap(filepath), GL_TEXTURE_2D, GL_RGBA,
                 QtOpenGL.QGLContext.NoBindOption)
 
-    def loadSceneFiles(self, filenames):
-        # self.youMagineButton.setDisabled(False)
-        self.loadScene(filenames)
+    def loadGCodeFile(self, filename):
+        self.onDeleteAll()
+        #Cheat the engine results to load a GCode file into it.
+        self._engine.abortEngine()
+        self._engine._result = sliceEngine.EngineResult(self)
+        with open(filename, "r") as f:
+            self._engine._result.setGCode(f.read())
+        self._engine._result.setFinished(True)
+        print "setting result"
+        self._engineResultView.setResult(self._engine._result)
+        self._engine._result.getGCodeLayers(self._engineResultView)
+        self.printButton.setBottomText('')
+        self.viewSelection.setValue(4)
+        self.printButton.setDisabled(False)
+        # self.youMagineButton.setDisabled(True)
+        self.onViewChange()
 
-    def loadFiles(self, filenames):
-        main_window = self._parent
-        # only one GCODE file can be active
-        # so if single gcode file, process this
-        # otherwise ignore all gcode files
-        gcodeFilename = None
-        if len(filenames) == 1:
-            filename = filenames[0]
-            ext = os.path.splitext(filename)[1].lower()
-            if ext == '.g' or ext == '.gcode':
-                gcodeFilename = filename
-                main_window.add_to_model_mru(filename)
-        if gcodeFilename is not None:
-            self.loadGCodeFile(gcodeFilename)
-        else:
-            # process directories and special file types
-            # and keep scene files for later processing
-            scene_filenames = []
-            ignored_types = dict()
-            # use file list as queue
-            # pop first entry for processing and append new files at end
-            while filenames:
-                filename = filenames.pop(0)
-                if os.path.isdir(filename):
-                    # directory: queue all included files and directories
-                    filenames.extend(os.path.join(filename, f) for f in os.listdir(filename))
-                else:
-                    ext = os.path.splitext(filename)[1].lower()
-                    if ext == '.ini':
-                        profile.loadProfile(filename)
-                        main_window.addToProfileMRU(filename)
-                    elif ext in meshLoader.loadSupportedExtensions() or \
-                            ext in imageToMesh.supportedExtensions():
-                        scene_filenames.append(filename)
-                        main_window.add_to_model_mru(filename)
-                    else:
-                        ignored_types[ext] = 1
-            if ignored_types:
-                ignored_types = ignored_types.keys()
-                ignored_types.sort()
-                # self.notification.message("ignored: " + " ".join("*" + type for type in ignored_types))
-            main_window.update_profile_to_controls_all()
-            # now process all the scene files
-            if scene_filenames:
-                self.loadSceneFiles(scene_filenames)
-                self._selectObject(None)
-                # self.sceneUpdated()
-                newZoom = numpy.max(self._machineSize)
-                self._animView = openglscene.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
-                self._animZoom = openglscene.animation(self, self._zoom, newZoom, 0.5)
-
+    QtCore.Slot(list)
     def loadScene(self, filelist):
         for filename in filelist:
             try:
@@ -1486,11 +1464,13 @@ class SceneView(QtOpenGL.QGLWidget):
 
     def showSaveGCode(self):
         if len(self._scene._objectList) < 1:
+            # TODO: notification why it cant be saved
+            log.info("No objects on the scene; can't save gcode")
             return
 
         result = self._engine.getResult()
         if result is not None and not result.isFinished():
-            print "generating gcode is not finished yet, you cannot save it"
+            log.info("generating gcode is not finished yet, you cannot save it")
             # self.notification ...
             return
         
@@ -1563,6 +1543,78 @@ class SaveGCodeWorker(QtCore.QObject):
         self.set_progress_bar_sig.emit(-1.0)
         # self.engine.getResult().submitInfoOnline()
         self.finished.emit()
+
+
+class FilesLoader(QtCore.QObject):
+    load_gcode_file_sig = QtCore.Signal(str)
+    load_scene_sig = QtCore.Signal(list)
+    finished = QtCore.Signal()
+
+    def __init__(self, sceneview, filenames, machine_size):
+        super(FilesLoader, self).__init__()
+        self.sceneview = sceneview
+        self.filenames = filenames
+        self.machine_size = machine_size
+
+    def loadFiles(self):
+        print "loading files..."
+        main_window = self.sceneview._parent
+        # only one GCODE file can be active
+        # so if single gcode file, process this
+        # otherwise ignore all gcode files
+        gcodeFilename = None
+        filenames = self.filenames
+        if len(filenames) == 1:
+            filename = filenames[0]
+            ext = os.path.splitext(filename)[1].lower()
+            if ext == '.g' or ext == '.gcode':
+                gcodeFilename = filename
+                main_window.add_to_model_mru(filename)
+        if gcodeFilename is not None:
+            self.load_gcode_file_sig.emit(gcodeFilename)
+        else:
+            # process directories and special file types
+            # and keep scene files for later processing
+            scene_filenames = []
+            ignored_types = dict()
+            # use file list as queue
+            # pop first entry for processing and append new files at end
+            while filenames:
+                filename = filenames.pop(0)
+                if os.path.isdir(filename):
+                    # directory: queue all included files and directories
+                    filenames.extend(os.path.join(filename, f) for f in os.listdir(filename))
+                else:
+                    ext = os.path.splitext(filename)[1].lower()
+                    if ext == '.ini':
+                        profile.loadProfile(filename)
+                        main_window.addToProfileMRU(filename)
+                    elif ext in meshLoader.loadSupportedExtensions() or \
+                            ext in imageToMesh.supportedExtensions():
+                        scene_filenames.append(filename)
+                        main_window.add_to_model_mru(filename)
+                    else:
+                        ignored_types[ext] = 1
+            if ignored_types:
+                ignored_types = ignored_types.keys()
+                ignored_types.sort()
+                # self.notification.message("ignored: " + " ".join("*" + type for type in ignored_types))
+            main_window.update_profile_to_controls_all()
+            # now process all the scene files
+            if scene_filenames:
+                self.loadSceneFiles(scene_filenames)
+                self.sceneview._selectObject(None)
+                newZoom = numpy.max(self.machine_size)
+                self.sceneview._animView = openglscene.animation(self.sceneview,
+                        self.sceneview._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
+                self.sceneview._animZoom = openglscene.animation(self.sceneview,
+                        self.sceneview._zoom, newZoom, 0.5)
+            self.finished.emit()
+
+    def loadSceneFiles(self, filenames):
+        # self.sceneview.youMagineButton.setDisabled(False)
+        # self.loadScene(filenames)
+        self.load_scene_sig.emit(filenames)
 
 
 class ShaderEditor(QtGui.QDialog):

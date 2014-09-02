@@ -69,6 +69,7 @@ class EngineResult(object):
         self._preferencesString = profile.getPreferencesString()
         self._gcodeInterpreter = gcodeInterpreter.gcode()
         self._finished = False
+        self.gcode_layers_thread = None
 
     def getFilamentWeight(self, e=0):
         #Calculates the weight of the filament in kg
@@ -129,6 +130,18 @@ class EngineResult(object):
 
     def isFinished(self):
         return self._finished
+
+    def stopLayersLoader(self):
+        print "trying to stop thread"
+        if not self.gcode_layers_thread:
+            return
+        try:
+            self.gcode_layers_thread.terminate()
+        except Exception, e:
+            print "could not stop layers loading thread: ", e
+            log.error(e)
+        print "thread stopped"
+        self.gcode_layers_thread = None
 
     def _gcodeInterpreterCallback(self, progress):
         # TODO: synchronous call to update from engine result view; avoid
@@ -376,7 +389,7 @@ class Engine(QtCore.QObject):
         if getattr(self, 'log_thread', None):
             try:
                 self.log_thread.terminate()
-            except RuntimeError, e:
+            except Exception, e:
                 log.error(e)
         self.log_thread = None
 
@@ -583,6 +596,7 @@ class Engine(QtCore.QObject):
 
         if self._result:
             self._result.setFinished(True)
+            self._sceneview.viewSelection.show_layers_button()
             self._callback(1.0)
 
         return_code = self._process.exitCode()

@@ -440,7 +440,7 @@ class SceneView(QtOpenGL.QGLWidget):
             if m.vbo is not None and m.vbo.decRef():
                 self.glReleaseList.append(m.vbo)
         if len(self._scene.objects()) == 0:
-            self._engineResultView.setResult(None)
+            self.cleanResult()
         import gc
         gc.collect()
         self.sceneUpdated()
@@ -1167,11 +1167,15 @@ class SceneView(QtOpenGL.QGLWidget):
         self._scene.centerAll()
         self.sceneUpdated()
 
+    def cleanResult(self):
+        self._engineResultView.setResult(None)
+        self.viewSelection.hide_layers_button()
+
     def onDeleteAll(self):
         while len(self._scene.objects()) > 0:
             self._deleteObject(self._scene.objects()[0])
         self._animView = openglscene.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
-        self._engineResultView.setResult(None)
+        self.cleanResult()
 
     def onSplitObject(self):
         if self._focusObj is None:
@@ -1199,6 +1203,7 @@ class SceneView(QtOpenGL.QGLWidget):
         if self.viewSelection.getValue() == 4:
             self.viewMode = 'gcode'
             self.tool = previewTools.toolNone(self)
+            self.loadLayers()
         elif self.viewSelection.getValue() == 1:
             self.viewMode = 'overhang'
         elif self.viewSelection.getValue() == 2:
@@ -1388,6 +1393,8 @@ class SceneView(QtOpenGL.QGLWidget):
         # progress_dialog.show()
         # QtGui.QApplication.processEvents()
 
+        self.viewSelection.setValue(0)
+
         profile.putPreference('lastFile', filenames[0])
 
         self.files_loader = FilesLoader(self, filenames, self._machineSize)
@@ -1417,12 +1424,21 @@ class SceneView(QtOpenGL.QGLWidget):
             self._engine._result.setGCode(f.read())
         self._engine._result.setFinished(True)
         self._engineResultView.setResult(self._engine._result)
-        self._engine._result.getGCodeLayers(self._engineResultView)
+        # self._engine._result.getGCodeLayers(self._engineResultView)
         self.printButton.setBottomText('')
+
+        self.viewSelection.show_layers_button()
         self.viewSelection.setValue(4)
+
         self.printButton.setDisabled(False)
         # self.youMagineButton.setDisabled(True)
         self.onViewChange()
+
+    def loadLayers(self):
+        if self._engine._result._gcodeInterpreter.layerList:
+            return
+        self._engine._result.stopLayersLoader()
+        self._engine._result.getGCodeLayers(self._engineResultView)
 
     @QtCore.Slot(list)
     def loadScene(self, filelist):

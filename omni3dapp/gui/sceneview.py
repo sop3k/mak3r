@@ -1359,24 +1359,36 @@ class SceneView(QtOpenGL.QGLWidget):
                 ' '.join(map(lambda s: '*' + s,img_extentions)),
                 ' '.join(map(lambda s: '*' + s, ['.g', '.gcode'])))
 
-        file_dialog = QtGui.QFileDialog(self._parent)
-        file_dialog.setNameFilter(wildcard_filter)
+        file_dialog = QtGui.QFileDialog(self._parent,
+            _("Open 3D model"),
+            os.path.split(profile.getPreference('lastFile'))[0],
+            wildcard_filter)
 
         if (file_dialog.exec_()):
             filenames = file_dialog.selectedFiles()
-
-        # chosen = file_dialog.getOpenFileNames(
-        # chosen = QtGui.QFileDialog.getOpenFileNames(
-        #     self,
-        #     _("Open 3D model"),
-        #     os.path.split(profile.getPreference('lastFile'))[0],
-        #     wildcard_filter)
-        # filenames, used_filter = chosen
+        else:
+            return False
 
         if len(filenames) < 1:
             return False
+
+        # progress_dialog = QtGui.QDialog(self._parent)
+        # self.progress_bar = QtGui.QProgressBar(progress_dialog)
+        # self.progress_bar.setRange(0, 0)
+        # self.progress_bar.setValue(0)
+
+        # dialog_layout = QtGui.QVBoxLayout()
+        # dialog_layout.addWidget(self.progress_bar)
+        # progress_dialog.setLayout(dialog_layout)
+        # if len(filenames) > 1:
+        #     msg = _("Loading files...")
+        # else:
+        #     msg = _("Loading file...")
+        # progress_dialog.setWindowTitle(msg)
+        # progress_dialog.show()
+        # QtGui.QApplication.processEvents()
+
         profile.putPreference('lastFile', filenames[0])
-        # print "finished show load model method"
 
         self.files_loader = FilesLoader(self, filenames, self._machineSize)
         self.files_loader_thread = QtCore.QThread(self._parent)
@@ -1384,14 +1396,12 @@ class SceneView(QtOpenGL.QGLWidget):
         self.files_loader_thread.started.connect(self.files_loader.loadFiles)
         self.files_loader.load_gcode_file_sig.connect(self.loadGCodeFile)
         self.files_loader.load_scene_sig.connect(self.loadScene)
+        # self.files_loader.finished.connect(progress_dialog.close)
         self.files_loader.finished.connect(self.files_loader_thread.quit)
         self.files_loader.finished.connect(self.files_loader.deleteLater)
         self.files_loader_thread.finished.connect(self.files_loader_thread.deleteLater)
 
         self.files_loader_thread.start()
-        # print "thread started"
-
-        # self.loadFiles(filenames)
 
     def loadGLTexture(self, filename):
         filepath = resources.getPathForImage(filename)
@@ -1406,7 +1416,6 @@ class SceneView(QtOpenGL.QGLWidget):
         with open(filename, "r") as f:
             self._engine._result.setGCode(f.read())
         self._engine._result.setFinished(True)
-        print "setting result"
         self._engineResultView.setResult(self._engine._result)
         self._engine._result.getGCodeLayers(self._engineResultView)
         self.printButton.setBottomText('')
@@ -1415,7 +1424,7 @@ class SceneView(QtOpenGL.QGLWidget):
         # self.youMagineButton.setDisabled(True)
         self.onViewChange()
 
-    QtCore.Slot(list)
+    @QtCore.Slot(list)
     def loadScene(self, filelist):
         for filename in filelist:
             try:

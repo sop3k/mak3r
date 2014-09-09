@@ -1442,7 +1442,6 @@ class SceneView(QtOpenGL.QGLWidget):
     def loadLayers(self):
         if self._engine._result._gcodeInterpreter.layerList:
             return
-        self._engine._result.stopLayersLoader()
         self._engine._result.getGCodeLayers(self._engineResultView)
 
     @QtCore.Slot(list)

@@ -64,7 +64,6 @@ class EngineResultView(object):
             self._gcodeLayers = None
 
     def _gcodeLoadCallback(self, result, progress, layers):
-        print "inside load callback"
         # TODO: test what happens if the result is True
         if result != self._result:
             #Abort loading from this thread.
@@ -72,6 +71,8 @@ class EngineResultView(object):
 
         self._gcodeLoadProgress = progress
         self._gcodeLayers = layers
+        if len(layers) % 2 == 0:
+            self._parent.queueRefresh()
         return False
 
     def onDraw(self):
@@ -170,8 +171,8 @@ class EngineResultView(object):
                     n -= 1
         glPopMatrix()
         if generatedVBO:
-        #     self._parent.updateGL()
             pass
+            # self._parent.queueRefresh()
 
         if self._gcodeLayers is not None and self._gcodeLoadProgress > 0.0 and \
                 self._gcodeLoadProgress < 1.0:

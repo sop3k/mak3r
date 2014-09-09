@@ -1593,7 +1593,6 @@ class FilesLoader(QtCore.QObject):
         self.machine_size = machine_size
 
     def loadFiles(self):
-        print "loading files..."
         main_window = self.sceneview._parent
         # only one GCODE file can be active
         # so if single gcode file, process this

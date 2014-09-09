@@ -76,7 +76,10 @@ class glGuiControl(object):
     def hasFocus(self):
         return self._base._focus == self
 
-    def OnKeyChar(self, key):
+    def onMouseReleaseEvent(self, x, y):
+        pass
+
+    def onKeyChar(self, key):
         pass
 
 
@@ -93,6 +96,12 @@ class glGuiContainer(glGuiControl):
     def onMousePressEvent(self, x, y, button):
         for ctrl in self._glGuiControlList:
             if ctrl.onMousePressEvent(x, y, button):
+                return True
+        return False
+
+    def onMouseReleaseEvent(self, x, y):
+        for ctrl in self._glGuiControlList:
+            if ctrl.onMouseReleaseEvent(x, y):
                 return True
         return False
 
@@ -358,7 +367,8 @@ class glRadioButton(glButton):
 class glComboButton(glButton):
     def __init__(self, parent, tooltip, imageIDs, tooltips, pos, callback):
         super(glComboButton, self).__init__(parent, imageIDs[0], tooltip, pos, self._onComboOpenSelect)
-        self._imageIDs = imageIDs
+        self._allImageIDs = imageIDs
+        self._imageIDs = imageIDs[:-1]
         self._tooltips = tooltips
         self._comboCallback = callback
         self._selection = 0
@@ -368,6 +378,12 @@ class glComboButton(glButton):
             self._base._focus = None
         else:
             self._base._focus = self
+
+    def hide_layers_button(self):
+        self._imageIDs = self._allImageIDs[:-1]
+
+    def show_layers_button(self):
+        self._imageIDs = self._allImageIDs
 
     def draw(self):
         if self._hidden:
@@ -867,5 +883,11 @@ class glSlider(glGuiControl):
         if self._checkHit(x, y):
             self.setFocus()
             self.onMouseMoveEvent(x, y)
+            return True
+        return False
+
+    def onMouseReleaseEvent(self, x, y):
+        if self.hasFocus():
+            self._base._focus = None
             return True
         return False

@@ -47,10 +47,6 @@ def getEngineFilename():
     return tempPath
 
 
-class UpdateGCodeLayers(QtCore.QObject):
-    set_gcode_layers = QtCore.Signal(list)
-
-
 class EngineResult(object):
     """
     Result from running the CuraEngine.
@@ -67,7 +63,7 @@ class EngineResult(object):
         self._modelHash = None
         self._profileString = profile.getProfileString()
         self._preferencesString = profile.getPreferencesString()
-        self._gcodeInterpreter = gcodeInterpreter.gcode()
+        self._gcodeInterpreter = gcodeInterpreter.GCode(self._parent)
         self._finished = False
 
     def getFilamentWeight(self, e=0):
@@ -131,36 +127,16 @@ class EngineResult(object):
         return self._finished
 
     def _gcodeInterpreterCallback(self, progress):
-        # TODO: synchronous call to update from engine result view; avoid
-        # sleeping
-        if len(self._gcodeInterpreter.layerList) % 5 == 0:
-            time.sleep(0.1)
-        # self.update_layers_sig.set_gcode_layers.emit(
-        #         self._gcodeInterpreter.layerList)
         return self._gcodeLoadCallback(self, progress, self._gcodeInterpreter.layerList)
 
     def getGCodeLayers(self, engine_results_view):
         if not self._finished:
             return None
 
-        self.update_layers_sig = UpdateGCodeLayers()
-        self.update_layers_sig.set_gcode_layers.connect(
-                engine_results_view.setGCodeLayers, QtCore.Qt.QueuedConnection)
-
         self._gcodeInterpreter.progressCallback = self._gcodeInterpreterCallback
         self._gcodeLoadCallback = engine_results_view._gcodeLoadCallback
 
-        self.gcode_layers_worker = GCodeLoader(self._gcodeInterpreter,
-                self._gcodeData)
-        self.gcode_layers_thread = QtCore.QThread(self._parent)
-        self.gcode_layers_worker.moveToThread(self.gcode_layers_thread)
-
-        self.gcode_layers_thread.started.connect(self.gcode_layers_worker.loadGCode)
-        self.gcode_layers_worker.finished.connect(self.gcode_layers_thread.quit)
-        self.gcode_layers_worker.finished.connect(self.gcode_layers_worker.deleteLater)
-        self.gcode_layers_thread.finished.connect(self.gcode_layers_thread.deleteLater)
-
-        self.gcode_layers_thread.start()
+        self._gcodeInterpreter.load(self._gcodeData)
 
     # def submitInfoOnline(self):
     #     if profile.getPreference('submit_slice_information') != 'True':
@@ -278,22 +254,6 @@ class SocketConnector(QtCore.QObject):
             else:
                 log.debug("Unknown command on socket: %x" % (cmd))
             self.finished.emit()
-
-
-class GCodeLoader(QtCore.QObject):
-    finished = QtCore.Signal()
-
-    def __init__(self, interpreter, data):
-        print "initializing GCodeLoader"
-        super(GCodeLoader, self).__init__()
-        self.interpreter = interpreter
-        self.data = data
-
-    def loadGCode(self):
-        print "inside loadGcode"
-        self.interpreter.load(self.data)
-        print "finished loading"
-        self.finished.emit()
 
 
 class Engine(QtCore.QObject):
@@ -515,7 +475,7 @@ class Engine(QtCore.QObject):
             self.abortEngine()
             return
 
-        self._result = EngineResult(self._parent)
+        self._result = EngineResult(self._sceneview)
         self._result.addLog('Running: %s' % (''.join(command_list)))
         self._result.setHash(self.model_hash)
         self._callback(0.0)
@@ -583,6 +543,7 @@ class Engine(QtCore.QObject):
 
         if self._result:
             self._result.setFinished(True)
+            self._sceneview.viewSelection.show_layers_button()
             self._callback(1.0)
 
         return_code = self._process.exitCode()

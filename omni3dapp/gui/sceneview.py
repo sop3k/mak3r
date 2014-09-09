@@ -440,7 +440,7 @@ class SceneView(QtOpenGL.QGLWidget):
             if m.vbo is not None and m.vbo.decRef():
                 self.glReleaseList.append(m.vbo)
         if len(self._scene.objects()) == 0:
-            self._engineResultView.setResult(None)
+            self.cleanResult()
         import gc
         gc.collect()
         self.sceneUpdated()
@@ -956,6 +956,12 @@ class SceneView(QtOpenGL.QGLWidget):
     def mouseDoubleClickEvent(self, evt):
         self._mouseState = 'doubleClick'
 
+    def mouseReleaseEvent(self, evt):
+        if self._container.onMouseReleaseEvent(evt.x(), evt.y()):
+            self.updateGL()
+            return
+        self.onMouseUp(evt)
+
     def onMouseDown(self, evt):
         self._mouseX = evt.x()
         self._mouseY = evt.y()
@@ -977,7 +983,7 @@ class SceneView(QtOpenGL.QGLWidget):
                     self._selectObject(self._focusObj, False)
                     self.queueRefresh()
 
-    def mouseReleaseEvent(self, evt):
+    def onMouseUp(self, evt):
         curr_buttons = evt.buttons()
         last_button = evt.button()
         if not curr_buttons == NO_BUTTON:
@@ -1167,11 +1173,15 @@ class SceneView(QtOpenGL.QGLWidget):
         self._scene.centerAll()
         self.sceneUpdated()
 
+    def cleanResult(self):
+        self._engineResultView.setResult(None)
+        self.viewSelection.hide_layers_button()
+
     def onDeleteAll(self):
         while len(self._scene.objects()) > 0:
             self._deleteObject(self._scene.objects()[0])
         self._animView = openglscene.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
-        self._engineResultView.setResult(None)
+        self.cleanResult()
 
     def onSplitObject(self):
         if self._focusObj is None:
@@ -1199,6 +1209,7 @@ class SceneView(QtOpenGL.QGLWidget):
         if self.viewSelection.getValue() == 4:
             self.viewMode = 'gcode'
             self.tool = previewTools.toolNone(self)
+            self.loadLayers()
         elif self.viewSelection.getValue() == 1:
             self.viewMode = 'overhang'
         elif self.viewSelection.getValue() == 2:
@@ -1388,6 +1399,8 @@ class SceneView(QtOpenGL.QGLWidget):
         # progress_dialog.show()
         # QtGui.QApplication.processEvents()
 
+        self.viewSelection.setValue(0)
+
         profile.putPreference('lastFile', filenames[0])
 
         self.files_loader = FilesLoader(self, filenames, self._machineSize)
@@ -1417,12 +1430,19 @@ class SceneView(QtOpenGL.QGLWidget):
             self._engine._result.setGCode(f.read())
         self._engine._result.setFinished(True)
         self._engineResultView.setResult(self._engine._result)
-        self._engine._result.getGCodeLayers(self._engineResultView)
+
         self.printButton.setBottomText('')
-        self.viewSelection.setValue(4)
         self.printButton.setDisabled(False)
+
+        self.viewSelection.show_layers_button()
+        self.viewSelection.setValue(4)
+
         # self.youMagineButton.setDisabled(True)
-        self.onViewChange()
+
+    def loadLayers(self):
+        if self._engine._result._gcodeInterpreter.layerList:
+            return
+        self._engine._result.getGCodeLayers(self._engineResultView)
 
     @QtCore.Slot(list)
     def loadScene(self, filelist):
@@ -1573,7 +1593,6 @@ class FilesLoader(QtCore.QObject):
         self.machine_size = machine_size
 
     def loadFiles(self):
-        print "loading files..."
         main_window = self.sceneview._parent
         # only one GCODE file can be active
         # so if single gcode file, process this
@@ -1625,7 +1644,7 @@ class FilesLoader(QtCore.QObject):
                         self.sceneview._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
                 self.sceneview._animZoom = openglscene.animation(self.sceneview,
                         self.sceneview._zoom, newZoom, 0.5)
-            self.finished.emit()
+        self.finished.emit()
 
     def loadSceneFiles(self, filenames):
         # self.sceneview.youMagineButton.setDisabled(False)

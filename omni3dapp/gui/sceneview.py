@@ -1424,15 +1424,14 @@ class SceneView(QtOpenGL.QGLWidget):
             self._engine._result.setGCode(f.read())
         self._engine._result.setFinished(True)
         self._engineResultView.setResult(self._engine._result)
-        # self._engine._result.getGCodeLayers(self._engineResultView)
         self.printButton.setBottomText('')
+
+        self.printButton.setDisabled(False)
 
         self.viewSelection.show_layers_button()
         self.viewSelection.setValue(4)
 
-        self.printButton.setDisabled(False)
         # self.youMagineButton.setDisabled(True)
-        self.onViewChange()
 
     def loadLayers(self):
         if self._engine._result._gcodeInterpreter.layerList:
@@ -1641,7 +1640,7 @@ class FilesLoader(QtCore.QObject):
                         self.sceneview._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
                 self.sceneview._animZoom = openglscene.animation(self.sceneview,
                         self.sceneview._zoom, newZoom, 0.5)
-            self.finished.emit()
+        self.finished.emit()
 
     def loadSceneFiles(self, filenames):
         # self.sceneview.youMagineButton.setDisabled(False)

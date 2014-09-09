@@ -67,17 +67,11 @@ class EngineResultView(object):
         # TODO: test what happens if the result is True
         if result != self._result:
             #Abort loading from this thread.
-            print "aborting"
             return True
+
         self._gcodeLoadProgress = progress
         self._gcodeLayers = layers
-        self.update_scene_sig.update.emit()
         return False
-
-    @QtCore.Slot(list)
-    def setGCodeLayers(self, val):
-        print "setting gcode layers"
-        self._gcodeLayers = val
 
     def onDraw(self):
         if not self._enabled:
@@ -85,10 +79,10 @@ class EngineResultView(object):
 
         result = self._result
         if result is not None and self._gcodeLayers is not None:
-            if result._polygons is not None and len(result._polygons) > 0:
-                self.layerSelect.setRange(1, len(result._polygons))
-            elif self._gcodeLayers is not None and len(self._gcodeLayers) > 0:
+            if self._gcodeLayers is not None and len(self._gcodeLayers) > 0:
                 self.layerSelect.setRange(1, len(self._gcodeLayers))
+            elif result._polygons is not None and len(result._polygons) > 0:
+                self.layerSelect.setRange(1, len(result._polygons))
 
         glPushMatrix()
         glEnable(GL_BLEND)
@@ -150,8 +144,7 @@ class EngineResultView(object):
                     while len(self._layerVBOs) < n + 1:
                         self._layerVBOs.append({})
                     layerVBOs = self._layerVBOs[n]
-                    if self._gcodeLayers is not None and ((layerNr - 10 < n <
-                        (len(self._gcodeLayers) - 1)) or len(result._polygons) < 1):
+                    if self._gcodeLayers is not None and ((layerNr - 10 < n < (len(self._gcodeLayers) - 1)) or len(result._polygons) < 1):
                         for typeNamePolygons, typeName, color in lineTypeList:
                             if typeName is None:
                                 continue
@@ -176,9 +169,11 @@ class EngineResultView(object):
                     n -= 1
         glPopMatrix()
         if generatedVBO:
-            self._parent.updateGL()
+        #     self._parent.updateGL()
+        #     pass
 
-        if self._gcodeLayers is not None and self._gcodeLoadProgress != 0.0 and self._gcodeLoadProgress != 1.0:
+        if self._gcodeLayers is not None and self._gcodeLoadProgress > 0.0 and \
+                self._gcodeLoadProgress < 1.0:
             glPushMatrix()
             glLoadIdentity()
             glTranslate(0,-0.8,-2)
@@ -213,23 +208,6 @@ class EngineResultView(object):
             verts = numpy.concatenate((verts, poly), 0)
             verts = numpy.concatenate((verts, poly * numpy.array([1,0,1],numpy.float32) + numpy.array([0,-100,0],numpy.float32)), 0)
         return openglHelpers.GLVBO(GL_QUADS, verts, indicesArray=indices)
-
-    def _gcodeToVBO_lines(self, gcodeLayers, extrudeType):
-        if ':' in extrudeType:
-            extruder = int(extrudeType[extrudeType.find(':')+1:])
-            extrudeType = extrudeType[0:extrudeType.find(':')]
-        else:
-            extruder = None
-        verts = numpy.zeros((0, 3), numpy.float32)
-        indices = numpy.zeros((0), numpy.uint32)
-        for layer in gcodeLayers:
-            for path in layer:
-                if path['type'] == 'extrude' and path['pathType'] == extrudeType and (extruder is None or path['extruder'] == extruder):
-                    i = numpy.arange(len(verts), len(verts) + len(path['points']), 1, numpy.uint32)
-                    i = numpy.dstack((i[0:-1],i[1:])).flatten()
-                    indices = numpy.concatenate((indices, i), 0)
-                    verts = numpy.concatenate((verts, path['points']))
-        return openglHelpers.GLVBO(GL_LINES, verts, indicesArray=indices)
 
     def _gcodeToVBO_quads(self, gcodeLayers, extrudeType):
         useFilamentArea = profile.getMachineSetting('gcode_flavor') == 'UltiGCode'

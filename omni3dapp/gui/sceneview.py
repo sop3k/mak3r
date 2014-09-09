@@ -956,6 +956,12 @@ class SceneView(QtOpenGL.QGLWidget):
     def mouseDoubleClickEvent(self, evt):
         self._mouseState = 'doubleClick'
 
+    def mouseReleaseEvent(self, evt):
+        if self._container.onMouseReleaseEvent(evt.x(), evt.y()):
+            self.updateGL()
+            return
+        self.onMouseUp(evt)
+
     def onMouseDown(self, evt):
         self._mouseX = evt.x()
         self._mouseY = evt.y()
@@ -977,7 +983,7 @@ class SceneView(QtOpenGL.QGLWidget):
                     self._selectObject(self._focusObj, False)
                     self.queueRefresh()
 
-    def mouseReleaseEvent(self, evt):
+    def onMouseUp(self, evt):
         curr_buttons = evt.buttons()
         last_button = evt.button()
         if not curr_buttons == NO_BUTTON:
@@ -1424,8 +1430,8 @@ class SceneView(QtOpenGL.QGLWidget):
             self._engine._result.setGCode(f.read())
         self._engine._result.setFinished(True)
         self._engineResultView.setResult(self._engine._result)
-        self.printButton.setBottomText('')
 
+        self.printButton.setBottomText('')
         self.printButton.setDisabled(False)
 
         self.viewSelection.show_layers_button()

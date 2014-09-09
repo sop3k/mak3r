@@ -127,11 +127,27 @@ class EngineResult(object):
     def isFinished(self):
         return self._finished
 
-    @QtCore.Slot(dict)
-    def _gcodeInterpreterCallback(self, progress, layers):
-        # if len(self._gcodeInterpreter.layerList) % 5 == 0:
-        #     time.sleep(0.1)
-        return self._gcodeLoadCallback(self, progress, layers)
+    def stopLayersLoader(self):
+        print "trying to stop thread"
+        if not self.gcode_layers_thread:
+            return
+        try:
+            self.gcode_layers_thread.terminate()
+        except Exception, e:
+            print "could not stop layers loading thread: ", e
+            log.error(e)
+        print "thread stopped"
+        self.gcode_layers_thread = None
+
+    @QtCore.Slot(float)
+    def _gcodeInterpreterCallback(self, progress):
+        # TODO: synchronous call to update from engine result view; avoid
+        # sleeping
+        if len(self._gcodeInterpreter.layerList) % 5 == 0:
+            time.sleep(0.1)
+        # self.update_layers_sig.set_gcode_layers.emit(
+        #         self._gcodeInterpreter.layerList)
+        return self._gcodeLoadCallback(self, progress, self._gcodeInterpreter.layerList)
 
     def getGCodeLayers(self, engine_results_view):
         if not self._finished:
@@ -340,7 +356,7 @@ class Engine(QtCore.QObject):
         if getattr(self, 'log_thread', None):
             try:
                 self.log_thread.terminate()
-            except Exception, e:
+            except RuntimeError, e:
                 log.error(e)
         self.log_thread = None
 

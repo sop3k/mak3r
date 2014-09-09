@@ -76,7 +76,10 @@ class glGuiControl(object):
     def hasFocus(self):
         return self._base._focus == self
 
-    def OnKeyChar(self, key):
+    def onMouseReleaseEvent(self, x, y):
+        pass
+
+    def onKeyChar(self, key):
         pass
 
 
@@ -93,6 +96,12 @@ class glGuiContainer(glGuiControl):
     def onMousePressEvent(self, x, y, button):
         for ctrl in self._glGuiControlList:
             if ctrl.onMousePressEvent(x, y, button):
+                return True
+        return False
+
+    def onMouseReleaseEvent(self, x, y):
+        for ctrl in self._glGuiControlList:
+            if ctrl.onMouseReleaseEvent(x, y):
                 return True
         return False
 
@@ -874,5 +883,11 @@ class glSlider(glGuiControl):
         if self._checkHit(x, y):
             self.setFocus()
             self.onMouseMoveEvent(x, y)
+            return True
+        return False
+
+    def onMouseReleaseEvent(self, x, y):
+        if self.hasFocus():
+            self._base._focus = None
             return True
         return False

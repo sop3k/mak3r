@@ -484,10 +484,8 @@ class SceneView(QtOpenGL.QGLWidget):
             self._container.updateLayout()
 
         try:
-            # self._context.makeCurrent()
             for obj in self.glReleaseList:
                 obj.release()
-            # del self.glReleaseList
             renderStartTime = time.time()
             self.onPaint()
             self._drawScene()
@@ -774,7 +772,7 @@ class SceneView(QtOpenGL.QGLWidget):
                 glStencilFunc(GL_EQUAL, 0, 255)
 
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-                glLineWidth(2)
+                glLineWidth(4)
                 glColor4f(1,1,1,0.5)
                 self._renderObject(self._selectedObj)
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)

@@ -2,11 +2,13 @@
 
 import re
 import subprocess
+import traceback
 
 from PySide import QtCore, QtGui
 
 from mainwindow_ui import Ui_MainWindow
 from omni3dapp.util import profile
+from omni3dapp.util import host
 from omni3dapp.gui.util.gcode_text_styling import GCodeSyntaxHighlighter
 from omni3dapp.gui import sceneview
 from omni3dapp.logger import log
@@ -42,6 +44,7 @@ class MainWindow(QtGui.QMainWindow):
         self.set_up_fields()
         self.setup_scene()
         self.connect_actions()
+        self.connect_buttons()
 
         # self.timer = QtCore.QTimer(self)
         # self.timer.timeout.connect(self.onTimer)
@@ -124,6 +127,9 @@ class MainWindow(QtGui.QMainWindow):
             elem.currentIndexChanged.connect(self.on_setting_change)
         for elem in self.ui.normal.findChildren(QtGui.QListWidget):
             elem.currentItemChanged.connect(self.on_setting_change)
+
+    def connect_buttons(self):
+        self.ui.connect_button.connect(self.connect_printer)
 
     def on_simple_switch(self, *args, **kwargs):
         profile.putPreference('startMode', 'Simple')
@@ -337,6 +343,39 @@ class MainWindow(QtGui.QMainWindow):
 
     def stripped_name(self, full_filename):
         return QtCore.QFileInfo(full_filename).fileName()
+
+    def connect_printer(self):
+        log.debug(_("Connecting..."))
+        port = None
+        port_val = self.ui.port_type.itemText(self.ui.port_type.currentIndex())
+        if not port_val:
+            scanned = host.scanserial()
+            if scanned:
+                port = scanned[0]
+        baud = 115200
+        try:
+            baud = int(self.ui.port_baud_rate.itemText(
+                self.ui.port_baud_rate.currentIndex()))
+        except:
+            log.error(_("Could not parse baud rate: "))
+            traceback.print_exc(file = sys.stdout)
+        # if self.paused:
+        #     self.p.paused = 0
+        #     self.p.printing = 0
+        #     wx.CallAfter(self.pausebtn.SetLabel, _("Pause"))
+        #     wx.CallAfter(self.printbtn.SetLabel, _("Print"))
+        #     wx.CallAfter(self.toolbarsizer.Layout)
+        #     self.paused = 0
+        #     if self.sdprinting:
+        #         self.p.send_now("M26 S0")
+        # if not self.connect_to_printer(port, baud):
+        #     return
+        # if port != self.settings.port:
+        #     self.set("port", port)
+        # if baud != self.settings.baudrate:
+        #     self.set("baudrate", str(baud))
+        # if self.predisconnect_mainqueue:
+        #     self.recoverbtn.Enable()
 
     def terminate_thread(self, thread_name):
         try:

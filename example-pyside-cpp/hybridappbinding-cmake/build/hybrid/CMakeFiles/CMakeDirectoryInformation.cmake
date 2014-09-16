@@ -11,14 +11,14 @@ SET(CMAKE_FORCE_UNIX_PATHS 1)
 # The C and CXX include file search paths:
 SET(CMAKE_C_INCLUDE_PATH
   "../hybrid/hybrid"
-  "/usr/local/include/shiboken"
+  "/usr/local/lib/python2.7/dist-packages/PySide-1.2.1-py2.7.egg/PySide/include/shiboken"
   "/usr/include/python2.7"
-  "/usr/local/include/PySide"
-  "/usr/local/include/PySide/QtCore"
-  "/usr/local/include/PySide/QtGui"
-  "/usr/local/Trolltech/Qt-4.8.6/include"
-  "/usr/local/Trolltech/Qt-4.8.6/include/QtCore"
-  "/usr/local/Trolltech/Qt-4.8.6/include/QtGui"
+  "/usr/local/lib/python2.7/dist-packages/PySide-1.2.1-py2.7.egg/PySide/include/PySide"
+  "/usr/local/lib/python2.7/dist-packages/PySide-1.2.1-py2.7.egg/PySide/include/PySide/QtCore"
+  "/usr/local/lib/python2.7/dist-packages/PySide-1.2.1-py2.7.egg/PySide/include/PySide/QtGui"
+  "/usr/local/Trolltech/Qt-4.8.1/include"
+  "/usr/local/Trolltech/Qt-4.8.1/include/QtCore"
+  "/usr/local/Trolltech/Qt-4.8.1/include/QtGui"
   "../../libhybrid"
   )
 SET(CMAKE_CXX_INCLUDE_PATH ${CMAKE_C_INCLUDE_PATH})

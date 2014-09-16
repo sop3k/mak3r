@@ -1,5 +1,11 @@
 project(hybrid)
 
+set(QT_INCLUDE_DIR /usr/local/Trolltech/Qt-4.8.1/include)
+set(QT_QTCORE_INCLUDE_DIR /usr/local/Trolltech/Qt-4.8.1/include/QtCore)
+set(QT_QTGUI_INCLUDE_DIR /usr/local/Trolltech/Qt-4.8.1/include/QtGui)
+set(SHIBOKEN_INCLUDE_DIR /usr/local/lib/python2.7/dist-packages/PySide-1.2.1-py2.7.egg/PySide/include/shiboken)
+set(PYSIDE_INCLUDE_DIR /usr/local/lib/python2.7/dist-packages/PySide-1.2.1-py2.7.egg/PySide/include/PySide)
+
 set(hybrid_SRC
     ${CMAKE_CURRENT_BINARY_DIR}/hybrid/hybrid_module_wrapper.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/hybrid/mainwindow_wrapper.cpp
@@ -36,7 +42,7 @@ add_custom_command(OUTPUT ${hybrid_SRC}
                    --generatorSet=shiboken --enable-parent-ctor-heuristic --enable-pyside-extensions --enable-return-value-heuristic
                    ${CMAKE_SOURCE_DIR}/hybrid/global.h
                    --include-paths=${QT_INCLUDE_DIR}:${LIBHYBRID_DIR}
-                   --typesystem-paths=${typesystem_path}:{PYSIDE_TYPESYSTEMS}:/usr/local/share/PySide/typesystems
+                   --typesystem-paths=${typesystem_path}:{PYSIDE_TYPESYSTEMS}:/usr/local/lib/python2.7/dist-packages/PySide-1.2.1-py2.7.egg/PySide/typesystems
                    --output-directory=${CMAKE_CURRENT_BINARY_DIR}
                    ${CMAKE_CURRENT_SOURCE_DIR}/typesystem_hybrid.xml
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

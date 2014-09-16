@@ -95,7 +95,7 @@ hybrid/CMakeFiles/hybrid.dir/hybrid/mainwindow_wrapper.cpp.o.provides.build: hyb
 hybrid/hybrid/hybrid_module_wrapper.cpp:
 	$(CMAKE_COMMAND) -E cmake_progress_report /home/ania/Projects/OmniTests/hybridapp-mine/hybridappbinding-cmake/build/CMakeFiles $(CMAKE_PROGRESS_3)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold "Running generator for libhybrid..."
-	cd /home/ania/Projects/OmniTests/hybridapp-mine/hybridappbinding-cmake/hybrid && /usr/local/bin/shiboken --generatorSet=shiboken --enable-parent-ctor-heuristic --enable-pyside-extensions --enable-return-value-heuristic /home/ania/Projects/OmniTests/hybridapp-mine/hybridappbinding-cmake/hybrid/global.h --include-paths=/usr/local/Trolltech/Qt-4.8.6/include:/home/ania/Projects/OmniTests/hybridapp-mine/hybridappbinding-cmake/../libhybrid --typesystem-paths=:{PYSIDE_TYPESYSTEMS}:/usr/local/share/PySide/typesystems --output-directory=/home/ania/Projects/OmniTests/hybridapp-mine/hybridappbinding-cmake/build/hybrid /home/ania/Projects/OmniTests/hybridapp-mine/hybridappbinding-cmake/hybrid/typesystem_hybrid.xml
+	cd /home/ania/Projects/OmniTests/hybridapp-mine/hybridappbinding-cmake/hybrid && /usr/local/lib/python2.7/dist-packages/PySide-1.2.1-py2.7.egg/PySide/shiboken --generatorSet=shiboken --enable-parent-ctor-heuristic --enable-pyside-extensions --enable-return-value-heuristic /home/ania/Projects/OmniTests/hybridapp-mine/hybridappbinding-cmake/hybrid/global.h --include-paths=/usr/local/Trolltech/Qt-4.8.1/include:/home/ania/Projects/OmniTests/hybridapp-mine/hybridappbinding-cmake/../libhybrid --typesystem-paths=:{PYSIDE_TYPESYSTEMS}:/usr/local/lib/python2.7/dist-packages/PySide-1.2.1-py2.7.egg/PySide/typesystems --output-directory=/home/ania/Projects/OmniTests/hybridapp-mine/hybridappbinding-cmake/build/hybrid /home/ania/Projects/OmniTests/hybridapp-mine/hybridappbinding-cmake/hybrid/typesystem_hybrid.xml
 
 hybrid/hybrid/mainwindow_wrapper.cpp: hybrid/hybrid/hybrid_module_wrapper.cpp
 
@@ -109,10 +109,6 @@ hybrid_EXTERNAL_OBJECTS =
 
 hybrid/hybrid.so: hybrid/CMakeFiles/hybrid.dir/hybrid/hybrid_module_wrapper.cpp.o
 hybrid/hybrid.so: hybrid/CMakeFiles/hybrid.dir/hybrid/mainwindow_wrapper.cpp.o
-hybrid/hybrid.so: /usr/lib/libpython2.7.so
-hybrid/hybrid.so: /usr/local/lib/libshiboken-python2.7.so
-hybrid/hybrid.so: /usr/local/Trolltech/Qt-4.8.6/lib/libQtCore.so
-hybrid/hybrid.so: /usr/local/Trolltech/Qt-4.8.6/lib/libQtGui.so
 hybrid/hybrid.so: /usr/local/lib/libpyside-python2.7.so
 hybrid/hybrid.so: ../../libhybrid/libhybrid.so
 hybrid/hybrid.so: hybrid/CMakeFiles/hybrid.dir/build.make

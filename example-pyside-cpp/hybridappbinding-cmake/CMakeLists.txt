@@ -1,11 +1,15 @@
 project(hybridbinding)
 
 cmake_minimum_required(VERSION 2.6)
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Macros/
+                      ${CMAKE_MODULE_PATH}
+                      /usr/share/cmake-2.8/Modules)
+
+set(QT_INCLUDE_DIR /usr/local/Trolltech/Qt-4.8.1/include)
+set(SHIBOKEN_INCLUDE_DIR /usr/local/lib/python2.7/dist-packages/PySide-1.2.1-py2.7.egg/PySide/include/shiboken)
 
 find_package(PythonLibs REQUIRED)
-find_package(Shiboken REQUIRED)
 find_package(PySide REQUIRED)
-find_package(Qt4 4.8.6 REQUIRED)
 
 set(LIBHYBRID_DIR ${CMAKE_SOURCE_DIR}/../libhybrid)
 

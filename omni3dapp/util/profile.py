@@ -40,6 +40,7 @@ settingsList = []
 # Each machine has it's own index and unique name.
 _selectedMachineIndex = 0
 
+
 class setting(object):
     """
         A setting object contains a configuration setting. These are globally accessible trough the quick access functions

@@ -100,7 +100,7 @@
                 <property name="geometry">
                  <rect>
                   <x>0</x>
-                  <y>-312</y>
+                  <y>0</y>
                   <width>450</width>
                   <height>900</height>
                  </rect>
@@ -593,7 +593,7 @@
                 <property name="geometry">
                  <rect>
                   <x>0</x>
-                  <y>-81</y>
+                  <y>0</y>
                   <width>450</width>
                   <height>630</height>
                  </rect>
@@ -1175,7 +1175,7 @@
               <attribute name="title">
                <string>Host</string>
               </attribute>
-              <widget class="QWidget" name="">
+              <widget class="QWidget" name="layoutWidget">
                <property name="geometry">
                 <rect>
                  <x>0</x>
@@ -1190,18 +1190,18 @@
                   <property name="title">
                    <string>Printer connection</string>
                   </property>
-                  <widget class="QWidget" name="">
+                  <widget class="QWidget" name="layoutWidget">
                    <property name="geometry">
                     <rect>
                      <x>1</x>
                      <y>30</y>
-                     <width>301</width>
+                     <width>370</width>
                      <height>29</height>
                     </rect>
                    </property>
                    <layout class="QHBoxLayout" name="horizontalLayout_10">
                     <item>
-                     <widget class="QLabel" name="port_label">
+                     <widget class="QPushButton" name="port_btn">
                       <property name="text">
                        <string>Port</string>
                       </property>
@@ -1236,7 +1236,7 @@
                   <property name="title">
                    <string>Build dimensions</string>
                   </property>
-                  <widget class="QWidget" name="">
+                  <widget class="QWidget" name="layoutWidget">
                    <property name="geometry">
                     <rect>
                      <x>0</x>
@@ -1347,7 +1347,7 @@
                   <property name="title">
                    <string>Home position</string>
                   </property>
-                  <widget class="QWidget" name="">
+                  <widget class="QWidget" name="layoutWidget">
                    <property name="geometry">
                     <rect>
                      <x>0</x>

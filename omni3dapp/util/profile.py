@@ -64,6 +64,7 @@ class setting(object):
         self._subcategory = subcategory
         self._validators = []
         self._conditions = []
+        self._range = []
 
         if type is types.FloatType:
             validators.validFloat(self)
@@ -81,6 +82,7 @@ class setting(object):
         return self
 
     def setRange(self, minValue=None, maxValue=None):
+        self._range = [minValue, maxValue]
         if len(self._validators) < 1:
             return
         self._validators[0].minValue = minValue
@@ -89,6 +91,9 @@ class setting(object):
 
     def getLabel(self):
         return _(self._label)
+
+    def getRange(self):
+        return self._range
 
     def getTooltip(self):
         return _(self._tooltip)
@@ -117,7 +122,7 @@ class setting(object):
     def getType(self):
         return self._type
 
-    def getValue(self, index = None):
+    def getValue(self, index=None):
         if index is None:
             index = self.getValueIndex()
         if index >= len(self._values):
@@ -127,7 +132,7 @@ class setting(object):
     def getDefault(self):
         return self._default
 
-    def setValue(self, value, index = None):
+    def setValue(self, value, index=None):
         if index is None:
             index = self.getValueIndex()
         while index >= len(self._values):
@@ -212,7 +217,6 @@ setting('inset0_speed',              0.0, float, 'advanced', _('Speed')).setRang
 setting('insetx_speed',              0.0, float, 'advanced', _('Speed')).setRange(0.0).setLabel(_("Inner shell speed (mm/s)"), _("Speed at which inner shells are printed. If set to 0 then the print speed is used. Printing the inner shell faster then the outer shell will reduce printing time. It is good to set this somewhere in between the outer shell speed and the infill/printing speed."))
 setting('cool_min_layer_time',         5, float, 'advanced', _('Cool')).setRange(0).setLabel(_("Minimal layer time (sec)"), _("Minimum time spent in a layer, gives the layer time to cool down before the next layer is put on top. If the layer will be placed down too fast the printer will slow down to make sure it has spent at least this amount of seconds printing this layer."))
 setting('fan_enabled',              True, bool,  'advanced', _('Cool')).setLabel(_("Enable cooling fan"), _("Enable the cooling fan during the print. The extra cooling from the cooling fan is essential during faster prints."))
-
 setting('skirt_line_count',            1, int,   'expert', 'Skirt').setRange(0).setLabel(_("Line count"), _("The skirt is a line drawn around the object at the first layer. This helps to prime your extruder, and to see if the object fits on your platform.\nSetting this to 0 will disable the skirt. Multiple skirt lines can help priming your extruder better for small objects."))
 setting('skirt_gap',                 3.0, float, 'expert', 'Skirt').setRange(0).setLabel(_("Start distance (mm)"), _("The distance between the skirt and the first layer.\nThis is the minimal distance, multiple skirt lines will be put outwards from this distance."))
 setting('skirt_minimal_length',    150.0, float, 'expert', 'Skirt').setRange(0).setLabel(_("Minimal length (mm)"), _("The minimal length of the skirt, if this minimal length is not reached it will add more skirt lines to reach this minimal lenght.\nNote: If the line count is set to 0 this is ignored."))
@@ -497,10 +501,19 @@ setting('last_run_version', '', str, 'preference', 'hidden')
 
 setting('machine_name', '', str, 'machine', 'hidden')
 setting('machine_type', 'unknown', str, 'machine', 'hidden') #Ultimaker, Ultimaker2, RepRap
-setting('machine_width', '205', float, 'machine', 'hidden').setLabel(_("Maximum width (mm)"), _("Size of the machine in mm"))
-setting('machine_depth', '205', float, 'machine', 'hidden').setLabel(_("Maximum depth (mm)"), _("Size of the machine in mm"))
-setting('machine_height', '200', float, 'machine', 'hidden').setLabel(_("Maximum height (mm)"), _("Size of the machine in mm"))
-setting('machine_center_is_zero', 'False', bool, 'machine', 'hidden').setLabel(_("Machine center 0,0"), _("Machines firmware defines the center of the bed as 0,0 instead of the front left corner."))
+setting('machine_width', '205.00', float, 'machine', _('Machine dimensions')
+        ).setLabel(_("Maximum width (mm)"), _("Size of the machine in mm")).setRange(0, 2000)
+setting('machine_depth', '205.00', float, 'machine', _('Machine dimensions')
+        ).setLabel(_("Maximum depth (mm)"), _("Size of the machine in mm")).setRange(0, 2000)
+setting('machine_height', '200.00', float, 'machine', _('Machine dimensions')
+        ).setLabel(_("Maximum height (mm)"), _("Size of the machine in mm")).setRange(0, 2000)
+setting('machine_x_offset', 0.00, float, 'machine', _('Machine dimensions')).setLabel(_("X offset")).setRange(-2000, 2000)
+setting('machine_y_offset', 0.00, float, 'machine', _('Machine dimensions')).setLabel(_("Y offset")).setRange(-2000, 2000)
+setting('machine_z_offset', 0.00, float, 'machine', _('Machine dimensions')).setLabel(_("Z offset")).setRange(-2000, 2000)
+setting('x_home_position', '0.00', float, 'machine', _('Home position')).setLabel(_("X home position")).setRange(-2000, 2000)
+setting('y_home_position', '0.00', float, 'machine', _('Home position')).setLabel(_("Y home position")).setRange(-2000, 2000)
+setting('z_home_position', '0.00', float, 'machine', _('Home position')).setLabel(_("Z home position")).setRange(-2000, 2000)
+# setting('machine_center_is_zero', 'False', bool, 'machine', 'hidden').setLabel(_("Machine center 0,0"), _("Machines firmware defines the center of the bed as 0,0 instead of the front left corner."))
 setting('machine_shape', 'Square', ['Square','Circular'], 'machine', 'hidden').setLabel(_("Build area shape"), _("The shape of machine build area."))
 setting('ultimaker_extruder_upgrade', 'False', bool, 'machine', 'hidden')
 setting('has_heated_bed', 'False', bool, 'machine', 'hidden').setLabel(_("Heated bed"), _("If you have an heated bed, this enabled heated bed settings (requires restart)"))
@@ -513,18 +526,15 @@ setting('extruder_offset_y2', '0.0', float, 'machine', 'hidden').setLabel(_("Off
 setting('extruder_offset_x3', '0.0', float, 'machine', 'hidden').setLabel(_("Offset X"), _("The offset of your forth extruder compared to the primary."))
 setting('extruder_offset_y3', '0.0', float, 'machine', 'hidden').setLabel(_("Offset Y"), _("The offset of your forth extruder compared to the primary."))
 setting('steps_per_e', '0', float, 'machine', 'hidden').setLabel(_("E-Steps per 1mm filament"), _("Amount of steps per mm filament extrusion. If set to 0 then this value is ignored and the value in your firmware is used."))
-setting('serial_port', 'AUTO', str, 'machine', 'hidden').setLabel(_("Serial port"), _("Serial port to use for communication with the printer"))
-setting('serial_port_auto', '', str, 'machine', 'hidden')
-setting('serial_baud', 'AUTO', str, 'machine', 'hidden').setLabel(_("Baudrate"), _("Speed of the serial port communication\nNeeds to match your firmware settings\nCommon values are 250000, 115200, 57600"))
-setting('serial_baud_auto', '', int, 'machine', 'hidden')
+
+setting('port_type', '', [], 'machine', _('Printer connection')).setLabel(_("Serial port"), _("Port used to communicate with printer"))
+setting('port_baud_rate', '115200', ['2400', '9600', '19200', '38400', '57600', '115200', '250000'], 'machine', _('Printer connection')).setLabel('@', _("Select baud rate for printer communication"))
 
 setting('extruder_head_size_min_x', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards X min (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 75mm for an Ultimaker if the fan is on the left side."))
 setting('extruder_head_size_min_y', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards Y min (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 18mm for an Ultimaker if the fan is on the left side."))
 setting('extruder_head_size_max_x', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards X max (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 18mm for an Ultimaker if the fan is on the left side."))
 setting('extruder_head_size_max_y', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards Y max (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 35mm for an Ultimaker if the fan is on the left side."))
 setting('extruder_head_size_height', '0.0', float, 'machine', 'hidden').setLabel(_("Printer gantry height (mm)"), _("The height of the gantry holding up the printer head. If an object is higher then this then you cannot print multiple objects one for one. 60mm for an Ultimaker."))
-
-setting('port_baud_rate', '115200', ['2400', '9600', '19200', '38400', '57600', '115200', '250000'], 'host', _('Printer connection')).setLabel('@', _("Select baud rate for printer communication"))
 
 validators.warningAbove(settingsDictionary['filament_flow'], 150, _("More flow than 150% is rare and usually not recommended."))
 validators.warningBelow(settingsDictionary['filament_flow'], 50, _("Less flow than 50% is rare and usually not recommended."))
@@ -660,6 +670,8 @@ def loadProfile(filename, allMachines = False):
                 if set.isAlteration():
                     section = 'alterations_%d' % (n)
                 if profileParser.has_option(section, set.getName()):
+                    if set._name == 'port_type':
+                        import pdb; pdb.set_trace();
                     set.setValue(unicode(profileParser.get(section, set.getName()), 'utf-8', 'replace'), n)
             n += 1
     else:
@@ -670,6 +682,8 @@ def loadProfile(filename, allMachines = False):
             if set.isAlteration():
                 section = 'alterations'
             if profileParser.has_option(section, set.getName()):
+                if set._name == 'port_type':
+                    import pdb; pdb.set_trace();
                 set.setValue(unicode(profileParser.get(section, set.getName()), 'utf-8', 'replace'))
 
 def saveProfile(filename, allMachines = False):
@@ -886,6 +900,8 @@ def loadMachineSettings(filename):
     for set in settingsList:
         if set.isMachineSetting():
             if profileParser.has_option('machine', set.getName()):
+                if set._name == 'port_type':
+                    import pdb; pdb.set_trace();
                 set.setValue(unicode(profileParser.get('machine', set.getName()), 'utf-8', 'replace'))
     checkAndUpdateMachineName()
 
@@ -959,6 +975,8 @@ def putMachineSetting(name, value, index = None):
     #Check if we have a configuration file loaded, else load the default.
     global settingsDictionary
     if name in settingsDictionary and settingsDictionary[name].isMachineSetting():
+        if name == 'port_type':
+            import pdb; pdb.set_trace();
         settingsDictionary[name].setValue(value, index)
     savePreferences(getPreferencePath())
 

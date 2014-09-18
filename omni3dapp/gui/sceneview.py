@@ -28,7 +28,7 @@ from omni3dapp.gui.util import openglscene, openglHelpers
 from omni3dapp.gui.util import previewTools
 from omni3dapp.gui.util import engineResultView
 from omni3dapp.gui.tools import imageToMesh
-from omni3dapp.util.printerConnection import printerConnectionManager
+# from omni3dapp.util.printerConnection import printerConnectionManager
 from omni3dapp.util.shortcuts import *
 from omni3dapp.gui.shadereditor_ui import Ui_ShaderEditor
 from omni3dapp.logger import log
@@ -82,7 +82,7 @@ class SceneView(QtOpenGL.QGLWidget):
         self._platformMesh = {}
         self._platformTexture = None
         self._isSimpleMode = True
-        self._printerConnectionManager = printerConnectionManager.PrinterConnectionManager()
+        # self._printerConnectionManager = printerConnectionManager.PrinterConnectionManager()
 
         self._viewport = None
         self._modelMatrix = None
@@ -521,16 +521,16 @@ class SceneView(QtOpenGL.QGLWidget):
         self._container.updateLayout()
 
     def onPaint(self):
-        connectionGroup = self._printerConnectionManager.getAvailableGroup()
-        if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
-            self.printButton._imageID = 2
-            self.printButton._tooltip = _("Toolpath to SD")
-        elif connectionGroup is not None:
-            self.printButton._imageID = connectionGroup.getIconID()
-            self.printButton._tooltip = _("Print with %s") % (connectionGroup.getName())
-        else:
-            self.printButton._imageID = 3
-            self.printButton._tooltip = _("Save toolpath")
+        # connectionGroup = self._printerConnectionManager.getAvailableGroup()
+        # if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
+        #     self.printButton._imageID = 2
+        #     self.printButton._tooltip = _("Toolpath to SD")
+        # elif connectionGroup is not None:
+        #     self.printButton._imageID = connectionGroup.getIconID()
+        #     self.printButton._tooltip = _("Print with %s") % (connectionGroup.getName())
+        # else:
+        #     self.printButton._imageID = 3
+        #     self.printButton._tooltip = _("Save toolpath")
 
         if self._animView is not None:
             self._viewTarget = self._animView.getPosition()

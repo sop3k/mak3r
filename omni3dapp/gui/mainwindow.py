@@ -80,6 +80,14 @@ class MainWindow(QtGui.QMainWindow):
                     items = val.getType()
                     elem.addItems(items)
                     elem.setCurrentIndex(items.index(val.getValue()))
+                elif isinstance(elem, QtGui.QDoubleSpinBox):
+                    val_range = val.getRange()
+                    if val_range:
+                        if val_range[0] is not None:
+                            elem.setMinimum(float(val_range[0]))
+                        if val_range[1] is not None:
+                            elem.setMaximum(float(val_range[1]))
+                    elem.setValue(float(val.getValue()))
                 elem.setToolTip(val.getTooltip())
             except Exception, e:
                 log.debug('Could not set value to field {0}: {1}'.format(key, e))

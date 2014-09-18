@@ -34,11 +34,10 @@ from serial import SerialException
 from .utils import run_command, get_command_output, \
     format_time, format_duration, RemainingTimeEstimator, \
     get_home_pos, parse_build_dimensions, parse_temperature_report
-from .settings import Settings, BuildDimensionsSetting
 from .power import powerset_print_start, powerset_print_stop
 from . import gcoder
-from .rpc import ProntRPC
 
+from omni3dapp.util import profile
 from omni3dapp.util.printing import printcore
 from omni3dapp.logger import log
 
@@ -62,6 +61,7 @@ tempreading_exp = re.compile("(^T:| T:)")
 REPORT_NONE = 0
 REPORT_POS = 1
 REPORT_TEMP = 2
+
 
 class Status(object):
 
@@ -124,16 +124,14 @@ class Pronsole(cmd.Cmd):
         self.p.errorcb = self.logError
         self.fgcode = None
         self.filename = None
-        self.rpc_server = None
         self.curlayer = 0
         self.sdlisting = 0
         self.sdlisting_echo = 0
         self.sdfiles = []
         self.paused = False
-        self.sdprinting = 0
         self.uploading = 0  # Unused, just for pronterface generalization
-        self.temps = {"pla": "185", "abs": "230", "off": "0"}
-        self.bedtemps = {"pla": "60", "abs": "110", "off": "0"}
+        # self.temps = {"pla": "185", "abs": "230", "off": "0"}
+        # self.bedtemps = {"pla": "60", "abs": "110", "off": "0"}
         self.percentdone = 0
         self.posreport = ""
         self.tempreadings = ""
@@ -142,19 +140,15 @@ class Pronsole(cmd.Cmd):
         self.m105_waitcycles = 0
         self.macros = {}
         self.history_file = "~/.pronsole-history"
-        self.rc_loaded = False
-        self.processing_rc = False
         self.processing_args = False
-        self.settings = Settings(self)
-        self.settings._add(BuildDimensionsSetting("build_dimensions", "200x200x100+0+0+0+0+0+0", _("Build dimensions"), _("Dimensions of Build Platform\n & optional offset of origin\n & optional switch position\n\nExamples:\n   XXXxYYY\n   XXX,YYY,ZZZ\n   XXXxYYYxZZZ+OffX+OffY+OffZ\nXXXxYYYxZZZ+OffX+OffY+OffZ+HomeX+HomeY+HomeZ"), "Printer"), self.update_build_dimensions)
-        self.settings._port_list = self.scanserial
-        self.settings._temperature_abs_cb = self.set_temp_preset
-        self.settings._temperature_pla_cb = self.set_temp_preset
-        self.settings._bedtemp_abs_cb = self.set_temp_preset
-        self.settings._bedtemp_pla_cb = self.set_temp_preset
-        # self.update_build_dimensions(None, self.settings.build_dimensions)
-        # self.update_tcp_streaming_mode(None, self.settings.tcp_streaming_mode)
-        # self.update_rpc_server(None, self.settings.rpc_server)
+        # profile.putMachineSetting('port_type', self.scanserial())
+        # self.settings._port_list = self.scanserial
+        # profile.putProfileSetting('print_temperature', self.set_temp_preset())
+        # self.settings._temperature_abs_cb = self.set_temp_preset
+        # self.settings._temperature_pla_cb = self.set_temp_preset
+        # profile.putProfileSetting('print_bed_temperature', self.set_temp_preset())
+        # self.settings._bedtemp_abs_cb = self.set_temp_preset
+        # self.settings._bedtemp_pla_cb = self.set_temp_preset
         self.monitoring = 0
         self.starttime = 0
         self.extra_print_time = 0
@@ -253,7 +247,7 @@ class Pronsole(cmd.Cmd):
 
     def logError(self, *msg):
         msg = u"".join(unicode(i) for i in msg)
-        logging.error(msg)
+        log.error(msg)
         if not self.settings.error_command:
             return
         output = get_command_output(self.settings.error_command, {"$m": msg})
@@ -533,7 +527,7 @@ class Pronsole(cmd.Cmd):
             if not self.processing_rc and not self.processing_args:
                 self.save_in_rc("set " + var, "set %s %s" % (var, value))
         except AttributeError:
-            logging.debug(_("Unknown variable '%s'") % var)
+            log.debug(_("Unknown variable '%s'") % var)
         except ValueError, ve:
             if hasattr(ve, "from_validator"):
                 self.logError(_("Bad value %s for variable '%s': %s") % (str, var, ve.args[0]))
@@ -550,7 +544,7 @@ class Pronsole(cmd.Cmd):
             try:
                 self.log("%s = %s" % (args[0], getattr(self.settings, args[0])))
             except AttributeError:
-                logging.warning("Unknown variable '%s'" % args[0])
+                log.warning("Unknown variable '%s'" % args[0])
             return
         self.set(args[0], args[1])
 
@@ -646,26 +640,6 @@ class Pronsole(cmd.Cmd):
             del rci, rco
 
     #  --------------------------------------------------------------
-    #  Configuration update callbacks
-    #  --------------------------------------------------------------
-
-    def update_build_dimensions(self, param, value):
-        self.build_dimensions_list = parse_build_dimensions(value)
-        self.p.analyzer.home_pos = get_home_pos(self.build_dimensions_list)
-
-    def update_tcp_streaming_mode(self, param, value):
-        self.p.tcp_streaming_mode = self.settings.tcp_streaming_mode
-
-    def update_rpc_server(self, param, value):
-        if value:
-            if self.rpc_server is None:
-                self.rpc_server = ProntRPC(self)
-        else:
-            if self.rpc_server is not None:
-                self.rpc_server.shutdown()
-                self.rpc_server = None
-
-    #  --------------------------------------------------------------
     #  Command line options handling
     #  --------------------------------------------------------------
 
@@ -676,9 +650,6 @@ class Pronsole(cmd.Cmd):
         parser.add_argument('filename', nargs='?', help = _("file to load"))
 
     def process_cmdline_arguments(self, args):
-        if args.verbose:
-            logger = logging.getLogger()
-            logger.setLevel(logging.DEBUG)
         for config in args.conf:
             self.load_rc(config)
         if not self.rc_loaded:
@@ -1161,14 +1132,14 @@ class Pronsole(cmd.Cmd):
         try:
             powerset_print_start(reason = "Preventing sleep during print")
         except:
-            logging.error(_("Failed to set power settings:"))
+            log.error(_("Failed to set power settings:"))
             traceback.print_exc(file = sys.stdout)
 
     def endcb(self):
         try:
             powerset_print_stop()
         except:
-            logging.error(_("Failed to set power settings:"))
+            log.error(_("Failed to set power settings:"))
             traceback.print_exc(file = sys.stdout)
         if self.p.queueindex == 0:
             print_duration = int(time.time() - self.starttime + self.extra_print_time)

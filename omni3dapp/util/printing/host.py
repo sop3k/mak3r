@@ -9,6 +9,7 @@ if os.name == "nt":
 
 from serial import SerialException
 
+from omni3dapp.util import profile
 from omni3dapp.util.printing.pronsole import Pronsole
 from omni3dapp.util.printing.printcore import Printcore
 from omni3dapp.logger import log
@@ -61,10 +62,12 @@ class PrinterConnection(Pronsole):
                 self.p.send_now("M26 S0")
         if not self.connect_to_printer(port_val, baud_val):
             return
-        if port_val != self.settings.port:
-            self.set("port", port)
-        if baud_val != self.settings.baudrate:
-            self.set("baudrate", str(baud_val))
+        settings_port = profile.settingsDictionary.get('port_type') or ""
+        if port_val != settings_port:
+            profile.settingsDictionary['port_type'].setValue(port_val)
+        settings_baud = profile.settingsDictionary.get('port_baud_rate') or ""
+        if baud_val != settings_baud:
+            profile.settingsDictionary['port_baud_rate'].setValue(baud_val)
         if self.predisconnect_mainqueue:
             # self.recoverbtn.Enable()
             pass
@@ -95,19 +98,22 @@ class PrinterConnection(Pronsole):
         return True
 
     def statuschecker(self):
-        super(Pronsole, self).statuschecker()
+        Pronsole.statuschecker(self)
         # wx.CallAfter(self.statusbar.SetStatusText, _("Not connected to printer."))
         log.info(_("Not connected to printer"))
 
     def rescanports(self):
         scanned = self.scanserial()
         portslist = list(scanned)
-        if self.settings.port != "" and self.settings.port not in portslist:
-            portslist.append(self.settings.port)
+        port = profile.settingsDictionary.get('port_type') or ""
+        if port:
+            port = port.getValue()
+        if port != "" and port not in portslist:
+            portslist.append(port)
         if portslist:    
             self.ui.port_type.clear()
             self.ui.port_type.addItems(portslist)
-        if os.path.exists(self.settings.port) or self.settings.port in scanned:
-            self.ui.port_type.setCurrentIndex(self.ui.port_type.findText(self.settings.port))
+        if os.path.exists(port) or port in scanned:
+            self.ui.port_type.setCurrentIndex(self.ui.port_type.findText(port))
         elif portslist:
             self.ui.port_type.setCurrentIndex(self.ui.port_type.findText(portslist[0]))

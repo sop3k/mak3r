@@ -30,6 +30,7 @@ import traceback
 import re
 
 from serial import SerialException
+from PySide import QtCore
 
 from .utils import run_command, get_command_output, \
     format_time, format_duration, RemainingTimeEstimator, \
@@ -102,10 +103,11 @@ class Status(object):
 
 
 class Pronsole(cmd.Cmd):
-    def __init__(self):
+    def __init__(self, parent=None):
         cmd.Cmd.__init__(self)
         if not READLINE:
             self.completekey = None
+        self.parent = parent
         self.status = Status()
         self.dynamic_temp = False
         self.compute_eta = None
@@ -129,6 +131,7 @@ class Pronsole(cmd.Cmd):
         self.sdlisting_echo = 0
         self.sdfiles = []
         self.paused = False
+        self.sdprinting = False
         self.uploading = 0  # Unused, just for pronterface generalization
         # self.temps = {"pla": "185", "abs": "230", "off": "0"}
         # self.bedtemps = {"pla": "60", "abs": "110", "off": "0"}
@@ -140,6 +143,8 @@ class Pronsole(cmd.Cmd):
         self.m105_waitcycles = 0
         self.macros = {}
         self.history_file = "~/.pronsole-history"
+        self.rc_loaded = False
+        self.processing_rc = False
         self.processing_args = False
         # profile.putMachineSetting('port_type', self.scanserial())
         # self.settings._port_list = self.scanserial
@@ -682,24 +687,79 @@ class Pronsole(cmd.Cmd):
         except SerialException as e:
             # Currently, there is no errno, but it should be there in the future
             if e.errno == 2:
-                self.logError(_("Error: You are trying to connect to a non-existing port."))
+                log.error(_("Error: You are trying to connect to a non-existing port."))
             elif e.errno == 8:
-                self.logError(_("Error: You don't have permission to open %s.") % port)
-                self.logError(_("You might need to add yourself to the dialout group."))
+                log.error(_("Error: You don't have permission to open %s.") % port)
+                log.error(_("You might need to add yourself to the dialout group."))
             else:
-                self.logError(traceback.format_exc())
+                log.error(traceback.format_exc())
             # Kill the scope anyway
             return False
         except OSError as e:
             if e.errno == 2:
-                self.logError(_("Error: You are trying to connect to a non-existing port."))
+                log.error(_("Error: You are trying to connect to a non-existing port."))
             else:
-                self.logError(traceback.format_exc())
+                log.error(traceback.format_exc())
             return False
         self.statuscheck = True
         self.status_thread = threading.Thread(target = self.statuschecker)
         self.status_thread.start()
+        # self.status_checker = StatusChecker(self)
+        # self.status_thread = QtCore.QThread(self.parent)
+        # self.status_checker.moveToThread(self.status_thread)
+        # self.status_thread.started.connect(self.status_checker.statuschecker)
+        # # self.status_thread = threading.Thread(target = self.statuschecker)
+        # self.status_checker.disconnect.connect(self.disconnect)
+        # self.status_checker.finished.connect(self.status_thread.quit)
+        # self.status_checker.finished.connect(self.status_checker.deleteLater)
+        # self.status_checker.finished.connect(self.clear_status_thread)
+        # self.status_thread.finished.connect(self.status_thread.deleteLater)
+        # self.status_thread.start()
         return True
+
+    def statuschecker_inner(self, do_monitoring=True):
+        print "inside status checker"
+        if self.p.online:
+            if self.p.writefailures >= 4:
+                self.logError(_("Disconnecting after 4 failed writes."))
+                self.status_thread = None
+                self.disconnect()
+                return
+            if do_monitoring:
+                if self.sdprinting:
+                    self.p.send_now("M27")
+                if self.m105_waitcycles % 10 == 0:
+                    self.p.send_now("M105")
+                self.m105_waitcycles += 1
+        cur_time = time.time()
+        wait_time = 0
+        while time.time() < cur_time + self.monitor_interval - 0.25:
+            if not self.statuscheck:
+                break
+            time.sleep(0.25)
+            # Safeguard: if system time changes and goes back in the past,
+            # we could get stuck almost forever
+            wait_time += 0.25
+            if wait_time > self.monitor_interval - 0.25:
+                break
+        # Always sleep at least a bit, if something goes wrong with the
+        # system time we'll avoid freezing the whole app this way
+        time.sleep(0.25)
+
+    def statuschecker(self):
+        print "inside statuschcker - check: ", self.statuscheck
+        while self.statuscheck:
+            self.statuschecker_inner()
+
+    def clear_status_thread(self):
+        if not self.status_thread:
+            return
+        try:
+            self.status_thread.terminate()
+        except Exception, e:
+            print e
+        finally:
+            self.status_thread = None
 
     def do_connect(self, l):
         a = l.split()
@@ -783,42 +843,6 @@ class Pronsole(cmd.Cmd):
     def help_block_until_online(self, l):
         self.log("Blocks until printer is online")
         self.log("Warning: if something goes wrong, this can block pronsole forever")
-
-    #  --------------------------------------------------------------
-    #  Printer status monitoring
-    #  --------------------------------------------------------------
-
-    def statuschecker_inner(self, do_monitoring = True):
-        if self.p.online:
-            if self.p.writefailures >= 4:
-                self.logError(_("Disconnecting after 4 failed writes."))
-                self.status_thread = None
-                self.disconnect()
-                return
-            if do_monitoring:
-                if self.sdprinting:
-                    self.p.send_now("M27")
-                if self.m105_waitcycles % 10 == 0:
-                    self.p.send_now("M105")
-                self.m105_waitcycles += 1
-        cur_time = time.time()
-        wait_time = 0
-        while time.time() < cur_time + self.monitor_interval - 0.25:
-            if not self.statuscheck:
-                break
-            time.sleep(0.25)
-            # Safeguard: if system time changes and goes back in the past,
-            # we could get stuck almost forever
-            wait_time += 0.25
-            if wait_time > self.monitor_interval - 0.25:
-                break
-        # Always sleep at least a bit, if something goes wrong with the
-        # system time we'll avoid freezing the whole app this way
-        time.sleep(0.25)
-
-    def statuschecker(self):
-        while self.statuscheck:
-            self.statuschecker_inner()
 
     #  --------------------------------------------------------------
     #  File loading handling
@@ -992,7 +1016,7 @@ class Pronsole(cmd.Cmd):
             self.p.send_now("M25")
         else:
             if not self.p.printing:
-                self.logError(_("Not printing, cannot pause."))
+                log.error(_("Not printing, cannot pause."))
                 return
             self.p.pause()
         self.paused = True
@@ -1596,3 +1620,50 @@ class Pronsole(cmd.Cmd):
 
     def help_run_gcode_script(self):
         self.log(_("Runs a custom script which output gcode which will in turn be executed. Current gcode filename can be given using $s token."))
+
+
+#  --------------------------------------------------------------
+#  Printer status monitoring
+#  --------------------------------------------------------------
+class StatusChecker(QtCore.QObject):
+    disconnect = QtCore.Signal()
+    finished = QtCore.Signal()
+
+    def __init__(self, parent):
+        super(StatusChecker, self).__init__()
+        self.parent = parent
+        self.p = parent.p
+        self.monitor_interval = 3
+
+    def statuschecker(self):
+        while self.parent.statuscheck:
+            self.statuschecker_inner()
+        self.finished.emit()
+
+    def statuschecker_inner(self, do_monitoring=True):
+        if self.p.online:
+            if self.p.writefailures >= 4:
+                log.error(_("Disconnecting after 4 failed writes."))
+                self.disconnect.emit()
+                self.finished.emit()
+                return
+            if do_monitoring:
+                if self.parent.sdprinting:
+                    self.p.send_now("M27")
+                if self.parent.m105_waitcycles % 10 == 0:
+                    self.p.send_now("M105")
+                self.parent.m105_waitcycles += 1
+        cur_time = time.time()
+        wait_time = 0
+        while time.time() < cur_time + self.monitor_interval - 0.25:
+            if not self.parent.statuscheck:
+                break
+            time.sleep(0.25)
+            # Safeguard: if system time changes and goes back in the past,
+            # we could get stuck almost forever
+            wait_time += 0.25
+            if wait_time > self.monitor_interval - 0.25:
+                break
+        # Always sleep at least a bit, if something goes wrong with the
+        # system time we'll avoid freezing the whole app this way
+        time.sleep(0.25)

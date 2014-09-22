@@ -535,6 +535,9 @@ setting('extruder_head_size_min_y', '0.0', float, 'machine', 'hidden').setLabel(
 setting('extruder_head_size_max_x', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards X max (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 18mm for an Ultimaker if the fan is on the left side."))
 setting('extruder_head_size_max_y', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards Y max (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 35mm for an Ultimaker if the fan is on the left side."))
 setting('extruder_head_size_height', '0.0', float, 'machine', 'hidden').setLabel(_("Printer gantry height (mm)"), _("The height of the gantry holding up the printer head. If an object is higher then this then you cannot print multiple objects one for one. 60mm for an Ultimaker."))
+setting('xy_feedrate', 3000, int, 'machine', '').setLabel(_("X && Y manual feedrate"), _("Feedrate for Control Panel Moves in X and Y (mm/min)")).setRange(0, 50000)
+setting('z_feedrate', 100, int, 'machine', '').setLabel(_("Z manual feedrate"), _("Feedrate for Control Panel Moves in Z (mm/min)")).setRange(0, 50000)
+setting('e_feedrate', 100, int, 'machine', '').setLabel(_("E manual feedrate"), _("Feedrate for Control Panel Moves in Extrusions (mm/min)")).setRange(0, 1000)
 
 validators.warningAbove(settingsDictionary['filament_flow'], 150, _("More flow than 150% is rare and usually not recommended."))
 validators.warningBelow(settingsDictionary['filament_flow'], 50, _("Less flow than 50% is rare and usually not recommended."))
@@ -670,8 +673,6 @@ def loadProfile(filename, allMachines = False):
                 if set.isAlteration():
                     section = 'alterations_%d' % (n)
                 if profileParser.has_option(section, set.getName()):
-                    if set._name == 'port_type':
-                        import pdb; pdb.set_trace();
                     set.setValue(unicode(profileParser.get(section, set.getName()), 'utf-8', 'replace'), n)
             n += 1
     else:
@@ -682,8 +683,6 @@ def loadProfile(filename, allMachines = False):
             if set.isAlteration():
                 section = 'alterations'
             if profileParser.has_option(section, set.getName()):
-                if set._name == 'port_type':
-                    import pdb; pdb.set_trace();
                 set.setValue(unicode(profileParser.get(section, set.getName()), 'utf-8', 'replace'))
 
 def saveProfile(filename, allMachines = False):
@@ -900,8 +899,6 @@ def loadMachineSettings(filename):
     for set in settingsList:
         if set.isMachineSetting():
             if profileParser.has_option('machine', set.getName()):
-                if set._name == 'port_type':
-                    import pdb; pdb.set_trace();
                 set.setValue(unicode(profileParser.get('machine', set.getName()), 'utf-8', 'replace'))
     checkAndUpdateMachineName()
 
@@ -975,8 +972,6 @@ def putMachineSetting(name, value, index = None):
     #Check if we have a configuration file loaded, else load the default.
     global settingsDictionary
     if name in settingsDictionary and settingsDictionary[name].isMachineSetting():
-        if name == 'port_type':
-            import pdb; pdb.set_trace();
         settingsDictionary[name].setValue(value, index)
     savePreferences(getPreferencePath())
 

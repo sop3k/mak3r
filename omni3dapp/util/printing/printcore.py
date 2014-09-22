@@ -19,23 +19,26 @@ __version__ = "2014.08.01"
 
 from serial import Serial, SerialException
 from select import error as SelectError
-from threading import Thread, Lock
 from Queue import Queue, Empty as QueueEmpty
+from threading import Thread, Lock
 import time
 import platform
 import os
 import sys
 reload(sys).setdefaultencoding('utf8')
-import logging
 import traceback
 import errno
 import socket
 import re
 from functools import wraps
 from collections import deque
+# from PySide import QtCore
 from . import gcoder
+from .utils import install_locale, decode_utf8, setup_logging
 
 from omni3dapp.logger import log
+
+setup_logging(sys.stderr)
 
 def locked(f):
     @wraps(f)
@@ -109,18 +112,20 @@ class Printcore(object):
             self.connect(port, baud)
         self.xy_feedrate = None
         self.z_feedrate = None
+        # self.mutex = QtCore.QMutex()
 
     def logError(self, error):
         if self.errorcb:
             try: self.errorcb(error)
             except: traceback.print_exc()
         else:
-            logging.error(error)
+            log.error(error)
 
     @locked
     def disconnect(self):
         """Disconnects from printer and pauses the print
         """
+        # locker = QtCore.QMutexLocker(self.mutex)
         if self.printer:
             if self.read_thread:
                 self.stop_read_thread = True
@@ -141,16 +146,17 @@ class Printcore(object):
         self.printing = False
 
     @locked
-    def connect(self, port = None, baud = None):
+    def connect(self, port=None, baud=None):
         """Set port and baudrate if given, then connect to printer
         """
+        # locker = QtCore.QMutexLocker(self.mutex)
         if self.printer:
             self.disconnect()
-        if port is not None:
+        if port:
             self.port = port
-        if baud is not None:
+        if baud:
             self.baud = baud
-        if self.port is not None and self.baud is not None:
+        if self.port and self.baud:
             # Connect to socket if "port" is an IP, device if not
             host_regexp = re.compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$|^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$")
             is_serial = True
@@ -223,9 +229,12 @@ class Printcore(object):
             if len(line) > 1:
                 self.log.append(line)
                 if self.recvcb:
-                    try: self.recvcb(line)
-                    except: traceback.print_exc()
-                if self.loud: logging.info("RECV: %s" % line.rstrip())
+                    try: 
+                        self.recvcb(line)
+                    except: 
+                        traceback.print_exc()
+                if self.loud:
+                    log.info("RECV: %s" % line.rstrip())
             return line
         except SelectError as e:
             if 'Bad file descriptor' in e.args[1]:
@@ -287,10 +296,12 @@ class Printcore(object):
     def _listen(self):
         """This function acts on messages from the firmware
         """
+        print "inslide _listen"
         self.clear = True
         if not self.printing:
             self._listen_until_online()
         while self._listen_can_continue():
+            print "inside listen can continue loop"
             line = self._readline()
             if line is None:
                 break
@@ -319,6 +330,7 @@ class Printcore(object):
                         pass
                 self.clear = True
         self.clear = True
+        print "finished here"
 
     def _start_sender(self):
         self.stop_send_thread = False
@@ -332,16 +344,22 @@ class Printcore(object):
             self.send_thread = None
 
     def _sender(self):
+        print "inside _Sender"
         while not self.stop_send_thread:
             try:
                 command = self.priqueue.get(True, 0.1)
             except QueueEmpty:
                 continue
+            print "set command properly"
             while self.printer and self.printing and not self.clear:
                 time.sleep(0.001)
+            print "sending command..."
             self._send(command)
             while self.printer and self.printing and not self.clear:
                 time.sleep(0.001)
+
+            print "sending and sleeping"
+
 
     def _checksum(self, command):
         return reduce(lambda x, y: x ^ y, map(ord, command))
@@ -470,10 +488,14 @@ class Printcore(object):
             self.logError(_("Not connected to printer."))
 
     def _print(self, resuming = False):
+        print "inside _print"
+        print "stopping sender"
         self._stop_sender()
+        print "stopped sender"
         try:
             if self.startcb:
                 # callback for printing started
+                print "starting startcb"
                 try: self.startcb(resuming)
                 except:
                     self.logError(_("Print start callback failed with:") +
@@ -485,7 +507,10 @@ class Printcore(object):
             self.sent = []
             if self.endcb:
                 # callback for printing done
-                try: self.endcb()
+                print "endbc..."
+                try:
+                    self.endcb()
+                    print "finished endbc"
                 except:
                     self.logError(_("Print end callback failed with:") +
                                   "\n" + traceback.format_exc())
@@ -582,10 +607,10 @@ class Printcore(object):
             try:
                 gline = self.analyzer.append(command, store = False)
             except:
-                logging.warning(_("Could not analyze command %s:") % command +
+                log.warning(_("Could not analyze command %s:") % command +
                                 "\n" + traceback.format_exc())
             if self.loud:
-                logging.info("SENT: %s" % command)
+                log.info("SENT: %s" % command)
             if self.sendcb:
                 try: self.sendcb(command, gline)
                 except: traceback.print_exc()

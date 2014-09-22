@@ -1175,18 +1175,24 @@
               <attribute name="title">
                <string>Host</string>
               </attribute>
-              <widget class="QWidget" name="layoutWidget">
+              <widget class="QWidget" name="">
                <property name="geometry">
                 <rect>
-                 <x>0</x>
-                 <y>10</y>
+                 <x>1</x>
+                 <y>13</y>
                  <width>471</width>
-                 <height>411</height>
+                 <height>541</height>
                 </rect>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_16">
+               <layout class="QVBoxLayout" name="verticalLayout_18">
                 <item>
                  <widget class="QGroupBox" name="groupBox_3">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>60</height>
+                   </size>
+                  </property>
                   <property name="title">
                    <string>Printer connection</string>
                   </property>
@@ -1233,6 +1239,12 @@
                 </item>
                 <item>
                  <widget class="QGroupBox" name="groupBox">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>130</height>
+                   </size>
+                  </property>
                   <property name="title">
                    <string>Machine dimensions</string>
                   </property>
@@ -1344,64 +1356,145 @@
                 </item>
                 <item>
                  <widget class="QGroupBox" name="groupBox_2">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>130</height>
+                   </size>
+                  </property>
                   <property name="title">
                    <string>Home position</string>
                   </property>
-                  <widget class="QWidget" name="layoutWidget">
+                  <widget class="QWidget" name="">
                    <property name="geometry">
                     <rect>
                      <x>0</x>
-                     <y>30</y>
-                     <width>169</width>
-                     <height>98</height>
+                     <y>20</y>
+                     <width>451</width>
+                     <height>100</height>
                     </rect>
                    </property>
-                   <layout class="QVBoxLayout" name="verticalLayout_15">
+                   <layout class="QHBoxLayout" name="horizontalLayout_50">
                     <item>
-                     <layout class="QHBoxLayout" name="horizontalLayout_30">
+                     <layout class="QVBoxLayout" name="verticalLayout_15">
                       <item>
-                       <widget class="QLabel" name="x_home_position_label">
-                        <property name="text">
-                         <string>X home position</string>
-                        </property>
-                       </widget>
+                       <layout class="QHBoxLayout" name="horizontalLayout_30">
+                        <item>
+                         <widget class="QLabel" name="x_home_position_label">
+                          <property name="text">
+                           <string>X home position</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="x_home_position"/>
+                        </item>
+                       </layout>
                       </item>
                       <item>
-                       <widget class="QDoubleSpinBox" name="x_home_position"/>
+                       <layout class="QHBoxLayout" name="horizontalLayout_41">
+                        <item>
+                         <widget class="QLabel" name="y_home_position_label">
+                          <property name="text">
+                           <string>Y home position</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="y_home_position"/>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="horizontalLayout_44">
+                        <item>
+                         <widget class="QLabel" name="z_home_position_label">
+                          <property name="text">
+                           <string>Z home position</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="z_home_position"/>
+                        </item>
+                       </layout>
                       </item>
                      </layout>
                     </item>
                     <item>
-                     <layout class="QHBoxLayout" name="horizontalLayout_41">
+                     <layout class="QVBoxLayout" name="verticalLayout_17">
                       <item>
-                       <widget class="QLabel" name="y_home_position_label">
-                        <property name="text">
-                         <string>Y home position</string>
-                        </property>
-                       </widget>
+                       <layout class="QHBoxLayout" name="horizontalLayout_47">
+                        <item>
+                         <widget class="QLabel" name="xy_feedrate_label">
+                          <property name="text">
+                           <string>X &amp; Y manual feedrate</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QSpinBox" name="xy_feedrate"/>
+                        </item>
+                       </layout>
                       </item>
                       <item>
-                       <widget class="QDoubleSpinBox" name="y_home_position"/>
+                       <layout class="QHBoxLayout" name="horizontalLayout_48">
+                        <item>
+                         <widget class="QLabel" name="z_feedrate_label">
+                          <property name="text">
+                           <string>Z manual feedrate</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QSpinBox" name="z_feedrate"/>
+                        </item>
+                       </layout>
                       </item>
-                     </layout>
-                    </item>
-                    <item>
-                     <layout class="QHBoxLayout" name="horizontalLayout_44">
                       <item>
-                       <widget class="QLabel" name="z_home_position_label">
-                        <property name="text">
-                         <string>Z home position</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="QDoubleSpinBox" name="z_home_position"/>
+                       <layout class="QHBoxLayout" name="horizontalLayout_49">
+                        <item>
+                         <widget class="QLabel" name="e_feedrate_label">
+                          <property name="text">
+                           <string>E manual feedrate</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QSpinBox" name="e_feedrate"/>
+                        </item>
+                       </layout>
                       </item>
                      </layout>
                     </item>
                    </layout>
                   </widget>
                  </widget>
+                </item>
+                <item>
+                 <layout class="QVBoxLayout" name="verticalLayout_16">
+                  <item>
+                   <widget class="QPlainTextEdit" name="logbox">
+                    <property name="readOnly">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="horizontalLayout_45">
+                    <item>
+                     <widget class="QLineEdit" name="commandbox"/>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="send_btn">
+                      <property name="text">
+                       <string>Send</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
                 </item>
                </layout>
               </widget>

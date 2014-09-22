@@ -8,7 +8,7 @@ from PySide import QtCore, QtGui
 
 from mainwindow_ui import Ui_MainWindow
 from omni3dapp.util import profile
-from omni3dapp.util.printing import host, printcore
+from omni3dapp.util.printing import host
 from omni3dapp.gui.util.gcode_text_styling import GCodeSyntaxHighlighter
 from omni3dapp.gui import sceneview
 from omni3dapp.logger import log
@@ -41,7 +41,7 @@ class MainWindow(QtGui.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.pc = host.PrinterConnection(self.ui)
+        self.pc = host.PrinterConnection(self)
 
         self.set_up_fields()
         self.setup_scene()
@@ -356,7 +356,6 @@ class MainWindow(QtGui.QMainWindow):
         return QtCore.QFileInfo(full_filename).fileName()
 
     def connect_printer(self):
-        import pdb; pdb.set_trace();
         log.debug(_("Connecting..."))
         port_val = self.ui.port_type.itemText(self.ui.port_type.currentIndex())
         baud_val = 115200

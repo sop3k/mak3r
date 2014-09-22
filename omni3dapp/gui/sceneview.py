@@ -176,7 +176,9 @@ class SceneView(QtOpenGL.QGLWidget):
         result = self._engine.getResult()
         finished = result is not None and result.isFinished()
         if not finished:
-            if self.printButton.getProgressBar() is not None and progressValue >= 0.0 and abs(self.printButton.getProgressBar() - progressValue) < 0.01:
+            if self.printButton.getProgressBar() is not None and \
+                    progressValue >= 0.0 and abs(
+                        self.printButton.getProgressBar()-progressValue) < 0.01:
                 return
         self.printButton.setDisabled(not finished)
         if progressValue >= 0.0:

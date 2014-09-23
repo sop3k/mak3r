@@ -19,7 +19,7 @@ import cmd
 import glob
 import os
 import time
-import threading
+# import threading
 import sys
 import shutil
 import subprocess
@@ -114,7 +114,7 @@ class Pronsole(cmd.Cmd):
         self.statuscheck = False
         self.status_thread = None
         self.monitor_interval = 3
-        self.p = printcore.Printcore()
+        self.p = printcore.Printcore(parent)
         self.p.recvcb = self.recvcb
         self.p.startcb = self.startcb
         self.p.endcb = self.endcb
@@ -169,7 +169,8 @@ class Pronsole(cmd.Cmd):
     #  --------------------------------------------------------------
 
     def postloop(self):
-        self.p.disconnect()
+        # self.p.disconnect()
+        self.p.signals.disconnect_sig.emit()
         cmd.Cmd.postloop(self)
 
     def preloop(self):
@@ -308,7 +309,8 @@ class Pronsole(cmd.Cmd):
     def kill(self):
         self.statuscheck = False
         if self.status_thread:
-            self.status_thread.join()
+            self.status_thread.finished.emit()
+            # self.status_thread.terminate()
             self.status_thread = None
         if self.rpc_server is not None:
             self.rpc_server.shutdown()
@@ -375,7 +377,8 @@ class Pronsole(cmd.Cmd):
             if not self.confirm():
                 return
         self.log(_("Exiting program. Goodbye!"))
-        self.p.disconnect()
+        # self.p.disconnect()
+        self.p.signals.disconnect_sig.emit()
         self.kill()
         sys.exit()
 
@@ -683,7 +686,8 @@ class Pronsole(cmd.Cmd):
 
     def connect_to_printer(self, port, baud):
         try:
-            self.p.connect(port, baud)
+            # self.p.connect(port, baud)
+            self.p.signals.connect_sig.emit({'port': port, 'baud': baud})
         except SerialException as e:
             # Currently, there is no errno, but it should be there in the future
             if e.errno == 2:
@@ -701,24 +705,28 @@ class Pronsole(cmd.Cmd):
             else:
                 log.error(traceback.format_exc())
             return False
+
+        self.stop_status_thread()
+
         self.statuscheck = True
-        self.status_thread = threading.Thread(target = self.statuschecker)
-        self.status_thread.start()
-        # self.status_checker = StatusChecker(self)
-        # self.status_thread = QtCore.QThread(self.parent)
-        # self.status_checker.moveToThread(self.status_thread)
-        # self.status_thread.started.connect(self.status_checker.statuschecker)
-        # # self.status_thread = threading.Thread(target = self.statuschecker)
-        # self.status_checker.disconnect.connect(self.disconnect)
-        # self.status_checker.finished.connect(self.status_thread.quit)
-        # self.status_checker.finished.connect(self.status_checker.deleteLater)
-        # self.status_checker.finished.connect(self.clear_status_thread)
-        # self.status_thread.finished.connect(self.status_thread.deleteLater)
+        # self.status_thread = threading.Thread(target = self.statuschecker)
         # self.status_thread.start()
+
+        self.status_checker = StatusChecker(self)
+        self.status_thread = QtCore.QThread(self.parent)
+        self.status_checker.moveToThread(self.status_thread)
+
+        self.status_thread.started.connect(self.status_checker.statuschecker)
+        self.status_checker.disconnect.connect(self.disconnect)
+        self.status_checker.finished.connect(self.status_thread.quit)
+        self.status_checker.finished.connect(self.status_checker.deleteLater)
+        # self.status_checker.finished.connect(self.stop_status_thread)
+        self.status_thread.finished.connect(self.status_thread.deleteLater)
+
+        self.status_thread.start()
         return True
 
     def statuschecker_inner(self, do_monitoring=True):
-        print "inside status checker"
         if self.p.online:
             if self.p.writefailures >= 4:
                 self.logError(_("Disconnecting after 4 failed writes."))
@@ -747,14 +755,14 @@ class Pronsole(cmd.Cmd):
         time.sleep(0.25)
 
     def statuschecker(self):
-        print "inside statuschcker - check: ", self.statuscheck
         while self.statuscheck:
             self.statuschecker_inner()
 
-    def clear_status_thread(self):
+    def stop_status_thread(self):
         if not self.status_thread:
             return
         try:
+            # self.status_thread.finished.emit()
             self.status_thread.terminate()
         except Exception, e:
             print e
@@ -826,12 +834,13 @@ class Pronsole(cmd.Cmd):
     def _bluetoothSerialFilter(self, serial):
         return not ("Bluetooth" in serial or "FireFly" in serial)
 
-    def online(self):
-        self.log("\rPrinter is now online")
-        self.write_prompt()
+    # def online(self):
+    #     self.log("\rPrinter is now online")
+    #     self.write_prompt()
 
     def do_disconnect(self, l):
-        self.p.disconnect()
+        # self.p.disconnect()
+        self.p.signals.disconnect_sig.emit()
 
     def help_disconnect(self):
         self.log("Disconnects from the printer")

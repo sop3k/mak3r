@@ -4,7 +4,6 @@ import re
 import sys
 import time
 import string
-import threading
 import traceback
 import cStringIO as StringIO
 import subprocess
@@ -19,6 +18,8 @@ if os.name == "nt":
     except:
         pass
 
+from PySide import QtCore, QtGui
+
 from serial import SerialException
 from .utils import setup_logging, dosify, \
     iconfile, configfile, format_time, format_duration, \
@@ -27,7 +28,6 @@ from .utils import setup_logging, dosify, \
 
 from omni3dapp.util import profile
 from omni3dapp.util.printing.pronsole import Pronsole
-from omni3dapp.util.printing.printcore import Printcore
 from omni3dapp.util.printing import gcoder
 from .pronsole import REPORT_NONE, REPORT_POS, REPORT_TEMP
 from omni3dapp.logger import log
@@ -56,6 +56,11 @@ class Tee(object):
 
     def flush(self):
         self.stdout.flush()
+
+
+class GuiSignals(QtCore.QObject):
+    addtext = QtCore.Signal(str)
+    setonline = QtCore.Signal()
 
 
 class PrinterConnection(Pronsole):
@@ -173,12 +178,18 @@ class PrinterConnection(Pronsole):
         printset = set(string.printable)
         self.is_printable = lambda text: set(text).issubset(printset)
 
+        self.guisignals = GuiSignals()
+        self.guisignals.addtext.connect(self.addtexttolog)
+        self.guisignals.setonline.connect(self.online_gui) 
+
     def connect(self, port_val, baud_val):
         self.log(_("Connecting..."))
         if not port_val:
             scanned = self.scanserial()
             if scanned:
                 port_val = scanned[0]
+                self.ui.port_type.addItem(port_val)
+                self.ui.port_type.setCurrentIndex(0)
         if self.paused:
             self.p.paused = 0
             self.p.printing = 0
@@ -190,7 +201,6 @@ class PrinterConnection(Pronsole):
                 self.p.send_now("M26 S0")
         if not self.connect_to_printer(port_val, baud_val):
             return
-        log.info("connected to printer")
         try:
             settings_port = profile.settingsDictionary.get('port_type').getValue()
         except AttributeError:
@@ -239,10 +249,14 @@ class PrinterConnection(Pronsole):
         self.log(_("Disconnected."))
         if self.p.printing or self.p.paused or self.paused:
             self.store_predisconnect_state()
-        self.p.disconnect()
+        # self.p.disconnect()
+        print "emitting disconnect signal"
+        self.p.signals.disconnect_sig.emit()
+        print "after disconnect"
         self.statuscheck = False
         if self.status_thread:
-            self.status_thread.join()
+            # self.status_thread.terminate()
+            self.status_thread.finished.emit()
             self.status_thread = None
 
         # wx.CallAfter(self.connectbtn.SetLabel, _("Connect"))
@@ -263,6 +277,7 @@ class PrinterConnection(Pronsole):
         # Relayout the toolbar to handle new buttons size
         # wx.CallAfter(self.toolbarsizer.Layout)
 
+    @QtCore.Slot(str)
     def addtexttolog(self, text):
         if self.is_printable(text):
             self.ui.logbox.appendPlainText(text)
@@ -473,16 +488,21 @@ class PrinterConnection(Pronsole):
         else:
             pronsole.pronsole.process_host_command(self, command)
 
-    # def online(self):
-    #     """Callback when printer goes online"""
-    #     self.log(_("Printer is now online."))
-    #     wx.CallAfter(self.online_gui)
+    def online(self):
+        """Callback when printer goes online"""
+        msg = _("Printer is now online.")
+        self.log(msg)
+        self.guisignals.addtext.emit(msg)
+        self.guisignals.setonline.emit()
 
-    # def online_gui(self):
-    #     """Callback when printer goes online (graphical bits)"""
-    #     self.connectbtn.SetLabel(_("Disconnect"))
-    #     self.connectbtn.SetToolTip(wx.ToolTip("Disconnect from the printer"))
-    #     self.connectbtn.Bind(wx.EVT_BUTTON, self.disconnect)
+    @QtCore.Slot()
+    def online_gui(self):
+        """Callback when printer goes online (graphical bits)"""
+        self.ui.connect_button.setText(_("Disconnect"))
+        self.ui.connect_button.setToolTip(_("Disconnect from the printer"))
+        self.ui.connect_button.clicked.connect(self.disconnect)
+
+        self.parent.statusBar().showMessage(_("Connected to printer"))
 
     #     if hasattr(self, "extrudersel"):
     #         self.do_tool(self.extrudersel.GetValue())
@@ -553,6 +573,7 @@ class PrinterConnection(Pronsole):
         if y is not None: self.current_pos[1] = y
         if z is not None: self.current_pos[2] = z
 
+    @QtCore.Slot(str)
     def recvcb(self, l):
         report_type = self.recvcb_report(l)
         isreport = report_type != REPORT_NONE

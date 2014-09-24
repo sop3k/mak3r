@@ -355,8 +355,13 @@ class MainWindow(QtGui.QMainWindow):
     def stripped_name(self, full_filename):
         return QtCore.QFileInfo(full_filename).fileName()
 
+    def set_statusbar(self, msg):
+        self.statusBar().showMessage(msg)
+
     def connect_printer(self):
-        log.debug(_("Connecting..."))
+        msg = _("Connecting...")
+        log.debug(msg)
+        self.set_statusbar(msg)
         port_val = self.ui.port_type.itemText(self.ui.port_type.currentIndex())
         baud_val = 115200
         try:

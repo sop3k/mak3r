@@ -33,31 +33,6 @@ from .pronsole import REPORT_NONE, REPORT_POS, REPORT_TEMP
 from omni3dapp.logger import log
 
 
-class Tee(object):
-    def __init__(self, target):
-        self.stdout = sys.stdout
-        sys.stdout = self
-        setup_logging(sys.stdout)
-        self.target = target
-
-    def __del__(self):
-        sys.stdout = self.stdout
-
-    def write(self, data):
-        try:
-            self.target(data)
-        except:
-            pass
-        try:
-            data = data.encode("utf-8")
-        except:
-            pass
-        self.stdout.write(data)
-
-    def flush(self):
-        self.stdout.flush()
-
-
 class GuiSignals(QtCore.QObject):
     addtext = QtCore.Signal(str)
     setonline = QtCore.Signal()
@@ -152,10 +127,7 @@ class PrinterConnection(Pronsole):
 
         # disable all printer controls until we connect to a printer
         # self.gui_set_disconnected()
-        # self.statusbar = self.CreateStatusBar()
-        # self.statusbar.SetStatusText(_("Not connected to printer."))
-        self.parent.statusBar().showMessage(_("Not connected to printer."))
-        # self.t = Tee(self.catchprint)
+        self.parent.set_statusbar(_("Not connected to printer."))
         self.stdout = sys.stdout
         self.slicing = False
         self.loading_gcode = False
@@ -183,13 +155,17 @@ class PrinterConnection(Pronsole):
         self.guisignals.setonline.connect(self.online_gui) 
 
     def connect(self, port_val, baud_val):
-        self.log(_("Connecting..."))
+        self.addtexttolog(_('Connecting...'))
         if not port_val:
-            scanned = self.scanserial()
-            if scanned:
-                port_val = scanned[0]
-                self.ui.port_type.addItem(port_val)
-                self.ui.port_type.setCurrentIndex(0)
+            port_val = self.rescanports()
+            # scanned = self.scanserial()
+            # if scanned:
+            #     port_val = scanned[0]
+            #     self.ui.port_type.addItem(port_val)
+            #     self.ui.port_type.setCurrentIndex(0)
+
+        self.parent.set_statusbar(_("Connecting..."))
+
         if self.paused:
             self.p.paused = 0
             self.p.printing = 0
@@ -206,23 +182,20 @@ class PrinterConnection(Pronsole):
         except AttributeError:
             settings_port = ""
         if port_val != settings_port:
-            profile.settingsDictionary['port_type'].setValue(port_val)
+            # profile.settingsDictionary['port_type'].setValue(port_val)
+            profile.putMachineSetting('port_type', port_val)
 
         try:
             settings_baud = profile.settingsDictionary.get('port_baud_rate').getValue()
         except AttributeError:
             settings_baud = ""
         if baud_val != settings_baud:
-            profile.settingsDictionary['port_baud_rate'].setValue(baud_val)
+            # profile.settingsDictionary['port_baud_rate'].setValue(baud_val)
+            profile.putMachineSetting('port_baud_rate', baud_val)
 
         if self.predisconnect_mainqueue:
             # self.recoverbtn.Enable()
             pass
-
-    # def statuschecker(self):
-    #     Pronsole.statuschecker(self)
-    #     # wx.CallAfter(self.statusbar.SetStatusText, _("Not connected to printer."))
-    #     log.debug(_("Not connected to printer"))
 
     def rescanports(self):
         scanned = self.scanserial()
@@ -233,30 +206,34 @@ class PrinterConnection(Pronsole):
         if port != "" and port not in portslist:
             portslist.append(port)
         if portslist:    
+            if not port:
+                port = portslist[0]
             self.ui.port_type.clear()
             self.ui.port_type.addItems(portslist)
+            self.parent.set_statusbar(_("Found active ports."))
+        else:
+            self.parent.set_statusbar(_("Did not find any connected ports."))
         if os.path.exists(port) or port in scanned:
             self.ui.port_type.setCurrentIndex(self.ui.port_type.findText(port))
-        elif portslist:
-            self.ui.port_type.setCurrentIndex(self.ui.port_type.findText(portslist[0]))
+        return port
 
     def store_predisconnect_state(self):
         self.predisconnect_mainqueue = self.p.mainqueue
         self.predisconnect_queueindex = self.p.queueindex
         self.predisconnect_layer = self.curlayer
 
+    def logdisp(self, msg):
+        log.debug(msg)
+        self.addtexttolog(msg)
+
     def disconnect(self):
-        self.log(_("Disconnected."))
+        self.parent.set_statusbar(_("Disconnecting from printer..."))
         if self.p.printing or self.p.paused or self.paused:
             self.store_predisconnect_state()
-        # self.p.disconnect()
-        print "emitting disconnect signal"
         self.p.signals.disconnect_sig.emit()
-        print "after disconnect"
         self.statuscheck = False
         if self.status_thread:
-            # self.status_thread.terminate()
-            self.status_thread.finished.emit()
+            self.status_thread.terminate()
             self.status_thread = None
 
         # wx.CallAfter(self.connectbtn.SetLabel, _("Connect"))
@@ -276,6 +253,7 @@ class PrinterConnection(Pronsole):
 
         # Relayout the toolbar to handle new buttons size
         # wx.CallAfter(self.toolbarsizer.Layout)
+        self.offline_gui()
 
     @QtCore.Slot(str)
     def addtexttolog(self, text):
@@ -426,7 +404,7 @@ class PrinterConnection(Pronsole):
 
     def statuschecker(self):
         Pronsole.statuschecker(self)
-        self.parent.statusBar().showMessage(_("Not connected to printer."))
+        self.parent.set_statusbar(_("Not connected to printer."))
 
     def pause(self, event):
         if not self.paused:
@@ -500,9 +478,10 @@ class PrinterConnection(Pronsole):
         """Callback when printer goes online (graphical bits)"""
         self.ui.connect_button.setText(_("Disconnect"))
         self.ui.connect_button.setToolTip(_("Disconnect from the printer"))
+        self.ui.connect_button.clicked.disconnect(self.parent.connect_printer)
         self.ui.connect_button.clicked.connect(self.disconnect)
 
-        self.parent.statusBar().showMessage(_("Connected to printer"))
+        self.parent.set_statusbar(_("Connected to printer."))
 
     #     if hasattr(self, "extrudersel"):
     #         self.do_tool(self.extrudersel.GetValue())
@@ -513,6 +492,16 @@ class PrinterConnection(Pronsole):
     #         self.printbtn.Enable()
 
     #     wx.CallAfter(self.toolbarsizer.Layout)
+
+    def offline_gui(self):
+        self.ui.connect_button.setText(_("Connect"))
+        self.ui.connect_button.setToolTip(_("Connect with the printer"))
+        self.ui.connect_button.clicked.disconnect(self.disconnect)
+        self.ui.connect_button.clicked.connect(self.parent.connect_printer)
+
+        msg = _("Disconnected.")
+        self.logdisp(msg)
+        self.parent.set_statusbar(msg)
 
     def layer_change_cb(self, newlayer):
         """Callback when the printed layer changed"""

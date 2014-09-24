@@ -515,6 +515,7 @@ setting('y_home_position', '0.00', float, 'machine', _('Home position')).setLabe
 setting('z_home_position', '0.00', float, 'machine', _('Home position')).setLabel(_("Z home position")).setRange(-2000, 2000)
 # setting('machine_center_is_zero', 'False', bool, 'machine', 'hidden').setLabel(_("Machine center 0,0"), _("Machines firmware defines the center of the bed as 0,0 instead of the front left corner."))
 setting('machine_shape', 'Square', ['Square','Circular'], 'machine', 'hidden').setLabel(_("Build area shape"), _("The shape of machine build area."))
+setting('machine_center_is_zero', 'False', bool, 'machine', 'hidden').setLabel(_("Machine center 0,0"), _("Machines firmware defines the center of the bed as 0,0 instead of the front left corner."))
 setting('ultimaker_extruder_upgrade', 'False', bool, 'machine', 'hidden')
 setting('has_heated_bed', 'False', bool, 'machine', 'hidden').setLabel(_("Heated bed"), _("If you have an heated bed, this enabled heated bed settings (requires restart)"))
 setting('gcode_flavor', 'RepRap (Marlin/Sprinter)', ['RepRap (Marlin/Sprinter)', 'RepRap (Volumetric)', 'UltiGCode', 'MakerBot', 'BFB', 'Mach3'], 'machine', 'hidden').setLabel(_("GCode Flavor"), _("Flavor of generated GCode.\nRepRap is normal 5D GCode which works on Marlin/Sprinter based firmwares.\nUltiGCode is a variation of the RepRap GCode which puts more settings in the machine instead of the slicer.\nMakerBot GCode has a few changes in the way GCode is generated, but still requires MakerWare to generate to X3G.\nBFB style generates RPM based code.\nMach3 uses A,B,C instead of E for extruders."))
@@ -968,7 +969,7 @@ def getMachineSetting(name, index = None):
     sys.stderr.write(msg)
     return ''
 
-def putMachineSetting(name, value, index = None):
+def putMachineSetting(name, value, index=None):
     #Check if we have a configuration file loaded, else load the default.
     global settingsDictionary
     if name in settingsDictionary and settingsDictionary[name].isMachineSetting():

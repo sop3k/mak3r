@@ -254,12 +254,13 @@ class Pronsole(cmd.Cmd):
     def logError(self, *msg):
         msg = u"".join(unicode(i) for i in msg)
         log.error(msg)
-        if not self.settings.error_command:
-            return
-        output = get_command_output(self.settings.error_command, {"$m": msg})
-        if output:
-            self.log("Error command output:")
-            self.log(output.rstrip())
+        self.guisignals.addtext.emit(msg)
+        # if not self.settings.error_command:
+        #     return
+        # output = get_command_output(self.settings.error_command, {"$m": msg})
+        # if output:
+        #     self.log("Error command output:")
+        #     self.log(output.rstrip())
 
     def promptf(self):
         """A function to generate prompts so that we can do dynamic prompts. """

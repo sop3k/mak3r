@@ -30,6 +30,10 @@ class MainWindow(QtGui.QMainWindow):
             'socket_connector_thread',
             'log_thread'
             ]
+    SETTING_CHANGE_WHITELIST = [
+            'commandbox',
+            'logbox',
+            ]
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -101,6 +105,10 @@ class MainWindow(QtGui.QMainWindow):
                 self.ui.menuRecent_Model_Files.addAction(action)
             self.update_mru_files_actions()
 
+            # Create history for commandbox
+            self.ui.commandbox.history = [u""]
+            self.ui.commandbox.histindex = 1
+
     def connect_actions(self):
         self.ui.actionSwitch_to_quickprint.triggered.connect(self.on_simple_switch)
         self.ui.actionSwitch_to_expert_mode.triggered.connect(self.on_normal_switch)
@@ -115,6 +123,9 @@ class MainWindow(QtGui.QMainWindow):
         self.connect_actions_simple_mode()
         # Normal panel actions
         self.connect_actions_normal_mode()
+
+        self.ui.commandbox.returnPressed.connect(self.pc.sendline)
+        self.ui.commandbox.installEventFilter(self)
 
     def connect_actions_simple_mode(self):
         self.ui.high_quality.toggled.connect(self.scene.sceneUpdated)
@@ -138,9 +149,19 @@ class MainWindow(QtGui.QMainWindow):
         for elem in self.ui.normal.findChildren(QtGui.QListWidget):
             elem.currentItemChanged.connect(self.on_setting_change)
 
+        for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
+            if elem.objectName().startswith('move'):
+                elem.clicked.connect(self.move_axis)
+            else:
+                elem.clicked.connect(self.home_pos)
+        # self.ui.machine_x_offset.valueChanged.connect(self.pc.moveX)
+        # self.ui.machine_y_offset.valueChanged.connect(self.pc.moveY)
+        # self.ui.machine_z_offset.valueChanged.connect(self.pc.moveZ)
+
     def connect_buttons(self):
         self.ui.connect_button.clicked.connect(self.connect_printer)
         self.ui.port_btn.clicked.connect(self.pc.rescanports)
+        self.ui.send_btn.clicked.connect(self.pc.sendline)
 
     def on_simple_switch(self, *args, **kwargs):
         profile.putPreference('startMode', 'Simple')
@@ -274,12 +295,15 @@ class MainWindow(QtGui.QMainWindow):
     def on_setting_change(self):
         # profile.settingsDictionary
         elem = QtCore.QObject.sender(self)
+        obj_name = elem.objectName()
+        if obj_name in self.SETTING_CHANGE_WHITELIST:
+            return
         if isinstance(elem, (QtGui.QLineEdit, QtGui.QTextEdit)):
-            profile.settingsDictionary[elem.objectName()].setValue(elem.text())
+            profile.settingsDictionary[obj_name].setValue(elem.text())
         elif isinstance(elem, QtGui.QCheckBox):
-            profile.settingsDictionary[elem.objectName()].setValue(elem.isChecked())
+            profile.settingsDictionary[obj_name].setValue(elem.isChecked())
         elif isinstance(elem, QtGui.QComboBox):
-            profile.settingsDictionary[elem.objectName()].setValue(
+            profile.settingsDictionary[obj_name].setValue(
                     elem.itemText(elem.currentIndex()))
         self.validate_normal_mode()
 
@@ -385,6 +409,46 @@ class MainWindow(QtGui.QMainWindow):
     def terminate_threads(self):
         for thread_name in self.THREADS:
             self.terminate_thread(thread_name)
+
+    def move_axis(self):
+        elem = QtCore.QObject.sender(self)
+        try:
+            axis, direction, step = re.match('move_([xyz])_(down|up)(\d{1,2})',
+                    elem.objectName()).groups()
+        except AttributeError, e:
+            log.error("Clicked button does not have an expected name: \
+                    {0}".format(e))
+            return
+        func = getattr(self.pc, 'move_{0}'.format(axis), None)
+        if not func:
+            log.error("Did not find method move_{0} of the class {1}".format(axis,
+                self.pc.__class__))
+            return 
+        multip = int(direction == 'up') or -1
+        if step.startswith('0'):
+            step = re.sub(r'(0*)(\d+)', r'\1.\2', step)
+        step = float(step)
+        if step == 0:
+            return
+        return func(step * multip)
+
+    def home_pos(self):
+        elem = QtCore.QObject.sender(self)
+        try:
+            axis = re.match('home_([xyz]+)', elem.objectName()).group(1)
+        except AttributeError, e:
+            log.error('Clicked button does not have an expected name: \
+                    {0}'.format(e))
+            return
+        return self.pc.home_position(axis)
+
+    def eventFilter(self, obj, evt):
+        if obj == self.ui.commandbox:
+            if evt.type() == QtCore.QEvent.KeyPress:
+                self.pc.cbkey(evt.key())
+                return True
+            return False
+        return super(MainWindow, self).eventFilter(obj, evt)
 
     def closeEvent(self, evt):
         # terminate all slicer-related threads

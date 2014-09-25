@@ -1434,16 +1434,29 @@ class Pronsole(cmd.Cmd):
             return
         l = l.split()
         if l[0].lower() == "x":
-            feed = self.settings.xy_feedrate
+            # feed = self.settings.xy_feedrate
+            try:
+                feed = profile.settingsDictionary.get('xy_feedrate').getValue()
+            except AttributeError:
+                feed = 0
             axis = "X"
         elif l[0].lower() == "y":
-            feed = self.settings.xy_feedrate
+            try:
+                feed = profile.settingsDictionary.get('xy_feedrate').getValue()
+            except AttributeError:
+                feed = 0
             axis = "Y"
         elif l[0].lower() == "z":
-            feed = self.settings.z_feedrate
+            try:
+                feed = profile.settingsDictionary.get('z_feedrate').getValue()
+            except AttributeError:
+                feed = 0
             axis = "Z"
         elif l[0].lower() == "e":
-            feed = self.settings.e_feedrate
+            try:
+                feed = profile.settingsDictionary.get('e_feedrate').getValue()
+            except AttributeError:
+                feed = 0
             axis = "E"
         else:
             self.logError(_("Unknown axis."))

@@ -155,14 +155,9 @@ class PrinterConnection(Pronsole):
         self.guisignals.setonline.connect(self.online_gui) 
 
     def connect(self, port_val, baud_val):
-        self.addtexttolog(_('Connecting...'))
+        self.guisignals.addtext.emit(_('Connecting...'))
         if not port_val:
             port_val = self.rescanports()
-            # scanned = self.scanserial()
-            # if scanned:
-            #     port_val = scanned[0]
-            #     self.ui.port_type.addItem(port_val)
-            #     self.ui.port_type.setCurrentIndex(0)
 
         self.parent.set_statusbar(_("Connecting..."))
 
@@ -222,9 +217,12 @@ class PrinterConnection(Pronsole):
         self.predisconnect_queueindex = self.p.queueindex
         self.predisconnect_layer = self.curlayer
 
-    def logdisp(self, msg):
-        log.debug(msg)
-        self.addtexttolog(msg)
+    def logdisp(self, msg, error=False):
+        if error:
+            log.error(msg)
+        else:
+            log.debug(msg)
+        self.guisignals.addtext.emit(msg)
 
     def disconnect(self):
         self.parent.set_statusbar(_("Disconnecting from printer..."))
@@ -369,38 +367,42 @@ class PrinterConnection(Pronsole):
             wx.CallAfter(self.printbtn.SetLabel, _("Print"))
             wx.CallAfter(self.toolbarsizer.Layout)
 
-    def moveXY(self, x, y):
-        # When user clicks on the XY control, the Z control no longer gets spacebar/repeat signals
-        self.zb.clearRepeat()
-        if x != 0:
-            if self.settings.clamp_jogging:
-                new_x = self.current_pos[0] + x
-                if new_x < self.build_dimensions_list[3] or new_x > self.build_dimensions_list[0] + self.build_dimensions_list[3]:
-                    self.clamped_move_message()
-                    return
-            self.onecmd('move X %s' % x)
-        elif y != 0:
-            if self.settings.clamp_jogging:
-                new_y = self.current_pos[1] + y
-                if new_y < self.build_dimensions_list[4] or new_y > self.build_dimensions_list[1] + self.build_dimensions_list[4]:
-                    self.clamped_move_message()
-                    return
-            self.onecmd('move Y %s' % y)
-        else:
+    def move_axis(self, axis, curr_pos, step, mach_size):
+        print self.current_pos
+        # self.zb.clearRepeat()
+        if step == 0:
             return
+        offset = profile.getMachineSettingFloat('machine_{0}_offset'.format(axis))
+        # if self.settings.clamp_jogging:
+        new_pos = curr_pos + step
+        print new_pos
+        # if new_x < x_offset or new_x > mach_width + x_offset:
+        if new_pos > mach_size + offset or new_pos < 0:
+            self.clamped_move_message()
+            return
+        self.onecmd('move {0} {1}'.format(axis.upper(), step))
         self.p.send_now('M114')
 
-    def moveZ(self, z):
-        if z != 0:
-            if self.settings.clamp_jogging:
-                new_z = self.current_pos[2] + z
-                if new_z < self.build_dimensions_list[5] or new_z > self.build_dimensions_list[2] + self.build_dimensions_list[5]:
-                    self.clamped_move_message()
-                    return
-            self.onecmd('move Z %s' % z)
-            self.p.send_now('M114')
+    def move_x(self, step):
+        mach_width = profile.getMachineSettingFloat('machine_width') 
+        self.move_axis('x', self.current_pos[0], step, mach_width)
+
+    def move_y(self, step):
+        mach_depth = profile.getMachineSettingFloat('machine_depth')
+        self.current_pos[1]
+        self.move_axis('y', self.current_pos[1], step, mach_depth)
+
+    def move_z(self, step):
+        mach_height = profile.getMachineSettingFloat('machine_height')
+        self.move_axis('z', self.current_pos[2], step, mach_height)
         # When user clicks on the Z control, the XY control no longer gets spacebar/repeat signals
-        self.xyb.clearRepeat()
+        # self.xyb.clearRepeat()
+
+    def home_position(self, axis):
+        if axis == 'all':
+            self.onecmd('home')
+        self.onecmd('home {0}'.format(axis.upper()))
+        self.p.send_now('M114')
 
     def statuschecker(self):
         Pronsole.statuschecker(self)
@@ -442,6 +444,7 @@ class PrinterConnection(Pronsole):
         self.p.send_now("G28 X Y")
         self.on_startprint()
         self.p.startprint(self.predisconnect_mainqueue, self.p.queueindex)
+
     def reset(self, event):
         self.log(_("Reset."))
         dlg = wx.MessageDialog(self, _("Are you sure you want to reset the printer?"), _("Reset?"), wx.YES | wx.NO)
@@ -574,7 +577,45 @@ class PrinterConnection(Pronsole):
             # self.update_tempdisplay()
         tstring = l.rstrip()
         if not self.p.loud and (tstring not in ["ok", "wait"] and not isreport):
-            # wx.CallAfter(self.addtexttolog, tstring + "\n")
-            self.addtexttolog(tstring + "\n")
+            self.guisignals.addtext.emit(tstring + "\n")
         for listener in self.recvlisteners:
             listener(l)
+
+    def parseusercmd(self, line):
+        if line.upper().startswith("M114"):
+            self.userm114 += 1
+        elif line.upper().startswith("M105"):
+            self.userm105 += 1
+
+    def sendline(self):
+        command = self.ui.commandbox.text()
+        if not len(command):
+            return
+        self.guisignals.addtext.emit(">>> " + command + "\n")
+        self.parseusercmd(str(command))
+        self.onecmd(str(command))
+        self.ui.commandbox.setText(u'')
+        self.ui.commandbox.history.append(command)
+        self.ui.commandbox.histindex = len(self.ui.commandbox.history)
+
+    def cbkey_action(self, val):
+        hist_len = len(self.ui.commandbox.history)
+        # if self.ui.commandbox.text():
+        #     # save current command
+        #     self.ui.commandbox.history.append(self.ui.commandbox.text())
+        if hist_len:
+            self.ui.commandbox.histindex = (self.ui.commandbox.histindex + \
+                    val) % hist_len
+            self.ui.commandbox.setText(
+                    self.ui.commandbox.history[self.ui.commandbox.histindex]
+                    )
+            self.ui.commandbox.selectAll()
+        
+    def cbkey(self, code):
+        if code == QtCore.Qt.Key_Up:
+            self.cbkey_action(-1)
+        elif code == QtCore.Qt.Key_Down:
+            self.cbkey_action(1)
+
+    def clamped_move_message(self):
+        self.logdisp(_("Manual move outside of the build volume prevented (see the \"Clamp manual moves\" option)."))

@@ -569,6 +569,7 @@ class Listener(QtCore.QObject):
                 self.parent.logError(_(u"Can't read from printer (disconnected?) (SelectError {0}): {1}").format(e.errno, decode_utf8(e.strerror)))
                 return None
             else:
+                import pdb; pdb.set_trace();
                 self.parent.logError(_(u"SelectError ({0}): {1}").format(e.errno, decode_utf8(e.strerror)))
                 raise
         except SerialException as e:

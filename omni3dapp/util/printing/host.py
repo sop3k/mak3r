@@ -479,6 +479,8 @@ class PrinterConnection(Pronsole):
     @QtCore.Slot()
     def online_gui(self):
         """Callback when printer goes online (graphical bits)"""
+        self.parent.set_connected()
+
         self.ui.connect_button.setText(_("Disconnect"))
         self.ui.connect_button.setToolTip(_("Disconnect from the printer"))
         self.ui.connect_button.clicked.disconnect(self.parent.connect_printer)
@@ -497,6 +499,8 @@ class PrinterConnection(Pronsole):
     #     wx.CallAfter(self.toolbarsizer.Layout)
 
     def offline_gui(self):
+        self.parent.set_connected(False)
+
         self.ui.connect_button.setText(_("Connect"))
         self.ui.connect_button.setToolTip(_("Connect with the printer"))
         self.ui.connect_button.clicked.disconnect(self.disconnect)

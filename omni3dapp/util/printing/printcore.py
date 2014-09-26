@@ -159,7 +159,6 @@ class Printcore(QtCore.QObject):
         port = attrs_dict.get('port') or ''
         baud = attrs_dict.get('baud') or ''
         if self.printer:
-            # self.disconnect()
             self.signals.disconnect_sig.emit()
         if port:
             self.port = port
@@ -203,14 +202,14 @@ class Printcore(QtCore.QObject):
                     self.printer = Serial(port = self.port,
                                           baudrate = self.baud,
                                           timeout = 0.25)
-                except SerialException as e:
+                except (SerialException, IOError) as e:
+                    if type(e) == SerialException:
+                        txt = _("Serial error: ")
+                    else:
+                        txt = _("IO error: ")
                     self.logError(_("Could not connect to %s at baudrate %s:") % (self.port, self.baud) +
-                                  "\n" + _("Serial error: %s") % e)
-                    self.printer = None
-                    return
-                except IOError as e:
-                    self.logError(_("Could not connect to %s at baudrate %s:") % (self.port, self.baud) +
-                                  "\n" + _("IO error: %s") % e)
+                            "\n" + txt + str(e))
+                    self.parent.set_statusbar(_("Could not connet to printer."))
                     self.printer = None
                     return
             self.stop_read_thread = False

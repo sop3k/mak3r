@@ -52,6 +52,10 @@ class MainWindow(QtGui.QMainWindow):
         self.connect_actions()
         self.connect_buttons()
 
+        # As a printer is not connected at the start of the app, set the gui
+        # disconnected
+        self.set_connected(False)
+
         # self.timer = QtCore.QTimer(self)
         # self.timer.timeout.connect(self.onTimer)
         # self.timer.start(1000)
@@ -119,13 +123,19 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.actionPrint.triggered.connect(self.scene.onPrintButton)
         self.ui.actionSave_GCode.triggered.connect(self.scene.showSaveGCode)
 
+        self.ui.commandbox.returnPressed.connect(self.pc.sendline)
+        self.ui.commandbox.installEventFilter(self)
+
+        for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
+            if elem.objectName().startswith('move'):
+                elem.clicked.connect(self.move_axis)
+            else:
+                elem.clicked.connect(self.home_pos)
+
         # Simple panel actions
         self.connect_actions_simple_mode()
         # Normal panel actions
         self.connect_actions_normal_mode()
-
-        self.ui.commandbox.returnPressed.connect(self.pc.sendline)
-        self.ui.commandbox.installEventFilter(self)
 
     def connect_actions_simple_mode(self):
         self.ui.high_quality.toggled.connect(self.scene.sceneUpdated)
@@ -148,15 +158,6 @@ class MainWindow(QtGui.QMainWindow):
             elem.currentIndexChanged.connect(self.on_setting_change)
         for elem in self.ui.normal.findChildren(QtGui.QListWidget):
             elem.currentItemChanged.connect(self.on_setting_change)
-
-        for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
-            if elem.objectName().startswith('move'):
-                elem.clicked.connect(self.move_axis)
-            else:
-                elem.clicked.connect(self.home_pos)
-        # self.ui.machine_x_offset.valueChanged.connect(self.pc.moveX)
-        # self.ui.machine_y_offset.valueChanged.connect(self.pc.moveY)
-        # self.ui.machine_z_offset.valueChanged.connect(self.pc.moveZ)
 
     def connect_buttons(self):
         self.ui.connect_button.clicked.connect(self.connect_printer)
@@ -442,11 +443,22 @@ class MainWindow(QtGui.QMainWindow):
             return
         return self.pc.home_position(axis)
 
+    def set_connected(self, is_active=True):
+        self.ui.commandbox.setEnabled(is_active)
+        self.ui.send_btn.setEnabled(is_active)
+        for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
+            elem.setEnabled(is_active)
+
     def eventFilter(self, obj, evt):
         if obj == self.ui.commandbox:
             if evt.type() == QtCore.QEvent.KeyPress:
-                self.pc.cbkey(evt.key())
-                return True
+                code = evt.key()
+                if code == QtCore.Qt.Key_Up:
+                    self.pc.cbkey_action(-1)
+                    return True
+                elif code == QtCore.Qt.Key_Down:
+                    self.pc.cbkey_action(1)
+                    return True
             return False
         return super(MainWindow, self).eventFilter(obj, evt)
 

@@ -687,9 +687,8 @@ class Pronsole(cmd.Cmd):
 
     def connect_to_printer(self, port, baud):
         try:
-            # self.p.connect(port, baud)
             self.p.signals.connect_sig.emit({'port': port, 'baud': baud})
-        except SerialException as e:
+        except (SerialException, OSError) as e:
             # Currently, there is no errno, but it should be there in the future
             if e.errno == 2:
                 log.error(_("Error: You are trying to connect to a non-existing port."))
@@ -699,12 +698,6 @@ class Pronsole(cmd.Cmd):
             else:
                 log.error(traceback.format_exc())
             # Kill the scope anyway
-            return False
-        except OSError as e:
-            if e.errno == 2:
-                log.error(_("Error: You are trying to connect to a non-existing port."))
-            else:
-                log.error(traceback.format_exc())
             return False
 
         self.stop_status_thread()

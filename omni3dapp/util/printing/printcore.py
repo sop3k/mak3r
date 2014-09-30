@@ -565,11 +565,13 @@ class Listener(QtCore.QObject):
             return line
         except SelectError as e:
             if 'Bad file descriptor' in e.args[1]:
-                self.parent.logError(_(u"Can't read from printer (disconnected?) (SelectError {0}): {1}").format(e.errno, decode_utf8(e.strerror)))
+                self.parent.logError(_(u"Can't read from printer " + \
+                        "(disconnected?) (SelectError {0}): {1}").format(e.args,
+                        decode_utf8(e.message)))
                 return None
             else:
-                import pdb; pdb.set_trace();
-                self.parent.logError(_(u"SelectError ({0}): {1}").format(e.errno, decode_utf8(e.strerror)))
+                self.parent.logError(_(u"SelectError ({0}): {1}").format(e.args,
+                                        decode_utf8(e.message)))
                 raise
         except SerialException as e:
             self.parent.logError(_(u"Can't read from printer (disconnected?) (SerialException): {0}").format(decode_utf8(str(e))))

@@ -36,6 +36,7 @@ from omni3dapp.logger import log
 class GuiSignals(QtCore.QObject):
     addtext = QtCore.Signal(str)
     setonline = QtCore.Signal()
+    enable_printing = QtCore.Signal()
 
 
 class PrinterConnection(Pronsole):
@@ -153,6 +154,8 @@ class PrinterConnection(Pronsole):
         self.guisignals = GuiSignals()
         self.guisignals.addtext.connect(self.addtexttolog)
         self.guisignals.setonline.connect(self.online_gui) 
+        self.guisignals.enable_printing.connect(
+                self.parent.scene.enable_printing)
 
     def connect(self, port_val, baud_val):
         self.guisignals.addtext.emit(_('Connecting...'))
@@ -389,7 +392,6 @@ class PrinterConnection(Pronsole):
 
     def move_y(self, step):
         mach_depth = profile.getMachineSettingFloat('machine_depth')
-        self.current_pos[1]
         self.move_axis('y', self.current_pos[1], step, mach_depth)
 
     def move_z(self, step):
@@ -475,16 +477,17 @@ class PrinterConnection(Pronsole):
         self.log(msg)
         self.guisignals.addtext.emit(msg)
         self.guisignals.setonline.emit()
+        self.guisignals.enable_printing.emit()
 
     @QtCore.Slot()
     def online_gui(self):
         """Callback when printer goes online (graphical bits)"""
         self.parent.set_connected()
 
-        self.ui.connect_button.setText(_("Disconnect"))
-        self.ui.connect_button.setToolTip(_("Disconnect from the printer"))
-        self.ui.connect_button.clicked.disconnect(self.parent.connect_printer)
-        self.ui.connect_button.clicked.connect(self.disconnect)
+        self.ui.connect_btn.setText(_("Disconnect"))
+        self.ui.connect_btn.setToolTip(_("Disconnect from the printer"))
+        self.ui.connect_btn.clicked.disconnect(self.parent.connect_printer)
+        self.ui.connect_btn.clicked.connect(self.disconnect)
 
         self.parent.set_statusbar(_("Connected to printer."))
 
@@ -501,10 +504,10 @@ class PrinterConnection(Pronsole):
     def offline_gui(self):
         self.parent.set_connected(False)
 
-        self.ui.connect_button.setText(_("Connect"))
-        self.ui.connect_button.setToolTip(_("Connect with the printer"))
-        self.ui.connect_button.clicked.disconnect(self.disconnect)
-        self.ui.connect_button.clicked.connect(self.parent.connect_printer)
+        self.ui.connect_btn.setText(_("Connect"))
+        self.ui.connect_btn.setToolTip(_("Connect with the printer"))
+        self.ui.connect_btn.clicked.disconnect(self.disconnect)
+        self.ui.connect_btn.clicked.connect(self.parent.connect_printer)
 
         msg = _("Disconnected.")
         self.logdisp(msg)
@@ -623,3 +626,21 @@ class PrinterConnection(Pronsole):
 
     def clamped_move_message(self):
         self.logdisp(_("Manual move outside of the build volume prevented (see the \"Clamp manual moves\" option)."))
+
+    def printfile(self, gcode):
+        self.extra_print_time = 0
+        if self.paused:
+            self.p.paused = 0
+            self.paused = 0
+            if self.sdprinting:
+                self.p.send_now("M26 S0")
+                self.p.send_now("M24")
+                return
+
+        if not self.fgcode:
+            self.parent.set_statusbar(_("No file loaded. Please use load first."))
+            return
+        if not self.p.online:
+            self.parent.set_statusbar(_("Not connected to printer."))
+            return
+        # self.p.startprint(self.fgcode)

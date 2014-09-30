@@ -30,6 +30,7 @@ m114_exp = re.compile("\([^\(\)]*\)|[/\*].*\n|([XYZ]):?([-+]?[0-9]*\.?[0-9]*)")
 specific_exp = "(?:\([^\(\)]*\))|(?:;.*)|(?:[/\*].*\n)|(%s[-+]?[0-9]*\.?[0-9]*)"
 move_gcodes = ["G0", "G1", "G2", "G3"]
 
+
 class PyLine(object):
 
     __slots__ = ('x', 'y', 'z', 'e', 'f', 'i', 'j',
@@ -44,6 +45,7 @@ class PyLine(object):
 
     def __getattr__(self, name):
         return None
+
 
 class PyLightLine(object):
 
@@ -100,6 +102,7 @@ def parse_coordinates(line, split_raw, imperial = False, force = False):
         if code not in gcode_parsed_nonargs and bit[1]:
             setattr(line, code, unit_factor * float(bit[1]))
 
+
 class Layer(list):
 
     __slots__ = ("duration", "z")
@@ -107,6 +110,7 @@ class Layer(list):
     def __init__(self, lines, z = None):
         super(Layer, self).__init__(lines)
         self.z = z
+
 
 class GCode(object):
 
@@ -211,15 +215,19 @@ class GCode(object):
         if not deferred:
             self.prepare(data, home_pos, layer_callback)
 
-    def prepare(self, data = None, home_pos = None, layer_callback = None):
+    def lines_from_gcode(self, gcode):
+        # self.lines = '\n'.split()
+        pass
+
+    def prepare(self, data=None, home_pos=None, layer_callback=None):
         self.home_pos = home_pos
         if data:
             line_class = self.line_class
             self.lines = [line_class(l2) for l2 in
                           (l.strip() for l in data)
                           if l2]
-            self._preprocess(build_layers = True,
-                             layer_callback = layer_callback)
+            self._preprocess(build_layers=True,
+                             layer_callback=layer_callback)
         else:
             self.lines = []
             self.append_layer_id = 0
@@ -307,8 +315,8 @@ class GCode(object):
             self.line_idxs.append(len(self.append_layer))
         return gline
 
-    def _preprocess(self, lines = None, build_layers = False,
-                    layer_callback = None):
+    def _preprocess(self, lines=None, build_layers=False,
+                    layer_callback=None):
         """Checks for imperial/relativeness settings and tool changes"""
         if not lines:
             lines = self.lines
@@ -679,8 +687,10 @@ class GCode(object):
     def estimate_duration(self):
         return self.layers_count, self.duration
 
+
 class LightGCode(GCode):
     line_class = LightLine
+
 
 def main():
     if len(sys.argv) < 2:
@@ -701,6 +711,7 @@ def main():
     print "Filament used: %0.02fmm" % gcode.filament_length
     print "Number of layers: %d" % gcode.layers_count
     print "Estimated duration: %s" % gcode.estimate_duration()[1]
+
 
 if __name__ == '__main__':
     main()

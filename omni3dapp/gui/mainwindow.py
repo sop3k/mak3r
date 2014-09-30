@@ -33,6 +33,8 @@ class MainWindow(QtGui.QMainWindow):
     SETTING_CHANGE_WHITELIST = [
             'commandbox',
             'logbox',
+            'port_type',
+            'port_baud_rate',
             ]
 
     def __init__(self, parent=None):
@@ -45,10 +47,14 @@ class MainWindow(QtGui.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        self.set_up_fields()
+
+        # Create a scene to present and modify 3d objects
+        self.setup_scene()
+
+        # Class that enables connecting to printer
         self.pc = host.PrinterConnection(self)
 
-        self.set_up_fields()
-        self.setup_scene()
         self.connect_actions()
         self.connect_buttons()
 
@@ -160,7 +166,7 @@ class MainWindow(QtGui.QMainWindow):
             elem.currentItemChanged.connect(self.on_setting_change)
 
     def connect_buttons(self):
-        self.ui.connect_button.clicked.connect(self.connect_printer)
+        self.ui.connect_btn.clicked.connect(self.connect_printer)
         self.ui.port_btn.clicked.connect(self.pc.rescanports)
         self.ui.send_btn.clicked.connect(self.pc.sendline)
 
@@ -396,6 +402,9 @@ class MainWindow(QtGui.QMainWindow):
             log.error(_("Could not parse baud rate: {0}".format(e)))
             traceback.print_exc(file = sys.stdout)
         return self.pc.connect(port_val, baud_val)
+
+    def is_online(self):
+        return self.pc.p.online
 
     def terminate_thread(self, thread_name):
         try:

@@ -187,7 +187,6 @@ class Pronsole(cmd.Cmd):
         the remainder of the line as argument.
 
         """
-
         self.preloop()
         if self.use_rawinput and self.completekey:
             try:

@@ -1283,3 +1283,11 @@ def getAlterationFileContents(filename, extruderCount = 1):
         #Append the profile string to the end of the GCode, so we can load it from the GCode file later.
         #postfix = ';CURA_PROFILE_STRING:%s\n' % (getProfileString())
     return unicode(prefix + re.sub("(.)\{([^\}]*)\}", replaceTagMatch, alterationContents).rstrip() + '\n' + postfix).strip().encode('utf-8') + '\n'
+
+
+def get_home_pos():
+    return [
+        settingsDictionary.get('x_home_position').getValue(),
+        settingsDictionary.get('y_home_position').getValue(),
+        settingsDictionary.get('z_home_position').getValue(),
+            ]

@@ -30,6 +30,7 @@ from omni3dapp.gui.util import engineResultView
 from omni3dapp.gui.tools import imageToMesh
 # from omni3dapp.util.printerConnection import printerConnectionManager
 from omni3dapp.util.shortcuts import *
+from omni3dapp.util.printing import gcoder
 from omni3dapp.gui.shadereditor_ui import Ui_ShaderEditor
 from omni3dapp.logger import log
 
@@ -148,6 +149,7 @@ class SceneView(QtOpenGL.QGLWidget):
 
         self._engine = sliceEngine.Engine(self, self._updateEngineProgress)
         self._engineResultView = engineResultView.EngineResultView(self)
+        self._slicing_finished = False
 
         self._sceneUpdateTimer = QtCore.QTimer(self)
 
@@ -171,22 +173,32 @@ class SceneView(QtOpenGL.QGLWidget):
                     self._animationList.remove(anim)
             self.updateGL()
 
+    def is_printing_enabled(self):
+        return self._slicing_finished and self._parent.is_online()
+
+    @QtCore.Slot()
+    def enable_printing(self):
+        if self.is_printing_enabled():
+            self.printButton.setDisabled(False)
+            self.updateGL()
+
     @QtCore.Slot(float)
     def _updateEngineProgress(self, progressValue):
         result = self._engine.getResult()
-        finished = result is not None and result.isFinished()
-        if not finished:
+        self._slicing_finished = result is not None and result.isFinished()
+        if not self._slicing_finished:
             if self.printButton.getProgressBar() is not None and \
                     progressValue >= 0.0 and abs(
                         self.printButton.getProgressBar()-progressValue) < 0.01:
                 return
-        self.printButton.setDisabled(not finished)
+        printing_enabled = self.is_printing_enabled()
+        self.printButton.setDisabled(not printing_enabled)
         if progressValue >= 0.0:
             self.printButton.setProgressBar(progressValue)
         else:
             self.printButton.setProgressBar(None)
         self._engineResultView.setResult(result)
-        if finished:
+        if self._slicing_finished:
             self.printButton.setProgressBar(None)
             text = '%s' % (result.getPrintTime())
             for e in xrange(0, int(profile.getMachineSetting('extruder_amount'))):
@@ -1307,8 +1319,14 @@ class SceneView(QtOpenGL.QGLWidget):
         self._selectObject(self._selectedObj)
         self.sceneUpdated()
 
+    def on_startprint(self):
+        self.printButton._imageID = 30
+        self.printButton._tooltip = _("Pause")
+
     def onPrintButton(self, button=LEFT_BUTTON):
         print "Entered onPrintButton method"
+        self.on_startprint()
+        self._parent.pc.printfile(self._engine._result.getGCode)
         # if button == 1:
         #     connectionGroup = self._printerConnectionManager.getAvailableGroup()
         #     if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
@@ -1426,8 +1444,17 @@ class SceneView(QtOpenGL.QGLWidget):
         #Cheat the engine results to load a GCode file into it.
         self._engine.abortEngine()
         self._engine._result = sliceEngine.EngineResult(self)
-        with open(filename, "r") as f:
+
+        # To test printing with Printrun
+        # gcode = gcoder.GCode(deferred=True)
+
+        with open(filename, "rU") as f:
             self._engine._result.setGCode(f.read())
+            # gcode.prepare(f, profile.get_home_pos(), layer_callback)
+            # gcode.prepare(f, profile.get_home_pos())
+
+        # self._parent.pc._set_fgcode(gcode)
+
         self._engine._result.setFinished(True)
         self._engineResultView.setResult(self._engine._result)
 

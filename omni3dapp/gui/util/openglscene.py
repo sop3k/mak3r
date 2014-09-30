@@ -209,6 +209,9 @@ class glButton(glGuiControl):
         self._progressBar = None
         self._altTooltip = ''
 
+    def isDisabled(self):
+        return self._disabled
+
     def setSelected(self, value):
         self._selected = value
 
@@ -342,6 +345,7 @@ class glButton(glGuiControl):
             self._callback(button)
             return True
         return False
+
 
 class glRadioButton(glButton):
     def __init__(self, parent, imageID, tooltip, pos, group, callback):

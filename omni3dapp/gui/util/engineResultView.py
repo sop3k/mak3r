@@ -74,9 +74,9 @@ class EngineResultView(object):
         result = self._result
         if result is not None and self._gcodeLayers is not None:
             if self._gcodeLayers is not None and len(self._gcodeLayers) > 0:
-                self.layerSelect.setRange(1, len(self._gcodeLayers))
+                self.layerSelect.setRange(0, len(self._gcodeLayers) - 1)
             elif result._polygons is not None and len(result._polygons) > 0:
-                self.layerSelect.setRange(1, len(result._polygons))
+                self.layerSelect.setRange(0, len(result._polygons) - 1)
 
         glPushMatrix()
         glEnable(GL_BLEND)
@@ -86,11 +86,11 @@ class EngineResultView(object):
 
         layerNr = self.layerSelect.getValue()
         if layerNr == self.layerSelect.getMaxValue() and result is not None and len(result._polygons) > 0:
-            layerNr = max(layerNr, len(result._polygons))
-        if len(result._polygons) > layerNr-1 and 'inset0' in result._polygons[layerNr-1] and len(result._polygons[layerNr-1]['inset0']) > 0 and len(result._polygons[layerNr-1]['inset0'][0]) > 0:
-            viewZ = result._polygons[layerNr-1]['inset0'][0][0][2]
+            layerNr = max(layerNr, len(result._polygons) - 1)
+        if len(result._polygons) > layerNr and 'inset0' in result._polygons[layerNr] and len(result._polygons[layerNr]['inset0']) > 0 and len(result._polygons[layerNr]['inset0'][0]) > 0:
+            viewZ = result._polygons[layerNr]['inset0'][0][0][2]
         else:
-            viewZ = (layerNr - 1) * profile.getProfileSettingFloat('layer_height') + profile.getProfileSettingFloat('bottom_thickness')
+            viewZ = layerNr * profile.getProfileSettingFloat('layer_height') + profile.getProfileSettingFloat('bottom_thickness')
         self._parent._viewTarget[2] = viewZ
         msize = max(profile.getMachineSettingFloat('machine_width'), profile.getMachineSettingFloat('machine_depth'))
         lineTypeList = [
@@ -103,11 +103,11 @@ class EngineResultView(object):
             ('skirt',      'SKIRT',      [0,1,1,1]),
             ('outline',     None,        [0,0,0,1])
         ]
-        n = layerNr - 1
+        n = layerNr
         generatedVBO = False
         if result is not None:
             while n >= 0:
-                if layerNr - n > 30 and n % 20 == 0 and len(result._polygons) > 0:
+                if layerNr - n >= 30 and n % 20 == 0 and len(result._polygons) > 0:
                     idx = n / 20
                     while len(self._layer20VBOs) < idx + 1:
                         self._layer20VBOs.append({})
@@ -133,12 +133,12 @@ class EngineResultView(object):
                                 layerVBOs[typeName].render()
                     n -= 20
                 else:
-                    c = 1.0 - ((layerNr - n) - 1) * 0.05
+                    c = 1.0 - (layerNr - n) * 0.05
                     c = max(0.5, c)
                     while len(self._layerVBOs) < n + 1:
                         self._layerVBOs.append({})
                     layerVBOs = self._layerVBOs[n]
-                    if self._gcodeLayers is not None and ((layerNr - 10 < n < (len(self._gcodeLayers) - 1)) or len(result._polygons) < 1):
+                    if self._gcodeLayers is not None and ((layerNr - 9 < n < (len(self._gcodeLayers) - 1)) or len(result._polygons) < 1):
                         for typeNamePolygons, typeName, color in lineTypeList:
                             if typeName is None:
                                 continue
@@ -147,7 +147,7 @@ class EngineResultView(object):
                             glColor4f(color[0]*c,color[1]*c,color[2]*c,color[3])
                             layerVBOs['GCODE-' + typeName].render()
 
-                        if n == layerNr - 1:
+                        if n == layerNr:
                             if 'GCODE-MOVE' not in layerVBOs:
                                 layerVBOs['GCODE-MOVE'] = self._gcodeToVBO_lines(self._gcodeLayers[n+1:n+2])
                             glColor4f(0,0,c,1)

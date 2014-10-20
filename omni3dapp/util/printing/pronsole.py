@@ -1148,13 +1148,13 @@ class Pronsole(cmd.Cmd):
             else:
                 self.compute_eta = None
 
-            if self.settings.start_command:
-                output = get_command_output(self.settings.start_command,
-                                            {"$s": str(self.filename),
-                                             "$t": format_time(time.time())})
-                if output:
-                    self.log("Start command output:")
-                    self.log(output.rstrip())
+            # if self.settings.start_command:
+            #     output = get_command_output(self.settings.start_command,
+            #                                 {"$s": str(self.filename),
+            #                                  "$t": format_time(time.time())})
+            #     if output:
+            #         self.log("Start command output:")
+            #         self.log(output.rstrip())
         try:
             powerset_print_start(reason = "Preventing sleep during print")
         except:
@@ -1173,17 +1173,17 @@ class Pronsole(cmd.Cmd):
                                                                                 "duration": format_duration(print_duration)})
 
             # Update total filament length used
-            new_total = self.settings.total_filament_used + self.fgcode.filament_length
-            self.set("total_filament_used", new_total)
+            # new_total = self.settings.total_filament_used + self.fgcode.filament_length
+            # self.set("total_filament_used", new_total)
 
-            if not self.settings.final_command:
-                return
-            output = get_command_output(self.settings.final_command,
-                                        {"$s": str(self.filename),
-                                         "$t": format_duration(print_duration)})
-            if output:
-                self.log("Final command output:")
-                self.log(output.rstrip())
+            # if not self.settings.final_command:
+            #     return
+            # output = get_command_output(self.settings.final_command,
+            #                             {"$s": str(self.filename),
+            #                              "$t": format_duration(print_duration)})
+            # if output:
+            #     self.log("Final command output:")
+            #     self.log(output.rstrip())
 
     def recvcb_report(self, l):
         isreport = REPORT_NONE

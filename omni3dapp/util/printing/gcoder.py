@@ -215,10 +215,6 @@ class GCode(object):
         if not deferred:
             self.prepare(data, home_pos, layer_callback)
 
-    def lines_from_gcode(self, gcode):
-        # self.lines = '\n'.split()
-        pass
-
     def prepare(self, data=None, home_pos=None, layer_callback=None):
         self.home_pos = home_pos
         if data:
@@ -302,7 +298,7 @@ class GCode(object):
             self.lines.insert(start_index, gline)
         return commands[::-1]
 
-    def append(self, command, store = True):
+    def append(self, command, store=True):
         command = command.strip()
         if not command:
             return

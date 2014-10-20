@@ -224,6 +224,15 @@ class glButton(glGuiControl):
     def setDisabled(self, value):
         self._disabled = value
 
+    def setCallback(self, value):
+        self._callback = value
+
+    def setTooltip(self, value):
+        self._tooltip = value
+
+    def setImageID(self, value):
+        self._imageID = value
+
     @QtCore.Slot(float)
     def setProgressBar(self, value):
         if value < 0:

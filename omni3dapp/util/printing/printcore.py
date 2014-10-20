@@ -259,17 +259,18 @@ class Printcore(QtCore.QObject):
         return reduce(lambda x, y: x ^ y, map(ord, command))
 
     def start_print_thread(self, resuming=False):
-        self.print_thread = QtCore.QThread(self.parent)
+        print "inside start print thread"
+        self.printer_thread = QtCore.QThread(self.parent)
         self.printer_worker = Printer(self, resuming)
-        self.printer_worker.moveToThread(self.print_thread)
+        self.printer_worker.moveToThread(self.printer_thread)
 
-        self.print_thread.started.connect(self.printer_worker._print)
+        self.printer_thread.started.connect(self.printer_worker._print)
         self.printer_worker.finished.connect(self.finish_printer_thread)
-        self.printer_worker.finished.connect(self.print_thread.quit)
+        self.printer_worker.finished.connect(self.printer_thread.quit)
         self.printer_worker.finished.connect(self.printer_worker.deleteLater)
-        self.print_thread.finished.connect(self.print_thread.deleteLater)
+        self.printer_thread.finished.connect(self.printer_thread.deleteLater)
 
-        self.print_thread.start()
+        self.printer_thread.start()
 
     def startprint(self, gcode, startindex=0):
         """Start a print, gcode is an array of gcode commands.
@@ -278,14 +279,14 @@ class Printcore(QtCore.QObject):
         the next line will be set to 0 and the firmware notified. Printing
         will then start in a parallel thread.
         """
-        if self.printing or not self.online or not self.printer:
-            return False
+        # if self.printing or not self.online or not self.printer:
+        #     return False
         self.queueindex = startindex
         self.mainqueue = gcode
         self.printing = True
         self.lineno = 0
         self.resendfrom = -1
-        self._send({'command': 'M110', 'lineno': -1, 'calcchecksum': True})
+        # self._send({'command': 'M110', 'lineno': -1, 'calcchecksum': True})
         if not gcode or not gcode.lines:
             return True
         self.clear = False
@@ -334,7 +335,7 @@ class Printcore(QtCore.QObject):
         # try joining the print thread: enclose it in try/except because we
         # might be calling it from the thread itself
         try:
-            self.print_thread.join()
+            self.printer_thread.terminate()
         except RuntimeError, e:
             if e.message == "cannot join current thread":
                 pass
@@ -343,7 +344,7 @@ class Printcore(QtCore.QObject):
         except:
             traceback.print_exc()
 
-        self.print_thread = None
+        self.printer_thread = None
 
         # saves the status
         self.pauseX = self.analyzer.abs_x
@@ -621,6 +622,7 @@ class Printer(QtCore.QObject):
         self.resuming = resuming
 
     def _print(self):
+        print "inside _print method"
         self.parent._stop_sender()
         try:
             if self.parent.startcb:
@@ -630,7 +632,8 @@ class Printer(QtCore.QObject):
                     self.parent.logError(_("Print start callback failed with:") +
                                   "\n" + traceback.format_exc())
                     self.finished.emit()
-            while self.parent.printing and self.parent.printer and self.parent.online:
+            # while self.parent.printing and self.parent.printer and self.parent.online:
+            while self.parent.printing:
                 self._sendnext()
             self.parent.sentlines = {}
             self.parent.log.clear()

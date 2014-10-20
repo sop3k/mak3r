@@ -358,17 +358,19 @@ class PrinterConnection(Pronsole):
     def startcb(self, resuming=False):
         """Callback on print start"""
         Pronsole.startcb(self, resuming)
-        if self.settings.lockbox and self.settings.lockonstart:
-            wx.CallAfter(self.lock, force = True)
+        # TODO: locking interface dependent on settings
+        # if self.settings.lockbox and self.settings.lockonstart:
+        #     wx.CallAfter(self.lock, force = True)
 
     def endcb(self):
         """Callback on print end/pause"""
         Pronsole.endcb(self)
         if self.p.queueindex == 0:
             self.p.runSmallScript(self.endScript)
-            wx.CallAfter(self.pausebtn.Disable)
-            wx.CallAfter(self.printbtn.SetLabel, _("Print"))
-            wx.CallAfter(self.toolbarsizer.Layout)
+            self.parent.scene.on_endprint()
+            # wx.CallAfter(self.pausebtn.Disable)
+            # wx.CallAfter(self.printbtn.SetLabel, _("Print"))
+            # wx.CallAfter(self.toolbarsizer.Layout)
 
     def move_axis(self, axis, curr_pos, step, mach_size):
         print self.current_pos
@@ -410,7 +412,8 @@ class PrinterConnection(Pronsole):
         Pronsole.statuschecker(self)
         self.parent.set_statusbar(_("Not connected to printer."))
 
-    def pause(self, event):
+    def pause(self, button):
+        print "inside pause"
         if not self.paused:
             self.log(_("Print paused at: %s") % format_time(time.time()))
             if self.sdprinting:
@@ -423,8 +426,9 @@ class PrinterConnection(Pronsole):
             self.paused = True
             # self.p.runSmallScript(self.pauseScript)
             self.extra_print_time += int(time.time() - self.starttime)
-            wx.CallAfter(self.pausebtn.SetLabel, _("Resume"))
-            wx.CallAfter(self.toolbarsizer.Layout)
+            self.parent.scene.on_pauseprint()
+            # wx.CallAfter(self.pausebtn.SetLabel, _("Resume"))
+            # wx.CallAfter(self.toolbarsizer.Layout)
         else:
             self.log(_("Resuming."))
             self.paused = False
@@ -432,8 +436,9 @@ class PrinterConnection(Pronsole):
                 self.p.send_now("M24")
             else:
                 self.p.resume()
-            wx.CallAfter(self.pausebtn.SetLabel, _("Pause"))
-            wx.CallAfter(self.toolbarsizer.Layout)
+            self.parent.scene.on_resumeprint()
+            # wx.CallAfter(self.pausebtn.SetLabel, _("Pause"))
+            # wx.CallAfter(self.toolbarsizer.Layout)
 
     def recover(self, event):
         self.extra_print_time = 0
@@ -627,6 +632,12 @@ class PrinterConnection(Pronsole):
     def clamped_move_message(self):
         self.logdisp(_("Manual move outside of the build volume prevented (see the \"Clamp manual moves\" option)."))
 
+    # def prepare_gcode(self, gcode):
+    #     return gcoder.GCode(
+    #             data=gcode,
+    #             home_pos=profile.get_home_pos(),
+    #             deferred=False)
+
     def printfile(self, gcode):
         self.extra_print_time = 0
         if self.paused:
@@ -637,10 +648,17 @@ class PrinterConnection(Pronsole):
                 self.p.send_now("M24")
                 return
 
+        if not gcode:
+            self.parent.set_statusbar(_("No file loaded. Please use load first."))
+            return
+        # if not self.p.online:
+        #     self.parent.set_statusbar(_("Not connected to printer."))
+        #     return
+
         if not self.fgcode:
             self.parent.set_statusbar(_("No file loaded. Please use load first."))
             return
-        if not self.p.online:
-            self.parent.set_statusbar(_("Not connected to printer."))
-            return
-        # self.p.startprint(self.fgcode)
+        # if not self.p.online:
+        #     self.parent.set_statusbar(_("Not connected to printer."))
+        #     return
+        self.p.startprint(self.fgcode)

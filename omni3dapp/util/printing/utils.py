@@ -131,7 +131,7 @@ class RemainingTimeEstimator(object):
         self.current_layer_estimate = 0
         self.current_layer_lines = 0
         self.gcode = gcode
-        self.remaining_layers_estimate = sum(layer.duration for layer in gcode.all_layers)
+        # self.remaining_layers_estimate = sum(layer.duration for layer in gcode.all_layers)
         if len(gcode) > 0:
             self.update_layer(0, 0)
 
@@ -139,9 +139,9 @@ class RemainingTimeEstimator(object):
         self.previous_layers_estimate += self.current_layer_estimate
         if self.previous_layers_estimate > 1. and printtime > 1.:
             self.drift = printtime / self.previous_layers_estimate
-        self.current_layer_estimate = self.gcode.all_layers[layer].duration
+        # self.current_layer_estimate = self.gcode.all_layers[layer].duration
         self.current_layer_lines = len(self.gcode.all_layers[layer])
-        self.remaining_layers_estimate -= self.current_layer_estimate
+        # self.remaining_layers_estimate -= self.current_layer_estimate
         self.last_idx = -1
         self.last_estimate = None
 
@@ -152,7 +152,7 @@ class RemainingTimeEstimator(object):
             return self.last_estimate
         layer, line = self.gcode.idxs(idx)
         layer_progress = (1 - (float(line + 1) / self.current_layer_lines))
-        remaining = layer_progress * self.current_layer_estimate + self.remaining_layers_estimate
+        # remaining = layer_progress * self.current_layer_estimate + self.remaining_layers_estimate
         estimate = self.drift * remaining
         total = estimate + printtime
         self.last_idx = idx

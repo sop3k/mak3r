@@ -1320,13 +1320,29 @@ class SceneView(QtOpenGL.QGLWidget):
         self.sceneUpdated()
 
     def on_startprint(self):
-        self.printButton._imageID = 30
-        self.printButton._tooltip = _("Pause")
+        self.printButton.setImageID(30)
+        self.printButton.setTooltip(_("Pause"))
+        self.printButton.setCallback(self._parent.pc.pause)
+
+    def on_endprint(self):
+        self.printButton.setImageID(6)
+        self.printButton.setTooltip(_("Print"))
+
+    def on_pauseprint(self):
+        self.printButton.setImageID(6)
+        self.printButton.setTooltip(_("Resume"))
+
+    def on_resumeprint(self):
+        self.printButton.setImageID(30)
+        self.printButton.setTooltip(_("Pause"))
 
     def onPrintButton(self, button=LEFT_BUTTON):
         print "Entered onPrintButton method"
         self.on_startprint()
-        self._parent.pc.printfile(self._engine._result.getGCode)
+        self._parent.pc.printfile(self._engine._result.getGCode())
+
+
+
         # if button == 1:
         #     connectionGroup = self._printerConnectionManager.getAvailableGroup()
         #     if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
@@ -1561,6 +1577,9 @@ class SceneView(QtOpenGL.QGLWidget):
             self.save_gcode_thread.finished.connect(self.save_gcode_thread.deleteLater)
 
             self.save_gcode_thread.start()
+
+    def set_printing_gcode(self, gcode):
+        self._parent.pc.fgcode = gcode
 
 
 class SaveGCodeWorker(QtCore.QObject):

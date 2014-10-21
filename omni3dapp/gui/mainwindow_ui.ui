@@ -100,9 +100,9 @@
                 <property name="geometry">
                  <rect>
                   <x>0</x>
-                  <y>0</y>
+                  <y>-177</y>
                   <width>450</width>
-                  <height>900</height>
+                  <height>940</height>
                  </rect>
                 </property>
                 <property name="sizePolicy">
@@ -114,7 +114,7 @@
                 <property name="minimumSize">
                  <size>
                   <width>450</width>
-                  <height>900</height>
+                  <height>940</height>
                  </size>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_11">
@@ -196,10 +196,16 @@
                  </item>
                  <item>
                   <widget class="QGroupBox" name="fill_groupbox">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>100</height>
+                    </size>
+                   </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>90</height>
+                     <height>120</height>
                     </size>
                    </property>
                    <property name="title">
@@ -252,25 +258,25 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>230</height>
+                     <height>270</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>230</height>
+                     <height>260</height>
                     </size>
                    </property>
                    <property name="title">
                     <string>Speed and Temperature</string>
                    </property>
-                   <widget class="QWidget" name="layoutWidget_5">
+                   <widget class="QWidget" name="">
                     <property name="geometry">
                      <rect>
-                      <x>0</x>
-                      <y>23</y>
-                      <width>421</width>
-                      <height>200</height>
+                      <x>1</x>
+                      <y>24</y>
+                      <width>431</width>
+                      <height>241</height>
                      </rect>
                     </property>
                     <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -299,6 +305,13 @@
                        </item>
                        <item>
                         <widget class="QLineEdit" name="print_temperature"/>
+                       </item>
+                       <item>
+                        <widget class="QPushButton" name="set_printtemp_btn">
+                         <property name="text">
+                          <string>Set</string>
+                         </property>
+                        </widget>
                        </item>
                       </layout>
                      </item>
@@ -356,6 +369,13 @@
                        <item>
                         <widget class="QLineEdit" name="print_bed_temperature"/>
                        </item>
+                       <item>
+                        <widget class="QPushButton" name="set_bedtemp_btn">
+                         <property name="text">
+                          <string>Set</string>
+                         </property>
+                        </widget>
+                       </item>
                       </layout>
                      </item>
                     </layout>
@@ -367,13 +387,13 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>0</height>
+                     <height>120</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
-                     <height>120</height>
+                     <height>150</height>
                     </size>
                    </property>
                    <property name="title">
@@ -443,6 +463,12 @@
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>80</height>
+                    </size>
+                   </property>
                    <property name="maximumSize">
                     <size>
                      <width>16777215</width>
@@ -482,6 +508,12 @@
                  </item>
                  <item>
                   <widget class="QGroupBox" name="filament_groupbox">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>190</height>
+                    </size>
+                   </property>
                    <property name="title">
                     <string>Filament</string>
                    </property>
@@ -1191,7 +1223,7 @@
                 <property name="geometry">
                  <rect>
                   <x>0</x>
-                  <y>0</y>
+                  <y>-111</y>
                   <width>464</width>
                   <height>670</height>
                  </rect>
@@ -1207,8 +1239,8 @@
                   <rect>
                    <x>0</x>
                    <y>1</y>
-                   <width>451</width>
-                   <height>664</height>
+                   <width>461</width>
+                   <height>735</height>
                   </rect>
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_18">

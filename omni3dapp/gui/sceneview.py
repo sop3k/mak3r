@@ -1342,7 +1342,6 @@ class SceneView(QtOpenGL.QGLWidget):
         self._parent.pc.printfile(self._engine._result.getGCode())
 
 
-
         # if button == 1:
         #     connectionGroup = self._printerConnectionManager.getAvailableGroup()
         #     if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):

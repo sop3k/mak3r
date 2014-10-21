@@ -36,6 +36,7 @@ from omni3dapp.logger import log
 class GuiSignals(QtCore.QObject):
     addtext = QtCore.Signal(str)
     setonline = QtCore.Signal()
+    setoffline = QtCore.Signal()
     enable_printing = QtCore.Signal()
 
 
@@ -154,6 +155,7 @@ class PrinterConnection(Pronsole):
         self.guisignals = GuiSignals()
         self.guisignals.addtext.connect(self.addtexttolog)
         self.guisignals.setonline.connect(self.online_gui) 
+        self.guisignals.setoffline.connect(self.offline_gui) 
         self.guisignals.enable_printing.connect(
                 self.parent.scene.enable_printing)
 
@@ -161,6 +163,10 @@ class PrinterConnection(Pronsole):
         self.guisignals.addtext.emit(_('Connecting...'))
         if not port_val:
             port_val = self.rescanports()
+            if not port_val:
+                msg = _('Could not find active ports.')
+                self.guisignals.addtext.emit(msg)
+                return
 
         self.parent.set_statusbar(_("Connecting..."))
 
@@ -254,7 +260,6 @@ class PrinterConnection(Pronsole):
 
         # Relayout the toolbar to handle new buttons size
         # wx.CallAfter(self.toolbarsizer.Layout)
-        self.offline_gui()
 
     @QtCore.Slot(str)
     def addtexttolog(self, text):
@@ -506,6 +511,7 @@ class PrinterConnection(Pronsole):
 
     #     wx.CallAfter(self.toolbarsizer.Layout)
 
+    @QtCore.Slot()
     def offline_gui(self):
         self.parent.set_connected(False)
 
@@ -632,12 +638,6 @@ class PrinterConnection(Pronsole):
     def clamped_move_message(self):
         self.logdisp(_("Manual move outside of the build volume prevented (see the \"Clamp manual moves\" option)."))
 
-    # def prepare_gcode(self, gcode):
-    #     return gcoder.GCode(
-    #             data=gcode,
-    #             home_pos=profile.get_home_pos(),
-    #             deferred=False)
-
     def printfile(self, gcode):
         self.extra_print_time = 0
         if self.paused:
@@ -651,14 +651,60 @@ class PrinterConnection(Pronsole):
         if not gcode:
             self.parent.set_statusbar(_("No file loaded. Please use load first."))
             return
-        # if not self.p.online:
-        #     self.parent.set_statusbar(_("Not connected to printer."))
-        #     return
+
+        if not self.p.online:
+            self.parent.set_statusbar(_("Not connected to printer."))
+            return
 
         if not self.fgcode:
             self.parent.set_statusbar(_("No file loaded. Please use load first."))
             return
-        # if not self.p.online:
-        #     self.parent.set_statusbar(_("Not connected to printer."))
-        #     return
+
         self.p.startprint(self.fgcode)
+
+    def do_settemp(self, l, command, msg):
+        if isinstance(l, str) or isinstance(l, unicode):
+            l = l.replace(", ", ".")
+        f = float(l)
+        if f >= 0:
+            if self.p.online:
+                self.p.send_now(command)
+                self.guisignals.addtext.emit(msg % f)
+                self.sethotendgui(f)
+            else:
+                self.guisignals.addtext.emit(_("Printer is not online."))
+        else:
+            self.guisignals.addtext.emit(
+                _("You cannot set negative temperatures. " \
+                  "To turn the hotend off entirely, set its temperature to 0."))
+
+    def set_printtemp(self, l):
+        command = "M104 S" + l
+        msg = _("Setting hotend temperature to %f degrees Celsius.")
+        self.do_settemp(l, command, msg)
+
+    def set_bedtemp(self, l):
+        command = "M140 S" + l
+        msg = _("Setting bed temperature to %f degrees Celsius.")
+        self.do_settemp(l, command, msg)
+
+    def sethotendgui(self, f):
+        return
+        # self.hsetpoint = f
+        # if self.display_gauges: self.hottgauge.SetTarget(int(f))
+        # if self.display_graph: wx.CallAfter(self.graph.SetExtruder0TargetTemperature, int(f))
+        # if f > 0:
+        #     wx.CallAfter(self.htemp.SetValue, str(f))
+        #     self.set("last_temperature", str(f))
+        #     wx.CallAfter(self.settoff.SetBackgroundColour, None)
+        #     wx.CallAfter(self.settoff.SetForegroundColour, None)
+        #     wx.CallAfter(self.settbtn.SetBackgroundColour, "#FFAA66")
+        #     wx.CallAfter(self.settbtn.SetForegroundColour, "#660000")
+        #     wx.CallAfter(self.htemp.SetBackgroundColour, "#FFDABB")
+        # else:
+        #     wx.CallAfter(self.settoff.SetBackgroundColour, "#0044CC")
+        #     wx.CallAfter(self.settoff.SetForegroundColour, "white")
+        #     wx.CallAfter(self.settbtn.SetBackgroundColour, None)
+        #     wx.CallAfter(self.settbtn.SetForegroundColour, None)
+        #     wx.CallAfter(self.htemp.SetBackgroundColour, "white")
+        #     wx.CallAfter(self.htemp.Refresh)

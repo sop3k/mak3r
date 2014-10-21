@@ -169,6 +169,8 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.connect_btn.clicked.connect(self.connect_printer)
         self.ui.port_btn.clicked.connect(self.pc.rescanports)
         self.ui.send_btn.clicked.connect(self.pc.sendline)
+        self.ui.set_bedtemp_btn.clicked.connect(self.bedtemp)
+        self.ui.set_printtemp_btn.clicked.connect(self.settemp)
 
     def on_simple_switch(self, *args, **kwargs):
         profile.putPreference('startMode', 'Simple')
@@ -300,18 +302,20 @@ class MainWindow(QtGui.QMainWindow):
         self.update_profile_to_controls_normal_panel()
 
     def on_setting_change(self):
-        # profile.settingsDictionary
         elem = QtCore.QObject.sender(self)
         obj_name = elem.objectName()
         if obj_name in self.SETTING_CHANGE_WHITELIST:
             return
-        if isinstance(elem, (QtGui.QLineEdit, QtGui.QTextEdit)):
-            profile.settingsDictionary[obj_name].setValue(elem.text())
-        elif isinstance(elem, QtGui.QCheckBox):
-            profile.settingsDictionary[obj_name].setValue(elem.isChecked())
-        elif isinstance(elem, QtGui.QComboBox):
-            profile.settingsDictionary[obj_name].setValue(
-                    elem.itemText(elem.currentIndex()))
+        try:
+            if isinstance(elem, (QtGui.QLineEdit, QtGui.QTextEdit)):
+                profile.settingsDictionary[obj_name].setValue(elem.text())
+            elif isinstance(elem, QtGui.QCheckBox):
+                profile.settingsDictionary[obj_name].setValue(elem.isChecked())
+            elif isinstance(elem, QtGui.QComboBox):
+                profile.settingsDictionary[obj_name].setValue(
+                        elem.itemText(elem.currentIndex()))
+        except KeyError:
+            pass
         self.validate_normal_mode()
 
     def validate_normal_mode(self):
@@ -402,6 +406,14 @@ class MainWindow(QtGui.QMainWindow):
             log.error(_("Could not parse baud rate: {0}".format(e)))
             traceback.print_exc(file = sys.stdout)
         return self.pc.connect(port_val, baud_val)
+
+    def settemp(self):
+        temp = self.ui.print_temperature.text()
+        self.pc.set_printtemp(temp)
+
+    def bedtemp(self):
+        temp = self.ui.print_bed_temperature.text()
+        self.pc.set_bedtemp(temp)
 
     def is_online(self):
         return self.pc.p.online

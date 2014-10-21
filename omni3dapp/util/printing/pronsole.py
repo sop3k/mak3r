@@ -114,7 +114,7 @@ class Pronsole(cmd.Cmd):
         self.statuscheck = False
         self.status_thread = None
         self.monitor_interval = 3
-        self.p = printcore.Printcore(parent)
+        self.p = printcore.Printcore(parent, self)
         self.p.recvcb = self.recvcb
         self.p.startcb = self.startcb
         self.p.endcb = self.endcb
@@ -133,8 +133,8 @@ class Pronsole(cmd.Cmd):
         self.paused = False
         self.sdprinting = False
         self.uploading = 0  # Unused, just for pronterface generalization
-        # self.temps = {"pla": "185", "abs": "230", "off": "0"}
-        # self.bedtemps = {"pla": "60", "abs": "110", "off": "0"}
+        self.temps = {"pla": "185", "abs": "230", "off": "0"}
+        self.bedtemps = {"pla": "60", "abs": "110", "off": "0"}
         self.percentdone = 0
         self.posreport = ""
         self.tempreadings = ""

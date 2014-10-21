@@ -525,7 +525,8 @@ setting('extruder_offset_x2', '0.0', float, 'machine', 'hidden').setLabel(_("Off
 setting('extruder_offset_y2', '0.0', float, 'machine', 'hidden').setLabel(_("Offset Y"), _("The offset of your tertiary extruder compared to the primary."))
 setting('extruder_offset_x3', '0.0', float, 'machine', 'hidden').setLabel(_("Offset X"), _("The offset of your forth extruder compared to the primary."))
 setting('extruder_offset_y3', '0.0', float, 'machine', 'hidden').setLabel(_("Offset Y"), _("The offset of your forth extruder compared to the primary."))
-setting('steps_per_e', '0', float, 'machine', 'hidden').setLabel(_("E-Steps per 1mm filament"), _("Amount of steps per mm filament extrusion. If set to 0 then this value is ignored and the value in your firmware is used."))
+# TODO: setdefault eSteps to 0
+setting('steps_per_e', '103.888', float, 'machine', 'hidden').setLabel(_("E-Steps per 1mm filament"), _("Amount of steps per mm filament extrusion. If set to 0 then this value is ignored and the value in your firmware is used."))
 
 setting('port_type', '', [], 'machine', _('Printer connection')).setLabel(_("Serial port"), _("Port used to communicate with printer"))
 setting('port_baud_rate', '115200', ['2400', '9600', '19200', '38400', '57600', '115200', '250000'], 'machine', _('Printer connection')).setLabel('@', _("Select baud rate for printer communication"))

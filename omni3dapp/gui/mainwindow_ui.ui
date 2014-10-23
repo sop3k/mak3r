@@ -100,7 +100,7 @@
                 <property name="geometry">
                  <rect>
                   <x>0</x>
-                  <y>-177</y>
+                  <y>0</y>
                   <width>450</width>
                   <height>940</height>
                  </rect>
@@ -270,7 +270,7 @@
                    <property name="title">
                     <string>Speed and Temperature</string>
                    </property>
-                   <widget class="QWidget" name="">
+                   <widget class="QWidget" name="layoutWidget">
                     <property name="geometry">
                      <rect>
                       <x>1</x>
@@ -1223,15 +1223,15 @@
                 <property name="geometry">
                  <rect>
                   <x>0</x>
-                  <y>-111</y>
+                  <y>-191</y>
                   <width>464</width>
-                  <height>670</height>
+                  <height>750</height>
                  </rect>
                 </property>
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
-                  <height>670</height>
+                  <height>750</height>
                  </size>
                 </property>
                 <widget class="QWidget" name="layoutWidget">

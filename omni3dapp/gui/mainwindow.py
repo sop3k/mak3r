@@ -35,6 +35,7 @@ class MainWindow(QtGui.QMainWindow):
             'logbox',
             'port_type',
             'port_baud_rate',
+            'qt_spinbox_lineedit',
             ]
 
     def __init__(self, parent=None):
@@ -156,14 +157,17 @@ class MainWindow(QtGui.QMainWindow):
 
     def connect_actions_normal_mode(self):
         # For each element in self.normal or self.tabWidget
-        for elem in self.ui.normal.findChildren(QtGui.QCheckBox):
-            elem.stateChanged.connect(self.on_setting_change)
-        for elem in self.ui.normal.findChildren(QtGui.QLineEdit):
-            elem.textChanged.connect(self.on_setting_change)
-        for elem in self.ui.normal.findChildren(QtGui.QComboBox):
-            elem.currentIndexChanged.connect(self.on_setting_change)
-        for elem in self.ui.normal.findChildren(QtGui.QListWidget):
-            elem.currentItemChanged.connect(self.on_setting_change)
+        for elem in self.ui.normal.findChildren(QtGui.QWidget):
+            if elem.objectName() in self.SETTING_CHANGE_WHITELIST:
+                continue
+            if isinstance(elem, QtGui.QDoubleSpinBox):
+                elem.valueChanged.connect(self.on_value_changed)
+            elif isinstance(elem, QtGui.QCheckBox):
+                elem.stateChanged.connect(self.on_state_changed)
+            elif isinstance(elem, QtGui.QLineEdit):
+                elem.textChanged.connect(self.on_text_changed)
+            elif isinstance(elem, QtGui.QComboBox):
+                elem.currentIndexChanged.connect(self.on_index_changed)
 
     def connect_buttons(self):
         self.ui.connect_btn.clicked.connect(self.connect_printer)
@@ -301,21 +305,28 @@ class MainWindow(QtGui.QMainWindow):
         self.scene.updateProfileToControls()
         self.update_profile_to_controls_normal_panel()
 
-    def on_setting_change(self):
+    def on_value_changed(self):
         elem = QtCore.QObject.sender(self)
-        obj_name = elem.objectName()
-        if obj_name in self.SETTING_CHANGE_WHITELIST:
-            return
+        self.on_setting_change(elem.objectName(), elem.value())
+
+    def on_state_changed(self):
+        elem = QtCore.QObject.sender(self)
+        self.on_setting_change(elem.objectName(), elem.isChecked())
+
+    def on_text_changed(self):
+        elem = QtCore.QObject.sender(self)
+        self.on_setting_change(elem.objectName(), elem.text())
+
+    def on_index_changed(self):
+        elem = QtCore.QObject.sender(self)
+        self.on_setting_change(elem.objectName(),
+                elem.itemText(elem.currentIndex()))
+
+    def on_setting_change(self, obj_name, value):
         try:
-            if isinstance(elem, (QtGui.QLineEdit, QtGui.QTextEdit)):
-                profile.settingsDictionary[obj_name].setValue(elem.text())
-            elif isinstance(elem, QtGui.QCheckBox):
-                profile.settingsDictionary[obj_name].setValue(elem.isChecked())
-            elif isinstance(elem, QtGui.QComboBox):
-                profile.settingsDictionary[obj_name].setValue(
-                        elem.itemText(elem.currentIndex()))
-        except KeyError:
-            pass
+            profile.settingsDictionary[obj_name].setValue(value)
+        except KeyError as e:
+            log.error("Key not found in preferences: {0}".format(e))
         self.validate_normal_mode()
 
     def validate_normal_mode(self):

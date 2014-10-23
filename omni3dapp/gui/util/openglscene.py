@@ -8,7 +8,7 @@ import OpenGL
 OpenGL.ERROR_CHECKING = False
 from OpenGL.GL import *
 
-from PySide import QtCore
+from PySide import QtCore, QtGui
 
 from omni3dapp.util import version
 from omni3dapp.gui.util import openglHelpers
@@ -112,9 +112,9 @@ class glGuiContainer(glGuiControl):
                 handled = True
         return handled
 
-    def draw(self):
+    def draw(self, painter=None):
         for ctrl in self._glGuiControlList:
-            ctrl.draw()
+            ctrl.draw(painter)
 
     def updateLayout(self):
         self._layout.update()
@@ -146,6 +146,7 @@ class glGuiLayoutButtons(object):
     def getLayoutSize(self):
         _, _, w, h = self._parent.getSize()
         return w, h
+
 
 class glGuiLayoutGrid(object):
     def __init__(self, parent):
@@ -192,6 +193,7 @@ class glGuiLayoutGrid(object):
 
     def getLayoutSize(self):
         return self._size
+
 
 class glButton(glGuiControl):
     def __init__(self, parent, imageID, tooltip, pos, callback, size=None):
@@ -259,7 +261,7 @@ class glButton(glGuiControl):
         x0, y0, w, h = self.getSize()
         return x0 + w / 2, y0 + h / 2
 
-    def draw(self):
+    def draw(self, painter=None):
         if self._hidden:
             return
 
@@ -377,6 +379,7 @@ class glRadioButton(glButton):
             self.setSelected(True)
         self._radioCallback(button)
 
+
 class glComboButton(glButton):
     def __init__(self, parent, tooltip, imageIDs, tooltips, pos, callback):
         super(glComboButton, self).__init__(parent, imageIDs[0], tooltip, pos, self._onComboOpenSelect)
@@ -398,7 +401,7 @@ class glComboButton(glButton):
     def show_layers_button(self):
         self._imageIDs = self._allImageIDs
 
-    def draw(self):
+    def draw(self, painter=None):
         if self._hidden:
             return
         self._selected = self.hasFocus()
@@ -462,6 +465,7 @@ class glComboButton(glButton):
                 return True
         return super(glComboButton, self).onMousePressEvent(x, y, button)
 
+
 class glFrame(glGuiContainer):
     def __init__(self, parent, pos):
         super(glFrame, self).__init__(parent, pos)
@@ -488,7 +492,7 @@ class glFrame(glGuiContainer):
         x0, y0, w, h = self.getSize()
         return x0, y0
 
-    def draw(self):
+    def draw(self, painter=None):
         if self._hidden:
             return
 
@@ -520,6 +524,7 @@ class glFrame(glGuiContainer):
             return True
         return False
 
+
 class glNotification(glFrame):
     def __init__(self, parent, pos):
         self._anim = None
@@ -539,7 +544,7 @@ class glNotification(glFrame):
         else:
             super(glNotification, self).setSize(baseSize[0] / 2 - w / 2, baseSize[1] - self._base._buttonSize * 0.2, 1, 1)
 
-    def draw(self):
+    def draw(self, painter=None):
         self.setSize(0,0,0,0)
         self.updateLayout()
         super(glNotification, self).draw()
@@ -552,7 +557,7 @@ class glNotification(glFrame):
         self._buttonExtra._imageID = extraButtonIcon
         self._buttonExtra._tooltip = extraButtonTooltip
         self._extraButtonCallback = extraButtonCallback
-        self._base._queueRefresh()
+        self._base.queueRefresh()
         self.updateLayout()
 
     def onExtraButton(self, button):
@@ -564,6 +569,7 @@ class glNotification(glFrame):
             self._anim = animation(self._base, self._anim.getPosition(), -20, 1)
         else:
             self._anim = animation(self._base, 25, -20, 1)
+
 
 class glLabel(glGuiControl):
     def __init__(self, parent, label, pos):
@@ -581,7 +587,7 @@ class glLabel(glGuiControl):
         x0, y0, w, h = self.getSize()
         return x0, y0
 
-    def draw(self):
+    def draw(self, painter=None):
         x, y, w, h = self.getSize()
 
         glPushMatrix()
@@ -613,6 +619,7 @@ class glLabel(glGuiControl):
     def onMousePressEvent(self, x, y, button):
         return False
 
+
 class glNumberCtrl(glGuiControl):
     def __init__(self, parent, value, pos, callback):
         self._callback = callback
@@ -635,7 +642,7 @@ class glNumberCtrl(glGuiControl):
         x0, y0, w, h = self.getSize()
         return x0, y0
 
-    def draw(self):
+    def draw(self, painter=None):
         x, y, w, h = self.getSize()
 
         glPushMatrix()
@@ -727,6 +734,7 @@ class glNumberCtrl(glGuiControl):
         self._selectPos = len(self._value)
         return True
 
+
 class glCheckbox(glGuiControl):
     def __init__(self, parent, value, pos, callback):
         self._callback = callback
@@ -751,7 +759,7 @@ class glCheckbox(glGuiControl):
         x0, y0, w, h = self.getSize()
         return x0, y0
 
-    def draw(self):
+    def draw(self, painter=None):
         x, y, w, h = self.getSize()
 
         glPushMatrix()
@@ -777,6 +785,7 @@ class glCheckbox(glGuiControl):
             self._value = not self._value
             return True
         return False
+
 
 class glSlider(glGuiControl):
     def __init__(self, parent, value, minValue, maxValue, pos, callback):
@@ -821,7 +830,7 @@ class glSlider(glGuiControl):
         minSize = self.getMinSize()
         return x0 + w / 2 - minSize[0] / 2, y0 + h / 2 - minSize[1] / 2
 
-    def draw(self):
+    def draw(self, painter=None):
         if self._hidden:
             return
 
@@ -904,3 +913,186 @@ class glSlider(glGuiControl):
             self._base._focus = None
             return True
         return False
+
+
+class glTempGauge(glGuiControl):
+    """
+    Custom gauge for displaying temperature value
+    """
+    def __init__(self, parent, size=(200, 200), pos=(0,0), title="", maxval=240,
+            gauge_color=None, bgcolor="#FFFFFF"):
+        self._hidden = True
+        super(glTempGauge, self).__init__(parent, pos)
+        self._parent = parent
+        self._width, self._height = size
+        self._title = title
+        self._maxval = maxval
+        self._gauge_color = gauge_color
+        self._bgcolor = QtGui.QColor(bgcolor)
+        self._value = 0
+        self._setpoint = 0
+        self._hidden = True
+        self.recalc()
+
+    def set_gradient_brush(self, gradient, painter, colors):
+        for tup in colors:
+            gradient.setColorAt(*tup)
+        painter.setBrush(QtGui.QBrush(gradient))
+
+    def set_lineargradient_brush(self, painter, positions, colors):
+        """
+        positions is tuple of coordinates of start and stop
+        colors is a tuple of tuples (position, color)
+        """
+        gradient = QtGui.QLinearGradient(*positions)
+        self.set_gradient_brush(gradient, painter, colors)
+
+    def set_radialgradient_brush(self, painter, positions, colors):
+        """
+        positions is tuple of start coordinates and radius
+        colors is a tuple of tuples (position, color)
+        """
+        gradient = QtGui.QRadialGradient(*positions)
+        self.set_gradient_brush(gradient, painter, colors)
+
+    def set_font(self, painter, size, style, weight):
+        font = QtGui.QFont()
+        font.setPointSize(size)
+        font.setStyle(style)
+        font.setWeight(weight)
+        painter.setFont(font)
+
+    def draw(self, painter=None):
+        if self._hidden or not painter:
+            return
+        x0, y0 = self.getSize()[:2]
+        x1, y1, xE, yE = self._ypt + 1, 1, self._width - 1, 20
+
+        cold = QtGui.QColor(0, 167, 223)
+        medium = QtGui.QColor(239, 233, 119)
+        hot = QtGui.QColor(210, 50, 100)
+
+        gauge1 = QtGui.QColor(255, 255, 210)
+        gauge2 = QtGui.QColor(234, 82, 0)
+        shadow1, shadow2 = QtGui.QColor(110, 110, 110), self._bgcolor
+
+        painter.setPen(QtCore.Qt.NoPen)
+
+        # gauge background
+        self.set_lineargradient_brush(
+                painter,
+                (x0, y0, x0 + xE - x1, y0 + yE),
+                ((0, cold), (0.5, medium), (1, hot))
+                )
+
+        painter.drawRoundedRect(x0, y0, xE - x1, yE, 6, 6)
+
+        # draw initial gauge
+        width = 12
+        w1 = y0 + yE / 2 - width / 2
+        w2 = w1 + width
+        value = x0 + max(10, min(self._width - 1, int(self._value * self._scale)))
+
+        self.set_lineargradient_brush(
+                painter,
+                (x0, y0 + 3, x0, y0 + 15),
+                ((0, gauge1), (1, self.interpolatedColour(
+                    value, x0, x1, xE, cold, medium, hot)))
+                )
+
+        path = QtGui.QPainterPath()
+        path.moveTo(x0 - 1, w1)
+        path.lineTo(value, w1)
+        path.lineTo(value + 2, w1 + width / 4)
+        path.lineTo(value + 2, w2 - width / 4)
+        path.lineTo(value, w2)
+        path.lineTo(x0 - 1, w2)
+        painter.drawPath(path)
+
+        # draw setpoint markers
+        setpoint = x0 + 2 + max(10, int(self._setpoint * self._scale))
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0)))
+        path = QtGui.QPainterPath()
+        marker_height = yE/2 - 2
+
+        path.moveTo(setpoint - 4, y0)
+        path.lineTo(setpoint + 4, y0)
+        path.lineTo(setpoint, y0 + marker_height)
+
+        path.moveTo(setpoint - 4, y0 + yE)
+        path.lineTo(setpoint + 4, y0 + yE)
+        path.lineTo(setpoint, y0 + yE - marker_height)
+        painter.drawPath(path)
+
+        # draw readout
+        text = u"T\u00B0 %u/%u" % (self._value, self._setpoint)
+        fontsize = 9
+        self.set_font(painter, fontsize, QtGui.QFont.StyleNormal, QtGui.QFont.Bold)
+        painter.setPen(QtCore.Qt.white)
+        textpoint = y0 + yE - fontsize/2
+        painter.drawText(x0 + 19, textpoint, self._title)
+        painter.drawText(x0 + 119, textpoint, text)
+
+        self.set_font(painter, fontsize, QtGui.QFont.StyleNormal, QtGui.QFont.Bold)
+        painter.setPen(QtCore.Qt.black)
+        painter.drawText(x0 + 18, textpoint - 1, self._title)
+        painter.drawText(x0 + 118, textpoint - 1, text)
+
+        return
+
+    def recalc(self):
+        mmax = max(int(self._setpoint * 1.05), self._maxval)
+        self._scale = float(self._width - 2) / float(mmax)
+        self._ypt = max(16, int(self._scale * max(self._setpoint, self._maxval / 6)))
+
+    def setValue(self, value):
+        self._value = value
+        self._base.queueRefresh()
+
+    def setTarget(self, value):
+        self._setpoint = value
+        self._base.queueRefresh()
+
+    def setHidden(self, val):
+        self._hidden = val
+
+    def interpolatedColour(self, val, vmin, vmid, vmax, cmin, cmid, cmax):
+        if val < vmin: return cmin
+        if val > vmax: return cmax
+        if val <= vmid:
+            lo, hi, val, valhi = cmin, cmid, val - vmin, vmid - vmin
+        else:
+            lo, hi, val, valhi = cmid, cmax, val - vmid, vmax - vmid
+        vv = float(val) / valhi
+        rgb = lo.red() + (hi.red() - lo.red()) * vv, lo.green() + \
+                (hi.green() - lo.green()) * vv, lo.blue() + \
+                (hi.blue() - lo.blue()) * vv
+        rgb = map(lambda x: x * 0.8, rgb)
+        return QtGui.QColor(*map(int, rgb))
+
+    def onMouseMoveEvent(self, x, y):
+        return False
+
+    def onMousePressEvent(self, x, y, button):
+        return False
+
+
+# class glTempGauges(glGuiControl):
+#     def __init__(self, parent, pos):
+#         super(glTempGauges, self).__init__(parent, pos)
+#         self._container = []
+# 
+#     def add(self, elem):
+#         self._container.append(elem)
+# 
+#     def draw(self, painter=None):
+#         for elem in self._container:
+#             elem.draw(painter)
+# 
+#     def onMouseMoveEvent(self, x, y):
+#         for elem in self._container:
+#             elem.onMouseMoveEvent(x, y)
+# 
+#     def onMousePressEvent(self, x, y, button):
+#         for elem in self._container:
+#             elem.onMousePressEvent(x, y, button)

@@ -147,6 +147,11 @@ class SceneView(QtOpenGL.QGLWidget):
 
         # self.notification = openglGui.glNotification(self, (0, 0))
 
+        self.printtemp_gauge = openglscene.glTempGauge(parent=self, size=(400, 10),
+                pos=(0, -2), title="Heater:")
+        self.bedtemp_gauge = openglscene.glTempGauge(parent=self, size=(400, 10),
+                pos=(0, -1), title="Bed:")
+
         self._engine = sliceEngine.Engine(self, self._updateEngineProgress)
         self._engineResultView = engineResultView.EngineResultView(self)
         self._slicing_finished = False
@@ -242,7 +247,7 @@ class SceneView(QtOpenGL.QGLWidget):
         glLoadIdentity()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
 
-    def _drawScene(self):
+    def _drawScene(self, painter):
         if self._glButtonsTexture is None:
             self._glButtonsTexture = self.loadGLTexture('glButtons.png')
             self._glRobotTexture = self.loadGLTexture('UltimakerRobot.png')
@@ -259,7 +264,7 @@ class SceneView(QtOpenGL.QGLWidget):
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        self._container.draw()
+        self._container.draw(painter)
 
     def _renderObject(self, obj, brightness=0, addSink=True):
         glPushMatrix()
@@ -478,6 +483,10 @@ class SceneView(QtOpenGL.QGLWidget):
         glEnable(GL_BLEND)
 
     def paintGL(self):
+        painter = QtGui.QPainter()
+        painter.begin(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+
         self._idleCalled = False
         h = self.height()
         w = self.width()
@@ -502,7 +511,7 @@ class SceneView(QtOpenGL.QGLWidget):
                 obj.release()
             renderStartTime = time.time()
             self.onPaint()
-            self._drawScene()
+            self._drawScene(painter)
             glFlush()
             if version.isDevVersion():
                 renderTime = time.time() - renderStartTime
@@ -529,6 +538,8 @@ class SceneView(QtOpenGL.QGLWidget):
                 # TODO: show modal box with error message
                 # wx.CallAfter(wx.MessageBox, errStr, _("3D window error"), wx.OK | wx.ICON_EXCLAMATION)
                 self._shownError = True
+
+        painter.end()
 
     def resizeGL(self, width, height):
         self._container.setSize(0, 0, width, height)
@@ -1579,6 +1590,22 @@ class SceneView(QtOpenGL.QGLWidget):
 
     def set_printing_gcode(self, gcode):
         self._parent.pc.fgcode = gcode
+
+    @QtCore.Slot(float)
+    def set_printtemp_target(self, temp):
+        self.printtemp_gauge.setTarget(temp)
+
+    @QtCore.Slot(float)
+    def set_bedtemp_target(self, temp):
+        self.bedtemp_gauge.setTarget(temp)
+
+    @QtCore.Slot(float)
+    def set_printtemp_value(self, temp):
+        self.printtemp_gauge.setValue(temp)
+
+    @QtCore.Slot(float)
+    def set_bedtemp_value(self, temp):
+        self.bedtemp_gauge.setValue(temp)
 
 
 class SaveGCodeWorker(QtCore.QObject):

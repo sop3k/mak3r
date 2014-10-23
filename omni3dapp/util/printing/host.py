@@ -38,6 +38,10 @@ class GuiSignals(QtCore.QObject):
     setonline = QtCore.Signal()
     setoffline = QtCore.Signal()
     enable_printing = QtCore.Signal()
+    set_printtemp_target = QtCore.Signal(float)
+    set_bedtemp_target = QtCore.Signal(float)
+    set_printtemp_value = QtCore.Signal(float)
+    set_bedtemp_value = QtCore.Signal(float)
 
 
 class PrinterConnection(Pronsole):
@@ -57,15 +61,14 @@ class PrinterConnection(Pronsole):
         self.excluder_z_rel = None
     fgcode = property(_get_fgcode, _set_fgcode)
 
-    def _get_display_graph(self):
-        return self.settings.tempgraph
+    # def _get_display_graph(self):
+    #     return self.settings.tempgraph
     # display_graph = property(_get_display_graph)
-    display_graph  = False
 
     def _get_display_gauges(self):
-        return self.settings.tempgauges
-    # display_gauges = property(_get_display_gauges)
-    display_gauges = False
+        # return self.settings.tempgauges
+        return True
+    display_gauges = property(_get_display_gauges)
 
     def __init__(self, parent):
         Pronsole.__init__(self, parent)
@@ -158,6 +161,14 @@ class PrinterConnection(Pronsole):
         self.guisignals.setoffline.connect(self.offline_gui) 
         self.guisignals.enable_printing.connect(
                 self.parent.scene.enable_printing)
+        self.guisignals.set_printtemp_target.connect(
+                self.parent.scene.set_printtemp_target)
+        self.guisignals.set_bedtemp_target.connect(
+                self.parent.scene.set_bedtemp_target)
+        self.guisignals.set_printtemp_value.connect(
+                self.parent.scene.set_printtemp_value)
+        self.guisignals.set_bedtemp_value.connect(
+                self.parent.scene.set_bedtemp_value)
 
     def connect(self, port_val, baud_val):
         self.guisignals.addtext.emit(_('Connecting...'))
@@ -284,18 +295,20 @@ class PrinterConnection(Pronsole):
                 temp = gline_s
                 #if self.display_gauges: wx.CallAfter(self.hottgauge.SetTarget, temp)
                 if self.display_gauges:
-                    self.hottgauge.SetTarget(temp)
+                    # self.hottgauge.setTarget(temp)
+                    self.guisignals.set_printtemp_target.emit(temp)
                 # if self.display_graph: wx.CallAfter(self.graph.SetExtruder0TargetTemperature, temp)
-                if self.display_graph:
-                    self.graph.SetExtruder0TargetTemperature(temp)
+                # if self.display_graph:
+                #     self.graph.SetExtruder0TargetTemperature(temp)
         elif gline.command in ["M140", "M190"]:
             gline_s = gcoder.S(gline)
             if gline_s is not None:
                 temp = gline_s
                 if self.display_gauges:
-                    self.bedtgauge.SetTarget(temp)
-                if self.display_graph:
-                    self.graph.SetBedTargetTemperature(temp)
+                    # self.bedtgauge.SetTarget(temp)
+                    self.guisignals.set_bedtemp_target.emit(temp)
+                # if self.display_graph:
+                #     self.graph.SetBedTargetTemperature(temp)
         elif gline.command.startswith("T"):
             tool = gline.command[1:]
             if hasattr(self, "extrudersel"):
@@ -488,6 +501,8 @@ class PrinterConnection(Pronsole):
         self.guisignals.addtext.emit(msg)
         self.guisignals.setonline.emit()
         self.guisignals.enable_printing.emit()
+        self.parent.scene.printtemp_gauge.setHidden(False)
+        self.parent.scene.bedtemp_gauge.setHidden(False)
 
     @QtCore.Slot()
     def online_gui(self):
@@ -540,29 +555,37 @@ class PrinterConnection(Pronsole):
             else:
                 hotend_temp = None
             if hotend_temp is not None:
-                if self.display_graph: wx.CallAfter(self.graph.SetExtruder0Temperature, hotend_temp)
-                if self.display_gauges: wx.CallAfter(self.hottgauge.SetValue, hotend_temp)
+                # if self.display_graph: wx.CallAfter(self.graph.SetExtruder0Temperature, hotend_temp)
+                # if self.display_gauges: wx.CallAfter(self.hottgauge.SetValue, hotend_temp)
+                if self.display_gauges:
+                    self.guisignals.set_printtemp_value.emit(hotend_temp)
                 setpoint = None
                 if "T0" in temps and temps["T0"][1]: setpoint = float(temps["T0"][1])
                 elif temps["T"][1]: setpoint = float(temps["T"][1])
                 if setpoint is not None:
-                    if self.display_graph: wx.CallAfter(self.graph.SetExtruder0TargetTemperature, setpoint)
-                    if self.display_gauges: wx.CallAfter(self.hottgauge.SetTarget, setpoint)
+                    # if self.display_graph: wx.CallAfter(self.graph.SetExtruder0TargetTemperature, setpoint)
+                    # if self.display_gauges: wx.CallAfter(self.hottgauge.SetTarget, setpoint)
+                    if self.display_gauges:
+                        self.guisignals.set_printtemp_target.emit(setpoint)
             if "T1" in temps:
                 hotend_temp = float(temps["T1"][0])
-                if self.display_graph: wx.CallAfter(self.graph.SetExtruder1Temperature, hotend_temp)
+                # if self.display_graph: wx.CallAfter(self.graph.SetExtruder1Temperature, hotend_temp)
                 setpoint = temps["T1"][1]
-                if setpoint and self.display_graph:
-                    wx.CallAfter(self.graph.SetExtruder1TargetTemperature, float(setpoint))
+                # if setpoint and self.display_graph:
+                #     wx.CallAfter(self.graph.SetExtruder1TargetTemperature, float(setpoint))
             bed_temp = float(temps["B"][0]) if "B" in temps and temps["B"][0] else None
             if bed_temp is not None:
-                if self.display_graph: wx.CallAfter(self.graph.SetBedTemperature, bed_temp)
-                if self.display_gauges: wx.CallAfter(self.bedtgauge.SetValue, bed_temp)
+                # if self.display_graph: wx.CallAfter(self.graph.SetBedTemperature, bed_temp)
+                # if self.display_gauges: wx.CallAfter(self.bedtgauge.SetValue, bed_temp)
+                if self.display_gauges:
+                    self.guisignals.set_bedtemp_value.emit(bed_temp)
                 setpoint = temps["B"][1]
                 if setpoint:
                     setpoint = float(setpoint)
-                    if self.display_graph: wx.CallAfter(self.graph.SetBedTargetTemperature, setpoint)
-                    if self.display_gauges: wx.CallAfter(self.bedtgauge.SetTarget, setpoint)
+                    # if self.display_graph: wx.CallAfter(self.graph.SetBedTargetTemperature, setpoint)
+                    # if self.display_gauges: wx.CallAfter(self.bedtgauge.SetTarget, setpoint)
+                    if self.display_gauges:
+                        self.guisignals.set_bedtemp_target.emit(setpoint)
         except:
             traceback.print_exc()
 
@@ -590,9 +613,8 @@ class PrinterConnection(Pronsole):
         if report_type == REPORT_POS:
             self.update_pos()
         elif report_type == REPORT_TEMP:
-            pass
             # wx.CallAfter(self.tempdisp.SetLabel, self.tempreadings.strip().replace("ok ", ""))
-            # self.update_tempdisplay()
+            self.update_tempdisplay()
         tstring = l.rstrip()
         if not self.p.loud and (tstring not in ["ok", "wait"] and not isreport):
             self.guisignals.addtext.emit(tstring + "\n")
@@ -689,12 +711,12 @@ class PrinterConnection(Pronsole):
         self.do_settemp(l, command, msg)
 
     def sethotendgui(self, f):
-        return
-        # self.hsetpoint = f
-        # if self.display_gauges: self.hottgauge.SetTarget(int(f))
+        self.hsetpoint = f
+        if self.display_gauges:
+            self.guisignals.set_printtemp_target.emit(float(f))
         # if self.display_graph: wx.CallAfter(self.graph.SetExtruder0TargetTemperature, int(f))
-        # if f > 0:
-        #     wx.CallAfter(self.htemp.SetValue, str(f))
+        if f > 0:
+            self.guisignals.set_printtemp_value.emit(float(f))
         #     self.set("last_temperature", str(f))
         #     wx.CallAfter(self.settoff.SetBackgroundColour, None)
         #     wx.CallAfter(self.settoff.SetForegroundColour, None)

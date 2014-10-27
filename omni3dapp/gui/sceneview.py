@@ -1348,7 +1348,6 @@ class SceneView(QtOpenGL.QGLWidget):
         self.printButton.setTooltip(_("Pause"))
 
     def onPrintButton(self, button=LEFT_BUTTON):
-        print "Entered onPrintButton method"
         self.on_startprint()
         self._parent.pc.printfile(self._engine._result.getGCode())
 
@@ -1485,7 +1484,8 @@ class SceneView(QtOpenGL.QGLWidget):
         self._engineResultView.setResult(self._engine._result)
 
         self.printButton.setBottomText('')
-        self.printButton.setDisabled(False)
+        if self._parent.pc.is_online():
+            self.printButton.setDisabled(False)
 
         self.viewSelection.show_layers_button()
         self.viewSelection.setValue(4)

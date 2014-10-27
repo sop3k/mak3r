@@ -684,26 +684,25 @@ class Pronsole(cmd.Cmd):
     #  Printer connection handling
     #  --------------------------------------------------------------
 
-    def connect_to_printer(self, port, baud):
-        try:
-            self.p.signals.connect_sig.emit({'port': port, 'baud': baud})
-        except (SerialException, OSError) as e:
-            # Currently, there is no errno, but it should be there in the future
-            if e.errno == 2:
-                log.error(_("Error: You are trying to connect to a non-existing port."))
-            elif e.errno == 8:
-                log.error(_("Error: You don't have permission to open %s.") % port)
-                log.error(_("You might need to add yourself to the dialout group."))
-            else:
-                log.error(traceback.format_exc())
-            # Kill the scope anyway
-            return False
+    # def connect_to_printer(self, port, baud):
+        # try:
+        # self.p.signals.connect_sig.emit({'port': port, 'baud': baud})
+        # except (SerialException, OSError, Exception) as e:
+        #     # Currently, there is no errno, but it should be there in the future
+        #     if e.errno == 2:
+        #         log.error(_("Error: You are trying to connect to a non-existing port."))
+        #     elif e.errno == 8:
+        #         log.error(_("Error: You don't have permission to open %s.") % port)
+        #         log.error(_("You might need to add yourself to the dialout group."))
+        #     else:
+        #         log.error(traceback.format_exc())
+        #     # Kill the scope anyway
+        #     return False
 
+    def after_connect(self):
         self.stop_status_thread()
 
         self.statuscheck = True
-        # self.status_thread = threading.Thread(target = self.statuschecker)
-        # self.status_thread.start()
 
         self.status_checker = StatusChecker(self)
         self.status_thread = QtCore.QThread(self.parent)
@@ -717,7 +716,6 @@ class Pronsole(cmd.Cmd):
         self.status_thread.finished.connect(self.status_thread.deleteLater)
 
         self.status_thread.start()
-        return True
 
     def statuschecker_inner(self, do_monitoring=True):
         if self.p.online:

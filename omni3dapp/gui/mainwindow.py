@@ -61,7 +61,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # As a printer is not connected at the start of the app, set the gui
         # disconnected
-        self.set_connected(False)
+        self.enable_elements(False)
 
         # self.timer = QtCore.QTimer(self)
         # self.timer.timeout.connect(self.onTimer)
@@ -405,9 +405,6 @@ class MainWindow(QtGui.QMainWindow):
         self.statusBar().showMessage(msg)
 
     def connect_printer(self):
-        msg = _("Connecting...")
-        log.debug(msg)
-        self.set_statusbar(msg)
         port_val = self.ui.port_type.itemText(self.ui.port_type.currentIndex())
         baud_val = 115200
         try:
@@ -475,11 +472,34 @@ class MainWindow(QtGui.QMainWindow):
             return
         return self.pc.home_position(axis)
 
-    def set_connected(self, is_active=True):
-        self.ui.commandbox.setEnabled(is_active)
-        self.ui.send_btn.setEnabled(is_active)
+    def enable_elements(self, enable=True):
+        self.ui.commandbox.setEnabled(enable)
+        self.ui.send_btn.setEnabled(enable)
         for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
-            elem.setEnabled(is_active)
+            elem.setEnabled(enable)
+
+    def set_connected(self):
+        self.enable_elements(True)
+
+        self.ui.connect_btn.setText(_("Disconnect"))
+        self.ui.connect_btn.setToolTip(_("Disconnect from the printer"))
+        self.ui.connect_btn.clicked.disconnect(self.connect_printer)
+        self.ui.connect_btn.clicked.connect(self.pc.disconnect)
+
+        self.set_statusbar(_("Connected to printer."))
+
+        if self.pc.fgcode:
+            self.scene.printButton.setDisabled(False)
+
+    def set_disconnected(self):
+        self.enable_elements(False)
+
+        self.ui.connect_btn.setText(_("Connect"))
+        self.ui.connect_btn.setToolTip(_("Connect with the printer"))
+        self.ui.connect_btn.clicked.disconnect(self.pc.disconnect)
+        self.ui.connect_btn.clicked.connect(self.connect_printer)
+
+        self.set_statusbar(_("Disconnected."))
 
     def eventFilter(self, obj, evt):
         if obj == self.ui.commandbox:

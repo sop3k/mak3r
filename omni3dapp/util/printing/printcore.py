@@ -20,7 +20,6 @@ __version__ = "2014.08.01"
 from serial import Serial, SerialException
 from select import error as SelectError
 from Queue import Queue, Empty as QueueEmpty
-from threading import Thread, Lock
 import time
 import platform
 import os
@@ -79,7 +78,7 @@ class Printcore(QtCore.QObject):
         self.printer = None
         # clear to send, enabled after responses
         # FIXME: should probably be changed to a sliding window approach
-        self.clear = False
+        self.clear = 0
         # The printer has responded to the initial command and is active
         self.online = False
         # is a print currently running, true if printing, false if paused
@@ -133,40 +132,38 @@ class Printcore(QtCore.QObject):
     def disconnect(self):
         """Disconnects from printer and pauses the print
         """
+        if self.printer:
+            if self.read_thread:
+                self.stop_read_thread = True
+                try:
+                    self.read_thread.terminate()
+                except RuntimeError as e:
+                    log.error(e)
+                finally:
+                    self.read_thread = None
+
+            if self.print_thread:
+                self.printing = False
+                try:
+                    self.print_thread.terminate()
+                except RuntimeError as e:
+                    log.error(e)
+                finally:
+                    self.print_thread = None
+            self._stop_sender()
+            try:
+                self.printer.close()
+            except socket.error, e:
+                log.error(e)
+            except OSError, e:
+                log.error(e)
+
+        self.printer = None
         self.online = False
         self.printing = False
 
-        if not self.printer:
-            return
-
-        if self.read_thread:
-            try:
-                self.stop_read_thread = True
-                self.read_thread.terminate()
-                self.read_thread = None
-            except RuntimeError as e:
-                self.read_thread = None
-                log.error(e)
-        if self.print_thread:
-            try:
-                self.printing = False
-                self.print_thread.terminate()
-                self.print_thread = None
-            except RuntimeError as e:
-                self.print_thread = None
-                log.error(e)
-        self._stop_sender()
-        try:
-            self.printer.close()
-        except socket.error, e:
-            log.error(e)
-        except OSError, e:
-            log.error(e)
-
-        self.printer = None
-
-        if self.host:
-            self.host.guisignals.setoffline.emit()
+        # if self.host:
+        #     self.host.guisignals.setoffline.emit()
 
     @QtCore.Slot(dict)
     def connect(self, attrs_dict):
@@ -243,6 +240,8 @@ class Printcore(QtCore.QObject):
             self.read_thread.start()
             self._start_sender()
 
+            self.host.after_connect()
+
     def reset(self):
         """Reset the printer
         """
@@ -267,24 +266,25 @@ class Printcore(QtCore.QObject):
 
     def _stop_sender(self):
         if self.send_thread:
+            self.stop_send_thread = True
             try:
-                self.stop_send_thread = True
                 self.send_thread.terminate()
-                self.send_thread = None
             except RuntimeError as e:
-                self.send_thread = None
                 log.error(e)
+            finally:
+                self.send_thread = None
 
     def _checksum(self, command):
         return reduce(lambda x, y: x ^ y, map(ord, command))
 
     def start_print_thread(self, resuming=False):
-        print "inside start print thread"
         self.printer_thread = QtCore.QThread(self.parent)
         self.printer_worker = Printer(self, resuming)
         self.printer_worker.moveToThread(self.printer_thread)
 
         self.printer_thread.started.connect(self.printer_worker._print)
+        self.printer_worker.send_command.connect(self._send,
+                QtCore.Qt.DirectConnection)
         self.printer_worker.finished.connect(self.finish_printer_thread)
         self.printer_worker.finished.connect(self.printer_thread.quit)
         self.printer_worker.finished.connect(self.printer_worker.deleteLater)
@@ -299,8 +299,8 @@ class Printcore(QtCore.QObject):
         the next line will be set to 0 and the firmware notified. Printing
         will then start in a parallel thread.
         """
-        # if self.printing or not self.online or not self.printer:
-        #     return False
+        if self.printing or not self.online or not self.printer:
+            return False
         self.queueindex = startindex
         self.mainqueue = gcode
         self.printing = True
@@ -310,7 +310,7 @@ class Printcore(QtCore.QObject):
         if not gcode or not gcode.lines:
             return True
         self.clear = False
-        resuming = (self.queueindex != 0)
+        resuming = (startindex != 0)
         self.start_print_thread(resuming)
         return True
 
@@ -318,8 +318,7 @@ class Printcore(QtCore.QObject):
         if not self.printer_thread:
             return
         try:
-            self.printer_thread.finished.emit()
-            # self.printer_thread.terminate()
+            self.printer_thread.terminate()
         except Exception, e:
             log.error(e)
         finally:
@@ -357,7 +356,7 @@ class Printcore(QtCore.QObject):
         try:
             self.printer_thread.terminate()
         except RuntimeError, e:
-            if e.message == "cannot join current thread":
+            if e.message == "cannot terminate current thread":
                 pass
             else:
                 traceback.print_exc()
@@ -403,7 +402,7 @@ class Printcore(QtCore.QObject):
         self.printing = True
         self.start_print_thread(True)
 
-    def send(self, command, wait = 0):
+    def send(self, command, wait=0):
         """Adds a command to the checksummed main command queue if printing, or
         sends the command immediately if not printing"""
 
@@ -644,20 +643,16 @@ class Printer(QtCore.QObject):
         self.resuming = resuming
 
     def _print(self):
-        print "inside _print method"
         self.parent._stop_sender()
         try:
             if self.parent.startcb:
                 # callback for printing started
-                print "starting cb"
                 try: self.parent.startcb(self.resuming)
                 except:
                     self.parent.logError(_("Print start callback failed with:") +
                                   "\n" + traceback.format_exc())
                     self.finished.emit()
-            # while self.parent.printing and self.parent.printer and self.parent.online:
-            print "after started"
-            while self.parent.printing:
+            while self.parent.printing and self.parent.printer and self.parent.online:
                 self._sendnext()
             self.parent.sentlines = {}
             self.parent.log.clear()
@@ -676,9 +671,7 @@ class Printer(QtCore.QObject):
             self.finished.emit()
 
     def _sendnext(self):
-        print "inside send next"
         if not self.parent.printer:
-            print "no printer found; returning"
             return
         while self.parent.printer and self.parent.printing and not self.parent.clear:
             time.sleep(0.001)
@@ -726,6 +719,33 @@ class Printer(QtCore.QObject):
                 self.parent.queueindex += 1
                 self.parent.clear = True
                 return
+
+            # Strip comments
+            tline = gcoder.gcode_strip_comment_exp.sub("", tline).strip()
+            if tline:
+                # self._send(tline, self.lineno, True)
+                self.send_command.emit({
+                    'command': tline,
+                    'lineno': self.parent.lineno,
+                    'calcchecksum': True})
+                self.parent.lineno += 1
+                if self.parent.printsendcb:
+                    try: self.parent.printsendcb(gline)
+                    except: traceback.print_exc()
+            else:
+                self.parent.clear = True
+            self.parent.queueindex += 1
+        else:
+            self.parent.printing = False
+            self.parent.clear = True
+            if not self.parent.paused:
+                self.parent.queueindex = 0
+                self.parent.lineno = 0
+                # self._send("M110", -1, True)
+                self.send_command.emit({
+                    'command': "M110",
+                    'lineno': -1,
+                    'calcchecksum': True})
 
     def process_host_command(self, command):
         """only ;@pause command is implemented as a host command in printcore, but hosts are free to reimplement this method"""

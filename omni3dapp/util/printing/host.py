@@ -190,8 +190,11 @@ class PrinterConnection(Pronsole):
             self.paused = 0
             if self.sdprinting:
                 self.p.send_now("M26 S0")
-        if not self.connect_to_printer(port_val, baud_val):
-            return
+        # if not self.connect_to_printer(port_val, baud_val):
+        # TODO: change this to mutex as we need to know return status
+        self.p.signals.connect_sig.emit({'port': port_val, 'baud': baud_val})
+        #     self.parent.set_statusbar(_("Could not connect to printer."))
+        #     return
         try:
             settings_port = profile.settingsDictionary.get('port_type').getValue()
         except AttributeError:
@@ -368,10 +371,12 @@ class PrinterConnection(Pronsole):
     def printsentcb(self, gline):
         """Callback when a print gcode has been sent"""
         if gline.is_move:
-            if hasattr(self.gwindow, "set_current_gline"):
-                wx.CallAfter(self.gwindow.set_current_gline, gline)
-            if hasattr(self.gviz, "set_current_gline"):
-                wx.CallAfter(self.gviz.set_current_gline, gline)
+            print "should set current gline here"
+        # if gline.is_move:
+        #     if hasattr(self.gwindow, "set_current_gline"):
+        #         wx.CallAfter(self.gwindow.set_current_gline, gline)
+        #     if hasattr(self.gviz, "set_current_gline"):
+        #         wx.CallAfter(self.gviz.set_current_gline, gline)
 
     def startcb(self, resuming=False):
         """Callback on print start"""
@@ -386,19 +391,14 @@ class PrinterConnection(Pronsole):
         if self.p.queueindex == 0:
             self.p.runSmallScript(self.endScript)
             self.parent.scene.on_endprint()
-            # wx.CallAfter(self.pausebtn.Disable)
-            # wx.CallAfter(self.printbtn.SetLabel, _("Print"))
-            # wx.CallAfter(self.toolbarsizer.Layout)
 
     def move_axis(self, axis, curr_pos, step, mach_size):
-        print self.current_pos
         # self.zb.clearRepeat()
         if step == 0:
             return
         offset = profile.getMachineSettingFloat('machine_{0}_offset'.format(axis))
         # if self.settings.clamp_jogging:
         new_pos = curr_pos + step
-        print new_pos
         # if new_x < x_offset or new_x > mach_width + x_offset:
         if new_pos > mach_size + offset or new_pos < 0:
             self.clamped_move_message()
@@ -431,7 +431,6 @@ class PrinterConnection(Pronsole):
         self.parent.set_statusbar(_("Not connected to printer."))
 
     def pause(self, button):
-        print "inside pause"
         if not self.paused:
             self.log(_("Print paused at: %s") % format_time(time.time()))
             if self.sdprinting:
@@ -461,7 +460,8 @@ class PrinterConnection(Pronsole):
     def recover(self, event):
         self.extra_print_time = 0
         if not self.p.online:
-            wx.CallAfter(self.statusbar.SetStatusText, _("Not connected to printer."))
+            self.parent.set_statusbar(_("Not connected to printer."))
+            # wx.CallAfter(self.statusbar.SetStatusText, _("Not connected to printer."))
             return
         # Reset Z
         self.p.send_now("G92 Z%f" % self.predisconnect_layer)
@@ -472,19 +472,20 @@ class PrinterConnection(Pronsole):
 
     def reset(self, event):
         self.log(_("Reset."))
-        dlg = wx.MessageDialog(self, _("Are you sure you want to reset the printer?"), _("Reset?"), wx.YES | wx.NO)
-        if dlg.ShowModal() == wx.ID_YES:
-            self.p.reset()
-            self.sethotendgui(0)
-            self.setbedgui(0)
-            self.p.printing = 0
-            wx.CallAfter(self.printbtn.SetLabel, _("Print"))
-            if self.paused:
-                self.p.paused = 0
-                wx.CallAfter(self.pausebtn.SetLabel, _("Pause"))
-                self.paused = 0
-            wx.CallAfter(self.toolbarsizer.Layout)
-        dlg.Destroy()
+        print "Resetting the printer - should ask if user is sure to reset it"
+        # dlg = wx.MessageDialog(self, _("Are you sure you want to reset the printer?"), _("Reset?"), wx.YES | wx.NO)
+        # if dlg.ShowModal() == wx.ID_YES:
+        #     self.p.reset()
+        #     self.sethotendgui(0)
+        #     self.setbedgui(0)
+        #     self.p.printing = 0
+        #     wx.CallAfter(self.printbtn.SetLabel, _("Print"))
+        #     if self.paused:
+        #         self.p.paused = 0
+        #         wx.CallAfter(self.pausebtn.SetLabel, _("Pause"))
+        #         self.paused = 0
+        #     wx.CallAfter(self.toolbarsizer.Layout)
+        # dlg.Destroy()
 
     def process_host_command(self, command):
         """Override host command handling"""
@@ -509,12 +510,12 @@ class PrinterConnection(Pronsole):
         """Callback when printer goes online (graphical bits)"""
         self.parent.set_connected()
 
-        self.ui.connect_btn.setText(_("Disconnect"))
-        self.ui.connect_btn.setToolTip(_("Disconnect from the printer"))
-        self.ui.connect_btn.clicked.disconnect(self.parent.connect_printer)
-        self.ui.connect_btn.clicked.connect(self.disconnect)
+        # self.ui.connect_btn.setText(_("Disconnect"))
+        # self.ui.connect_btn.setToolTip(_("Disconnect from the printer"))
+        # self.ui.connect_btn.clicked.disconnect(self.parent.connect_printer)
+        # self.ui.connect_btn.clicked.connect(self.disconnect)
 
-        self.parent.set_statusbar(_("Connected to printer."))
+        # self.parent.set_statusbar(_("Connected to printer."))
 
     #     if hasattr(self, "extrudersel"):
     #         self.do_tool(self.extrudersel.GetValue())
@@ -528,22 +529,17 @@ class PrinterConnection(Pronsole):
 
     @QtCore.Slot()
     def offline_gui(self):
-        self.parent.set_connected(False)
-
-        self.ui.connect_btn.setText(_("Connect"))
-        self.ui.connect_btn.setToolTip(_("Connect with the printer"))
-        self.ui.connect_btn.clicked.disconnect(self.disconnect)
-        self.ui.connect_btn.clicked.connect(self.parent.connect_printer)
+        self.parent.set_disconnected()
 
         msg = _("Disconnected.")
         self.logdisp(msg)
-        self.parent.set_statusbar(msg)
 
     def layer_change_cb(self, newlayer):
         """Callback when the printed layer changed"""
         pronsole.pronsole.layer_change_cb(self, newlayer)
         if self.settings.mainviz != "3D" or self.settings.trackcurrentlayer3d:
-            wx.CallAfter(self.gviz.setlayer, newlayer)
+            print "should set a layer in gviz here"
+            # wx.CallAfter(self.gviz.setlayer, newlayer)
 
     def update_tempdisplay(self):
         try:
@@ -730,3 +726,6 @@ class PrinterConnection(Pronsole):
         #     wx.CallAfter(self.settbtn.SetForegroundColour, None)
         #     wx.CallAfter(self.htemp.SetBackgroundColour, "white")
         #     wx.CallAfter(self.htemp.Refresh)
+
+    def is_online(self):
+        return self.p.online

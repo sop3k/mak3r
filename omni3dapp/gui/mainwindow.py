@@ -478,6 +478,9 @@ class MainWindow(QtGui.QMainWindow):
         for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
             elem.setEnabled(enable)
 
+        self.ui.set_bedtemp_btn.setEnabled(enable)
+        self.ui.set_printtemp_btn.setEnabled(enable)
+
     def set_connected(self):
         self.enable_elements(True)
 

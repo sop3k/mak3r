@@ -28,8 +28,9 @@ from omni3dapp.gui.util import openglscene, openglHelpers
 from omni3dapp.gui.util import previewTools
 from omni3dapp.gui.util import engineResultView
 from omni3dapp.gui.tools import imageToMesh
-from omni3dapp.util.printerConnection import printerConnectionManager
+# from omni3dapp.util.printerConnection import printerConnectionManager
 from omni3dapp.util.shortcuts import *
+from omni3dapp.util.printing import gcoder
 from omni3dapp.gui.shadereditor_ui import Ui_ShaderEditor
 from omni3dapp.logger import log
 
@@ -82,7 +83,7 @@ class SceneView(QtOpenGL.QGLWidget):
         self._platformMesh = {}
         self._platformTexture = None
         self._isSimpleMode = True
-        self._printerConnectionManager = printerConnectionManager.PrinterConnectionManager()
+        # self._printerConnectionManager = printerConnectionManager.PrinterConnectionManager()
 
         self._viewport = None
         self._modelMatrix = None
@@ -146,8 +147,14 @@ class SceneView(QtOpenGL.QGLWidget):
 
         # self.notification = openglGui.glNotification(self, (0, 0))
 
+        self.printtemp_gauge = openglscene.glTempGauge(parent=self, size=(400, 10),
+                pos=(0, -2), title="Heater:")
+        self.bedtemp_gauge = openglscene.glTempGauge(parent=self, size=(400, 10),
+                pos=(0, -1), title="Bed:")
+
         self._engine = sliceEngine.Engine(self, self._updateEngineProgress)
         self._engineResultView = engineResultView.EngineResultView(self)
+        self._slicing_finished = False
 
         self._sceneUpdateTimer = QtCore.QTimer(self)
 
@@ -171,20 +178,32 @@ class SceneView(QtOpenGL.QGLWidget):
                     self._animationList.remove(anim)
             self.updateGL()
 
+    def is_printing_enabled(self):
+        return self._slicing_finished and self._parent.is_online()
+
+    @QtCore.Slot()
+    def enable_printing(self):
+        if self.is_printing_enabled():
+            self.printButton.setDisabled(False)
+            self.updateGL()
+
     @QtCore.Slot(float)
     def _updateEngineProgress(self, progressValue):
         result = self._engine.getResult()
-        finished = result is not None and result.isFinished()
-        if not finished:
-            if self.printButton.getProgressBar() is not None and progressValue >= 0.0 and abs(self.printButton.getProgressBar() - progressValue) < 0.01:
+        self._slicing_finished = result is not None and result.isFinished()
+        if not self._slicing_finished:
+            if self.printButton.getProgressBar() is not None and \
+                    progressValue >= 0.0 and abs(
+                        self.printButton.getProgressBar()-progressValue) < 0.01:
                 return
-        self.printButton.setDisabled(not finished)
+        printing_enabled = self.is_printing_enabled()
+        self.printButton.setDisabled(not printing_enabled)
         if progressValue >= 0.0:
             self.printButton.setProgressBar(progressValue)
         else:
             self.printButton.setProgressBar(None)
         self._engineResultView.setResult(result)
-        if finished:
+        if self._slicing_finished:
             self.printButton.setProgressBar(None)
             text = '%s' % (result.getPrintTime())
             for e in xrange(0, int(profile.getMachineSetting('extruder_amount'))):
@@ -228,7 +247,7 @@ class SceneView(QtOpenGL.QGLWidget):
         glLoadIdentity()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
 
-    def _drawScene(self):
+    def _drawScene(self, painter):
         if self._glButtonsTexture is None:
             self._glButtonsTexture = self.loadGLTexture('glButtons.png')
             self._glRobotTexture = self.loadGLTexture('UltimakerRobot.png')
@@ -245,7 +264,7 @@ class SceneView(QtOpenGL.QGLWidget):
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        self._container.draw()
+        self._container.draw(painter)
 
     def _renderObject(self, obj, brightness=0, addSink=True):
         glPushMatrix()
@@ -464,6 +483,10 @@ class SceneView(QtOpenGL.QGLWidget):
         glEnable(GL_BLEND)
 
     def paintGL(self):
+        painter = QtGui.QPainter()
+        painter.begin(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+
         self._idleCalled = False
         h = self.height()
         w = self.width()
@@ -488,7 +511,7 @@ class SceneView(QtOpenGL.QGLWidget):
                 obj.release()
             renderStartTime = time.time()
             self.onPaint()
-            self._drawScene()
+            self._drawScene(painter)
             glFlush()
             if version.isDevVersion():
                 renderTime = time.time() - renderStartTime
@@ -516,21 +539,23 @@ class SceneView(QtOpenGL.QGLWidget):
                 # wx.CallAfter(wx.MessageBox, errStr, _("3D window error"), wx.OK | wx.ICON_EXCLAMATION)
                 self._shownError = True
 
+        painter.end()
+
     def resizeGL(self, width, height):
         self._container.setSize(0, 0, width, height)
         self._container.updateLayout()
 
     def onPaint(self):
-        connectionGroup = self._printerConnectionManager.getAvailableGroup()
-        if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
-            self.printButton._imageID = 2
-            self.printButton._tooltip = _("Toolpath to SD")
-        elif connectionGroup is not None:
-            self.printButton._imageID = connectionGroup.getIconID()
-            self.printButton._tooltip = _("Print with %s") % (connectionGroup.getName())
-        else:
-            self.printButton._imageID = 3
-            self.printButton._tooltip = _("Save toolpath")
+        # connectionGroup = self._printerConnectionManager.getAvailableGroup()
+        # if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
+        #     self.printButton._imageID = 2
+        #     self.printButton._tooltip = _("Toolpath to SD")
+        # elif connectionGroup is not None:
+        #     self.printButton._imageID = connectionGroup.getIconID()
+        #     self.printButton._tooltip = _("Print with %s") % (connectionGroup.getName())
+        # else:
+        #     self.printButton._imageID = 3
+        #     self.printButton._tooltip = _("Save toolpath")
 
         if self._animView is not None:
             self._viewTarget = self._animView.getPosition()
@@ -1064,6 +1089,8 @@ class SceneView(QtOpenGL.QGLWidget):
         modifiers = evt.modifiers()
         if self._engineResultView.onKeyChar(code, modifiers):
             return
+        if self._container.keyPressEvent(code, modifiers):
+            return
         if code == QtCore.Qt.Key_Delete or (code == QtCore.Qt.Key_Backspace and sys.platform.startswith("darwin")):
             if self._selectedObj is not None:
                 self._deleteObject(self._selectedObj)
@@ -1305,8 +1332,28 @@ class SceneView(QtOpenGL.QGLWidget):
         self._selectObject(self._selectedObj)
         self.sceneUpdated()
 
+    def on_startprint(self):
+        self.printButton.setImageID(30)
+        self.printButton.setTooltip(_("Pause"))
+        self.printButton.setCallback(self._parent.pc.pause)
+
+    def on_endprint(self):
+        self.printButton.setImageID(6)
+        self.printButton.setTooltip(_("Print"))
+
+    def on_pauseprint(self):
+        self.printButton.setImageID(6)
+        self.printButton.setTooltip(_("Resume"))
+
+    def on_resumeprint(self):
+        self.printButton.setImageID(30)
+        self.printButton.setTooltip(_("Pause"))
+
     def onPrintButton(self, button=LEFT_BUTTON):
-        print "Entered onPrintButton method"
+        self.on_startprint()
+        self._parent.pc.printfile(self._engine._result.getGCode())
+
+
         # if button == 1:
         #     connectionGroup = self._printerConnectionManager.getAvailableGroup()
         #     if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
@@ -1424,13 +1471,23 @@ class SceneView(QtOpenGL.QGLWidget):
         #Cheat the engine results to load a GCode file into it.
         self._engine.abortEngine()
         self._engine._result = sliceEngine.EngineResult(self)
-        with open(filename, "r") as f:
+
+        # To test printing with Printrun
+        # gcode = gcoder.GCode(deferred=True)
+
+        with open(filename, "rU") as f:
             self._engine._result.setGCode(f.read())
+            # gcode.prepare(f, profile.get_home_pos(), layer_callback)
+            # gcode.prepare(f, profile.get_home_pos())
+
+        # self._parent.pc._set_fgcode(gcode)
+
         self._engine._result.setFinished(True)
         self._engineResultView.setResult(self._engine._result)
 
         self.printButton.setBottomText('')
-        self.printButton.setDisabled(False)
+        if self._parent.pc.is_online():
+            self.printButton.setDisabled(False)
 
         self.viewSelection.show_layers_button()
         self.viewSelection.setValue(4)
@@ -1532,6 +1589,25 @@ class SceneView(QtOpenGL.QGLWidget):
             self.save_gcode_thread.finished.connect(self.save_gcode_thread.deleteLater)
 
             self.save_gcode_thread.start()
+
+    def set_printing_gcode(self, gcode):
+        self._parent.pc.fgcode = gcode
+
+    @QtCore.Slot(float)
+    def set_printtemp_target(self, temp):
+        self.printtemp_gauge.setTarget(temp)
+
+    @QtCore.Slot(float)
+    def set_bedtemp_target(self, temp):
+        self.bedtemp_gauge.setTarget(temp)
+
+    @QtCore.Slot(float)
+    def set_printtemp_value(self, temp):
+        self.printtemp_gauge.setValue(temp)
+
+    @QtCore.Slot(float)
+    def set_bedtemp_value(self, temp):
+        self.bedtemp_gauge.setValue(temp)
 
 
 class SaveGCodeWorker(QtCore.QObject):

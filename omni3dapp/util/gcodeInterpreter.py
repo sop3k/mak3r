@@ -15,6 +15,8 @@ import cStringIO as StringIO
 from PySide import QtCore
 
 from omni3dapp.util import profile
+from omni3dapp.util.printing import gcoder
+
 
 def gcodePath(newType, pathType, layerThickness, startPoint):
     """
@@ -30,6 +32,7 @@ def gcodePath(newType, pathType, layerThickness, startPoint):
             'points': [startPoint],
             'extrusion': [0.0]}
 
+
 class GCode(object):
     """
     The heavy lifting GCode parser. This is most likely the hardest working python code in Cura.
@@ -42,9 +45,12 @@ class GCode(object):
         self.extrusionAmount = 0
         self.filename = None
         self.progressCallback = None
+        self.printing_gcode = None
     
     def load(self, data):
         self.filename = None
+        self.printing_gcode = gcoder.GCode(home_pos=profile.get_home_pos(),
+                deferred=False)
         if type(data) in types.StringTypes and os.path.isfile(data):
             self.filename = data
             self._fileSize = os.stat(data).st_size
@@ -304,6 +310,7 @@ class GCode(object):
                         self.extrudeAmountMultiply = s / 100.0
                 # else:
                 #     print "Unknown M code:" + str(M)
+        self.printing_gcode.append(line.strip())
         self.parse_line_timer.singleShot(0, self._parse_line)
 
     def _after_line_parsing(self):
@@ -311,9 +318,11 @@ class GCode(object):
             path['points'] = numpy.array(path['points'], numpy.float32)
             path['extrusion'] = numpy.array(path['extrusion'], numpy.float32)
         self.layerList.append(self.currentLayer)
+        self._sceneview.set_printing_gcode(self.printing_gcode)
         if self.progressCallback is not None and self._fileSize > 0:
             self.progressCallback(float(self.gcodeFile.tell()) / float(self._fileSize))
             self._sceneview.updateGL()
+
 
 def getCodeInt(line, code):
     n = line.find(code) + 1
@@ -327,6 +336,7 @@ def getCodeInt(line, code):
     except:
         return None
 
+
 def getCodeFloat(line, code):
     n = line.find(code) + 1
     if n < 1:
@@ -338,6 +348,7 @@ def getCodeFloat(line, code):
         return float(line[n:m])
     except:
         return None
+
 
 if __name__ == '__main__':
     for filename in sys.argv[1:]:

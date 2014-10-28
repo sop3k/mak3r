@@ -2,11 +2,13 @@
 
 import re
 import subprocess
+import traceback
 
 from PySide import QtCore, QtGui
 
 from mainwindow_ui import Ui_MainWindow
 from omni3dapp.util import profile
+from omni3dapp.util.printing import host
 from omni3dapp.gui.util.gcode_text_styling import GCodeSyntaxHighlighter
 from omni3dapp.gui import sceneview
 from omni3dapp.logger import log
@@ -28,6 +30,13 @@ class MainWindow(QtGui.QMainWindow):
             'socket_connector_thread',
             'log_thread'
             ]
+    SETTING_CHANGE_WHITELIST = [
+            'commandbox',
+            'logbox',
+            'port_type',
+            'port_baud_rate',
+            'qt_spinbox_lineedit',
+            ]
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -40,8 +49,19 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.setupUi(self)
 
         self.set_up_fields()
+
+        # Create a scene to present and modify 3d objects
         self.setup_scene()
+
+        # Class that enables connecting to printer
+        self.pc = host.PrinterConnection(self)
+
         self.connect_actions()
+        self.connect_buttons()
+
+        # As a printer is not connected at the start of the app, set the gui
+        # disconnected
+        self.enable_elements(False)
 
         # self.timer = QtCore.QTimer(self)
         # self.timer.timeout.connect(self.onTimer)
@@ -75,6 +95,14 @@ class MainWindow(QtGui.QMainWindow):
                     items = val.getType()
                     elem.addItems(items)
                     elem.setCurrentIndex(items.index(val.getValue()))
+                elif isinstance(elem, QtGui.QDoubleSpinBox):
+                    val_range = val.getRange()
+                    if val_range:
+                        if val_range[0] is not None:
+                            elem.setMinimum(float(val_range[0]))
+                        if val_range[1] is not None:
+                            elem.setMaximum(float(val_range[1]))
+                    elem.setValue(float(val.getValue()))
                 elem.setToolTip(val.getTooltip())
             except Exception, e:
                 log.debug('Could not set value to field {0}: {1}'.format(key, e))
@@ -88,6 +116,10 @@ class MainWindow(QtGui.QMainWindow):
                 self.ui.menuRecent_Model_Files.addAction(action)
             self.update_mru_files_actions()
 
+            # Create history for commandbox
+            self.ui.commandbox.history = [u""]
+            self.ui.commandbox.histindex = 1
+
     def connect_actions(self):
         self.ui.actionSwitch_to_quickprint.triggered.connect(self.on_simple_switch)
         self.ui.actionSwitch_to_expert_mode.triggered.connect(self.on_normal_switch)
@@ -97,6 +129,15 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.actionClear_platform.triggered.connect(self.scene.onDeleteAll)
         self.ui.actionPrint.triggered.connect(self.scene.onPrintButton)
         self.ui.actionSave_GCode.triggered.connect(self.scene.showSaveGCode)
+
+        self.ui.commandbox.returnPressed.connect(self.pc.sendline)
+        self.ui.commandbox.installEventFilter(self)
+
+        for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
+            if elem.objectName().startswith('move'):
+                elem.clicked.connect(self.move_axis)
+            else:
+                elem.clicked.connect(self.home_pos)
 
         # Simple panel actions
         self.connect_actions_simple_mode()
@@ -116,14 +157,24 @@ class MainWindow(QtGui.QMainWindow):
 
     def connect_actions_normal_mode(self):
         # For each element in self.normal or self.tabWidget
-        for elem in self.ui.normal.findChildren(QtGui.QCheckBox):
-            elem.stateChanged.connect(self.on_setting_change)
-        for elem in self.ui.normal.findChildren(QtGui.QLineEdit):
-            elem.textChanged.connect(self.on_setting_change)
-        for elem in self.ui.normal.findChildren(QtGui.QComboBox):
-            elem.currentIndexChanged.connect(self.on_setting_change)
-        for elem in self.ui.normal.findChildren(QtGui.QListWidget):
-            elem.currentItemChanged.connect(self.on_setting_change)
+        for elem in self.ui.normal.findChildren(QtGui.QWidget):
+            if elem.objectName() in self.SETTING_CHANGE_WHITELIST:
+                continue
+            if isinstance(elem, QtGui.QDoubleSpinBox):
+                elem.valueChanged.connect(self.on_value_changed)
+            elif isinstance(elem, QtGui.QCheckBox):
+                elem.stateChanged.connect(self.on_state_changed)
+            elif isinstance(elem, QtGui.QLineEdit):
+                elem.textChanged.connect(self.on_text_changed)
+            elif isinstance(elem, QtGui.QComboBox):
+                elem.currentIndexChanged.connect(self.on_index_changed)
+
+    def connect_buttons(self):
+        self.ui.connect_btn.clicked.connect(self.connect_printer)
+        self.ui.port_btn.clicked.connect(self.pc.rescanports)
+        self.ui.send_btn.clicked.connect(self.pc.sendline)
+        self.ui.set_bedtemp_btn.clicked.connect(self.bedtemp)
+        self.ui.set_printtemp_btn.clicked.connect(self.settemp)
 
     def on_simple_switch(self, *args, **kwargs):
         profile.putPreference('startMode', 'Simple')
@@ -254,16 +305,28 @@ class MainWindow(QtGui.QMainWindow):
         self.scene.updateProfileToControls()
         self.update_profile_to_controls_normal_panel()
 
-    def on_setting_change(self):
-        # profile.settingsDictionary
+    def on_value_changed(self):
         elem = QtCore.QObject.sender(self)
-        if isinstance(elem, (QtGui.QLineEdit, QtGui.QTextEdit)):
-            profile.settingsDictionary[elem.objectName()].setValue(elem.text())
-        elif isinstance(elem, QtGui.QCheckBox):
-            profile.settingsDictionary[elem.objectName()].setValue(elem.isChecked())
-        elif isinstance(elem, QtGui.QComboBox):
-            profile.settingsDictionary[elem.objectName()].setValue(
-                    elem.itemText(elem.currentIndex()))
+        self.on_setting_change(elem.objectName(), elem.value())
+
+    def on_state_changed(self):
+        elem = QtCore.QObject.sender(self)
+        self.on_setting_change(elem.objectName(), elem.isChecked())
+
+    def on_text_changed(self):
+        elem = QtCore.QObject.sender(self)
+        self.on_setting_change(elem.objectName(), elem.text())
+
+    def on_index_changed(self):
+        elem = QtCore.QObject.sender(self)
+        self.on_setting_change(elem.objectName(),
+                elem.itemText(elem.currentIndex()))
+
+    def on_setting_change(self, obj_name, value):
+        try:
+            profile.settingsDictionary[obj_name].setValue(value)
+        except KeyError as e:
+            log.error("Key not found in preferences: {0}".format(e))
         self.validate_normal_mode()
 
     def validate_normal_mode(self):
@@ -338,6 +401,31 @@ class MainWindow(QtGui.QMainWindow):
     def stripped_name(self, full_filename):
         return QtCore.QFileInfo(full_filename).fileName()
 
+    def set_statusbar(self, msg):
+        self.statusBar().showMessage(msg)
+
+    def connect_printer(self):
+        port_val = self.ui.port_type.itemText(self.ui.port_type.currentIndex())
+        baud_val = 115200
+        try:
+            baud_val = int(self.ui.port_baud_rate.itemText(
+                self.ui.port_baud_rate.currentIndex()))
+        except (TypeError, ValueError), e:
+            log.error(_("Could not parse baud rate: {0}".format(e)))
+            traceback.print_exc(file = sys.stdout)
+        return self.pc.connect(port_val, baud_val)
+
+    def settemp(self):
+        temp = self.ui.print_temperature.text()
+        self.pc.set_printtemp(temp)
+
+    def bedtemp(self):
+        temp = self.ui.print_bed_temperature.text()
+        self.pc.set_bedtemp(temp)
+
+    def is_online(self):
+        return self.pc.p.online
+
     def terminate_thread(self, thread_name):
         try:
             thread = getattr(self.scene._engine, thread_name, None)
@@ -351,6 +439,80 @@ class MainWindow(QtGui.QMainWindow):
     def terminate_threads(self):
         for thread_name in self.THREADS:
             self.terminate_thread(thread_name)
+
+    def move_axis(self):
+        elem = QtCore.QObject.sender(self)
+        try:
+            axis, direction, step = re.match('move_([xyz])_(down|up)(\d{1,2})',
+                    elem.objectName()).groups()
+        except AttributeError, e:
+            log.error("Clicked button does not have an expected name: \
+                    {0}".format(e))
+            return
+        func = getattr(self.pc, 'move_{0}'.format(axis), None)
+        if not func:
+            log.error("Did not find method move_{0} of the class {1}".format(axis,
+                self.pc.__class__))
+            return 
+        multip = int(direction == 'up') or -1
+        if step.startswith('0'):
+            step = re.sub(r'(0*)(\d+)', r'\1.\2', step)
+        step = float(step)
+        if step == 0:
+            return
+        return func(step * multip)
+
+    def home_pos(self):
+        elem = QtCore.QObject.sender(self)
+        try:
+            axis = re.match('home_([xyz]+)', elem.objectName()).group(1)
+        except AttributeError, e:
+            log.error('Clicked button does not have an expected name: \
+                    {0}'.format(e))
+            return
+        return self.pc.home_position(axis)
+
+    def enable_elements(self, enable=True):
+        self.ui.commandbox.setEnabled(enable)
+        self.ui.send_btn.setEnabled(enable)
+        for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
+            elem.setEnabled(enable)
+
+    def set_connected(self):
+        self.enable_elements(True)
+
+        self.ui.connect_btn.setText(_("Disconnect"))
+        self.ui.connect_btn.setToolTip(_("Disconnect from the printer"))
+        self.ui.connect_btn.clicked.disconnect(self.connect_printer)
+        self.ui.connect_btn.clicked.connect(self.pc.disconnect)
+
+        self.set_statusbar(_("Connected to printer."))
+
+        if self.pc.fgcode:
+            self.scene.printButton.setDisabled(False)
+
+    def set_disconnected(self):
+        self.enable_elements(False)
+
+        self.ui.connect_btn.setText(_("Connect"))
+        self.ui.connect_btn.setToolTip(_("Connect with the printer"))
+        self.ui.connect_btn.clicked.disconnect(self.pc.disconnect)
+        self.ui.connect_btn.clicked.connect(self.connect_printer)
+
+        self.set_statusbar(_("Disconnected."))
+
+    def eventFilter(self, obj, evt):
+        if obj == self.ui.commandbox:
+            if evt.type() == QtCore.QEvent.KeyPress:
+                code = evt.key()
+                if code == QtCore.Qt.Key_Up:
+                    self.pc.cbkey_action(-1)
+                    return True
+                elif code == QtCore.Qt.Key_Down:
+                    self.pc.cbkey_action(1)
+                    return True
+            return False
+        return super(MainWindow, self).eventFilter(obj, evt)
 
     def closeEvent(self, evt):
         # terminate all slicer-related threads

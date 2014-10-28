@@ -1089,6 +1089,8 @@ class SceneView(QtOpenGL.QGLWidget):
         modifiers = evt.modifiers()
         if self._engineResultView.onKeyChar(code, modifiers):
             return
+        if self._container.keyPressEvent(code, modifiers):
+            return
         if code == QtCore.Qt.Key_Delete or (code == QtCore.Qt.Key_Backspace and sys.platform.startswith("darwin")):
             if self._selectedObj is not None:
                 self._deleteObject(self._selectedObj)

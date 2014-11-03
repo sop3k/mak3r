@@ -86,31 +86,12 @@ class glGuiControl(object):
 class glGuiContainer(glGuiControl):
     def __init__(self, parent, pos):
         self._glGuiControlList = []
+        glGuiLayoutButtons(self)
         super(glGuiContainer, self).__init__(parent, pos)
 
     def add(self, ctrl):
         self._glGuiControlList.append(ctrl)
         self.updateLayout()
-
-    def update(self):
-        bs = self._base._buttonSize
-        x0, y0, w, h = self.getSize()
-        gridSize = bs * 1.0
-        for ctrl in self._glGuiControlList:
-            pos = ctrl._pos
-            if pos[0] < 0:
-                x = w + pos[0] * gridSize - bs * 0.2
-            else:
-                x = pos[0] * gridSize + bs * 0.2
-            if pos[1] < 0:
-                y = h + pos[1] * gridSize * 1.2 - bs * 0.0
-            else:
-                y = pos[1] * gridSize * 1.2 + bs * 0.2
-            ctrl.setSize(x, y, gridSize, gridSize)
-
-    def getLayoutSize(self):
-        _, _, w, h = self.getSize()
-        return w, h
 
     def onMousePressEvent(self, x, y, button):
         for ctrl in self._glGuiControlList:
@@ -140,9 +121,35 @@ class glGuiContainer(glGuiControl):
             ctrl.draw(painter)
 
     def updateLayout(self):
-        self.update()
+        self._layout.update()
         for ctrl in self._glGuiControlList:
             ctrl.updateLayout()
+
+
+class glGuiLayoutButtons(object):
+    def __init__(self, parent):
+        self._parent = parent
+        self._parent._layout = self
+
+    def update(self):
+        bs = self._parent._base._buttonSize
+        x0, y0, w, h = self._parent.getSize()
+        gridSize = bs * 1.0
+        for ctrl in self._parent._glGuiControlList:
+            pos = ctrl._pos
+            if pos[0] < 0:
+                x = w + pos[0] * gridSize - bs * 0.2
+            else:
+                x = pos[0] * gridSize + bs * 0.2
+            if pos[1] < 0:
+                y = h + pos[1] * gridSize * 1.2 - bs * 0.0
+            else:
+                y = pos[1] * gridSize * 1.2 + bs * 0.2
+            ctrl.setSize(x, y, gridSize, gridSize)
+
+    def getLayoutSize(self):
+        _, _, w, h = self._parent.getSize()
+        return w, h
 
 
 class glGuiLayoutGrid(object):
@@ -502,7 +509,7 @@ class glFrame(glGuiContainer):
         bs = self._parent._buttonSize
         pos = self._getPixelPos()
 
-        size = self.getLayoutSize()
+        size = self._layout.getLayoutSize()
         glColor4ub(255,255,255,255)
         openglHelpers.glDrawStretchedQuad(pos[0], pos[1], size[0], size[1], bs*0.75, 0)
 
@@ -937,8 +944,9 @@ class glTempGauge(glGuiControl):
     def __init__(self, parent, size=(240, 100), pos=(0,0), title="", maxval=240,
             gauge_color=None, bgcolor="#FFFFFF"):
         self._hidden = True
-        self._width, self._height = size
+        super(glTempGauge, self).__init__(parent, pos)
         self._parent = parent
+        self._width, self._height = size
         self._title = title
         self._maxval = maxval
         self._gauge_color = gauge_color
@@ -946,8 +954,6 @@ class glTempGauge(glGuiControl):
         self._value = 0
         self._setpoint = 0
         self._hidden = True
-        self._separator = 10
-        super(glTempGauge, self).__init__(parent, pos)
         self.recalc()
 
     def set_gradient_brush(self, gradient, painter, colors):
@@ -979,12 +985,10 @@ class glTempGauge(glGuiControl):
         painter.setFont(font)
 
     def setValue(self, value):
-        """ Set current temperature """
         self._value = value
         self._base.queueRefresh()
 
     def setTarget(self, value):
-        """ Set target temperature """
         self._setpoint = value
         self._base.queueRefresh()
 
@@ -994,12 +998,9 @@ class glTempGauge(glGuiControl):
     def draw(self, painter=None):
         if self._hidden or not painter:
             return
-        x0, y0, self._width, self._height = self.getSize()
-
+        x0, y0 = self.getSize()[:2]
         self.recalc()
-
         x1, y1, xE, yE = self._ypt + 1, 1, self._width - 1, 20
-
 
         cold = QtGui.QColor(0, 167, 223)
         medium = QtGui.QColor(239, 233, 119)
@@ -1014,13 +1015,13 @@ class glTempGauge(glGuiControl):
         # gauge background
         self.set_lineargradient_brush(
                 painter,
-                (x0, y0, x0 + xE - x1, y0 + yE),
+                (x0, y0, x0 + xE, y0 + yE),
                 ((0, cold), (0.5, medium), (1, hot))
                 )
 
-        painter.drawRoundedRect(x0, y0, xE - x1, yE, 6, 6)
+        painter.drawRoundedRect(x0, y0, xE, yE, 6, 6)
 
-        # draw initial gauge
+        # draw gauge
         width = 12
         w1 = y0 + yE / 2 - width / 2
         w2 = w1 + width
@@ -1100,3 +1101,24 @@ class glTempGauge(glGuiControl):
 
     def keyPressEvent(self, code, modifiers):
         pass
+
+
+# class glTempGauges(glGuiControl):
+#     def __init__(self, parent, pos):
+#         super(glTempGauges, self).__init__(parent, pos)
+#         self._container = []
+# 
+#     def add(self, elem):
+#         self._container.append(elem)
+# 
+#     def draw(self, painter=None):
+#         for elem in self._container:
+#             elem.draw(painter)
+# 
+#     def onMouseMoveEvent(self, x, y):
+#         for elem in self._container:
+#             elem.onMouseMoveEvent(x, y)
+# 
+#     def onMousePressEvent(self, x, y, button):
+#         for elem in self._container:
+#             elem.onMousePressEvent(x, y, button)

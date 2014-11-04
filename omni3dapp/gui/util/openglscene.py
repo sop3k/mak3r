@@ -80,7 +80,7 @@ class glGuiControl(object):
         pass
 
     def keyPressEvent(self, code, modifiers):
-        pass
+        return False
 
 
 class glGuiContainer(glGuiControl):
@@ -113,8 +113,8 @@ class glGuiContainer(glGuiControl):
         return handled
 
     def keyPressEvent(self, code, modifiers):
-        for ctrl in self._glGuiControlList:
-            ctrl.keyPressEvent(code, modifiers)
+        return any([ctrl.keyPressEvent(code, modifiers) \
+                    for ctrl in self._glGuiControlList])
 
     def draw(self, painter=None):
         for ctrl in self._glGuiControlList:
@@ -362,7 +362,7 @@ class glButton(glGuiControl):
         return False
 
     def keyPressEvent(self, code, modifiers):
-        pass
+        return False
 
 
 class glRadioButton(glButton):
@@ -473,7 +473,7 @@ class glComboButton(glButton):
         return super(glComboButton, self).onMousePressEvent(x, y, button)
 
     def keyPressEvent(self, code, modifiers):
-        pass
+        return False
 
 
 class glFrame(glGuiContainer):
@@ -485,12 +485,19 @@ class glFrame(glGuiContainer):
 
     def setSelected(self, value):
         self._selected = value
+        # for child in self._glGuiControlList:
+        #     try:
+        #         child.setSelected(value)
+        #     except AttributeError:
+        #         # Not all children will need to be set selected
+        #         pass
 
     def setHidden(self, value):
         self._hidden = value
         for child in self._glGuiControlList:
             if self._base._focus == child:
                 self._base._focus = None
+        self.setSelected(not value)
 
     def getSelected(self):
         return self._selected
@@ -632,7 +639,7 @@ class glLabel(glGuiControl):
         return False
 
     def keyPressEvent(self, code, modifiers):
-        pass
+        return False
 
 
 class glNumberCtrl(glGuiControl):
@@ -642,12 +649,16 @@ class glNumberCtrl(glGuiControl):
         self._selectPos = 0
         self._maxLen = 6
         self._inCallback = False
+        self._selected = False
         super(glNumberCtrl, self).__init__(parent, pos)
 
     def setValue(self, value):
         if self._inCallback:
             return
         self._value = str(value)
+
+    def setSelected(self, value):
+        self._selected = value
 
     def getMinSize(self):
         w, h = openglHelpers.glGetStringSize("VALUES")
@@ -656,6 +667,9 @@ class glNumberCtrl(glGuiControl):
     def _getPixelPos(self):
         x0, y0, w, h = self.getSize()
         return x0, y0
+
+    def getSelected(self):
+        return self._selected
 
     def draw(self, painter=None):
         x, y, w, h = self.getSize()
@@ -700,14 +714,16 @@ class glNumberCtrl(glGuiControl):
         return False
 
     def keyPressEvent(self, code, modifiers):
+        if not self.hasFocus():
+            return False
         self._inCallback = True
         if code == QtCore.Qt.Key_Left:
             self._selectPos -= 1
             self._selectPos = max(0, self._selectPos)
-        if code == QtCore.Qt.Key_Right:
+        elif code == QtCore.Qt.Key_Right:
             self._selectPos += 1
             self._selectPos = min(self._selectPos, len(self._value))
-        if code == QtCore.Qt.Key_Up:
+        elif code == QtCore.Qt.Key_Up:
             try:
                 value = float(self._value)
             except:
@@ -716,7 +732,7 @@ class glNumberCtrl(glGuiControl):
                 value += 0.1
                 self._value = str(value)
                 self._callback(self._value)
-        if code == QtCore.Qt.Key_Down:
+        elif code == QtCore.Qt.Key_Down:
             try:
                 value = float(self._value)
             except:
@@ -726,14 +742,14 @@ class glNumberCtrl(glGuiControl):
                 if value > 0:
                     self._value = str(value)
                     self._callback(self._value)
-        if code == QtCore.Qt.Key_Backspace and self._selectPos > 0:
+        elif code == QtCore.Qt.Key_Backspace and self._selectPos > 0:
             self._value = self._value[0:self._selectPos - 1] + self._value[self._selectPos:]
             self._selectPos -= 1
             self._callback(self._value)
-        if code == QtCore.Qt.Key_Delete:
+        elif code == QtCore.Qt.Key_Delete:
             self._value = self._value[0:self._selectPos] + self._value[self._selectPos + 1:]
             self._callback(self._value)
-        if code == QtCore.Qt.Key_Tab or code == QtCore.Qt.Key_Enter or \
+        elif code == QtCore.Qt.Key_Tab or code == QtCore.Qt.Key_Enter or \
                 code == QtCore.Qt.Key_Return:
             if modifiers == SHIFT_KEY:
                 self.focusPrevious()
@@ -743,7 +759,9 @@ class glNumberCtrl(glGuiControl):
             self._value = self._value[0:self._selectPos] + chr(code) + self._value[self._selectPos:]
             self._selectPos += 1
             self._callback(self._value)
+
         self._inCallback = False
+        return True
 
     def setFocus(self):
         self._base._focus = self
@@ -803,7 +821,7 @@ class glCheckbox(glGuiControl):
         return False
 
     def keyPressEvent(self, code, modifiers):
-        pass
+       return False
 
 
 class glSlider(glGuiControl):
@@ -934,7 +952,7 @@ class glSlider(glGuiControl):
         return False
 
     def keyPressEvent(self, code, modifiers):
-        pass
+        return False
 
 
 class glTempGauge(glGuiControl):
@@ -1100,7 +1118,7 @@ class glTempGauge(glGuiControl):
         return False
 
     def keyPressEvent(self, code, modifiers):
-        pass
+        return False
 
 
 # class glTempGauges(glGuiControl):

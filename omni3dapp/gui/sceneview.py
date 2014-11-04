@@ -126,13 +126,13 @@ class SceneView(QtOpenGL.QGLWidget):
                 '1.0', (1,2), lambda value: self.onScaleEntry(value, 2))
         openglscene.glLabel(self.scaleForm, _("Size X (mm)"), (0,4))
         self.scaleXmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,4), lambda value: self.onScaleEntryMM(value, 0, True))
+                '0.0', (1,4), lambda value: self.onScaleEntry(value, 0, True))
         openglscene.glLabel(self.scaleForm, _("Size Y (mm)"), (0,5))
         self.scaleYmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,5), lambda value: self.onScaleEntryMM(value, 1, True))
+                '0.0', (1,5), lambda value: self.onScaleEntry(value, 1, True))
         openglscene.glLabel(self.scaleForm, _("Size Z (mm)"), (0,6))
         self.scaleZmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,6), lambda value: self.onScaleEntryMM(value, 2, True))
+                '0.0', (1,6), lambda value: self.onScaleEntry(value, 2, True))
         openglscene.glLabel(self.scaleForm, _("Uniform scale"), (0,8))
         self.scaleUniform = openglscene.glCheckbox(self.scaleForm, True,
                 (1,8), None)
@@ -855,6 +855,7 @@ class SceneView(QtOpenGL.QGLWidget):
         if hidden:
             self.rotateToolButton.setSelected(False)
             self.scaleToolButton.setSelected(False)
+            self.scaleForm.setSelected(False)
             self.mirrorToolButton.setSelected(False)
             self.onToolSelect(0)
 
@@ -1087,9 +1088,9 @@ class SceneView(QtOpenGL.QGLWidget):
     def keyPressEvent(self, evt):
         code = evt.key()
         modifiers = evt.modifiers()
-        if self._engineResultView.onKeyChar(code, modifiers):
-            return
-        if self._container.keyPressEvent(code, modifiers):
+        if self._engineResultView.onKeyChar(code, modifiers) or \
+                self._container.keyPressEvent(code, modifiers):
+            self.queueRefresh()
             return
         if code == QtCore.Qt.Key_Delete or (code == QtCore.Qt.Key_Backspace and sys.platform.startswith("darwin")):
             if self._selectedObj is not None:

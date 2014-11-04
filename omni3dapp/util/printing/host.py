@@ -254,7 +254,10 @@ class PrinterConnection(Pronsole):
         self.p.signals.disconnect_sig.emit()
         self.statuscheck = False
         if self.status_thread:
-            self.status_thread.terminate()
+            try:
+                self.status_thread.terminate()
+            except Exception as e:
+                    log.error(e)
             self.status_thread = None
 
         # wx.CallAfter(self.connectbtn.SetLabel, _("Connect"))
@@ -274,6 +277,8 @@ class PrinterConnection(Pronsole):
 
         # Relayout the toolbar to handle new buttons size
         # wx.CallAfter(self.toolbarsizer.Layout)
+
+        self.guisignals.setoffline.emit()
 
     @QtCore.Slot(str)
     def addtexttolog(self, text):
@@ -509,23 +514,6 @@ class PrinterConnection(Pronsole):
     def online_gui(self):
         """Callback when printer goes online (graphical bits)"""
         self.parent.set_connected()
-
-        # self.ui.connect_btn.setText(_("Disconnect"))
-        # self.ui.connect_btn.setToolTip(_("Disconnect from the printer"))
-        # self.ui.connect_btn.clicked.disconnect(self.parent.connect_printer)
-        # self.ui.connect_btn.clicked.connect(self.disconnect)
-
-        # self.parent.set_statusbar(_("Connected to printer."))
-
-    #     if hasattr(self, "extrudersel"):
-    #         self.do_tool(self.extrudersel.GetValue())
-
-    #     self.gui_set_connected()
-
-    #     if self.filename:
-    #         self.printbtn.Enable()
-
-    #     wx.CallAfter(self.toolbarsizer.Layout)
 
     @QtCore.Slot()
     def offline_gui(self):

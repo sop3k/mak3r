@@ -137,19 +137,17 @@ class Printcore(QtCore.QObject):
                 self.stop_read_thread = True
                 try:
                     self.read_thread.terminate()
-                except RuntimeError as e:
+                except Exception as e:
                     log.error(e)
-                finally:
-                    self.read_thread = None
+                self.read_thread = None
 
             if self.print_thread:
                 self.printing = False
                 try:
                     self.print_thread.terminate()
-                except RuntimeError as e:
+                except Exception as e:
                     log.error(e)
-                finally:
-                    self.print_thread = None
+                self.print_thread = None
             self._stop_sender()
             try:
                 self.printer.close()
@@ -161,9 +159,6 @@ class Printcore(QtCore.QObject):
         self.printer = None
         self.online = False
         self.printing = False
-
-        # if self.host:
-        #     self.host.guisignals.setoffline.emit()
 
     @QtCore.Slot(dict)
     def connect(self, attrs_dict):

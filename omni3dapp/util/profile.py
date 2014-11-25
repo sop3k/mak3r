@@ -25,8 +25,8 @@ if sys.version_info[0] < 3:
 else:
     import configparser as ConfigParser
 
-from util.version import getVersion
-from util import validators
+from omni3dapp.util.version import getVersion
+from omni3dapp.util import validators
 from omni3dapp.logger import log
 
 

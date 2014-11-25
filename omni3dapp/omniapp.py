@@ -37,7 +37,6 @@ def main():
     #    return
 
     preference_path = profile.getPreferencePath()
-    log.info("Loading preferences from {0}".format(preference_path))
     profile.loadPreferences(preference_path)
 
     if options.profile is not None:

@@ -78,7 +78,7 @@ def main():
     #    from Cura.gui import app
     #    app.CuraApp(args).MainLoop()
 
-    from gui import app
+    from omni3dapp.gui import app
     app.OmniApp(args)
 
 

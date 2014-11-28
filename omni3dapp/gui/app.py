@@ -110,9 +110,9 @@ class OmniApp(object):
         if newver is not None:
             update_dialog = QtGui.QMessageBox.question(
                         self.main_window,
-                        "Update application?",
-                        "New version is available. Do you wish to update the "\
-                        "application?",
+                        _("Update application?"),
+                        _("New version is available. Do you wish to update the "\
+                        "application?"),
                         YES_BTN | NO_BTN,
                         YES_BTN
                         )
@@ -122,26 +122,34 @@ class OmniApp(object):
                 # TODO: Show progress bar while installing (or relevant message)
                 eskyapp.install_version(newver)
 
-                restart_dialog = QtGui.QDialog(self.main_window)
-                restart_dialog.setWindowTitle("Update complete")
+                QtGui.QMessageBox.information(
+                        self.main_window,
+                        _("Update complete"),
+                        _("Application updated from version {0} to version"\
+                        " {1}.\nYou should restart the application now"\
+                        " to apply changes".format(eskyapp.version, newver))
+                        )
 
-                yes_button = QtGui.QPushButton("Yes")
-                yes_button.clicked.connect(self.restart)
+                # restart_dialog = QtGui.QDialog(self.main_window)
+                # restart_dialog.setWindowTitle("Update complete")
 
-                no_button = QtGui.QPushButton("No")
-                no_button.clicked.connect(restart_dialog.close)
+                # yes_button = QtGui.QPushButton("Yes")
+                # yes_button.clicked.connect(self.restart)
 
-                label = QtGui.QLabel("Application updated from version {0} to version"\
-                                " {1}.\nDo you want to restart the application now"\
-                                " and apply changes?".format(eskyapp.version, newver))
+                # no_button = QtGui.QPushButton("No")
+                # no_button.clicked.connect(restart_dialog.close)
 
-                dialog_layout = QtGui.QVBoxLayout()
-                dialog_layout.addWidget(label)
-                dialog_layout.addWidget(yes_button)
-                dialog_layout.addWidget(no_button)
+                # label = QtGui.QLabel("Application updated from version {0} to version"\
+                #                 " {1}.\nDo you want to restart the application now"\
+                #                 " and apply changes?".format(eskyapp.version, newver))
 
-                restart_dialog.setLayout(dialog_layout)
-                restart_dialog.show()
+                # dialog_layout = QtGui.QVBoxLayout()
+                # dialog_layout.addWidget(label)
+                # dialog_layout.addWidget(yes_button)
+                # dialog_layout.addWidget(no_button)
+
+                # restart_dialog.setLayout(dialog_layout)
+                # restart_dialog.show()
 
         eskyapp.cleanup()
 

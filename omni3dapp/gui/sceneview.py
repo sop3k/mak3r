@@ -219,6 +219,10 @@ class SceneView(QtOpenGL.QGLWidget):
             self.printButton.setBottomText('')
         self.queueRefresh()
 
+    @QtCore.Slot(float)
+    def _updateLoadingProgress(self, progressValue):
+        pass
+
     def _init3DView(self):
         # set viewing projection
         glViewport(0, 0, self.width(), self.height())
@@ -1431,8 +1435,8 @@ class SceneView(QtOpenGL.QGLWidget):
 
         # progress_dialog = QtGui.QDialog(self._parent)
         # self.progress_bar = QtGui.QProgressBar(progress_dialog)
-        # self.progress_bar.setRange(0, 0)
-        # self.progress_bar.setValue(0)
+        # self.progress_bar.setRange(0, 100)
+        # self.progress_bar.setValue(50)
 
         # dialog_layout = QtGui.QVBoxLayout()
         # dialog_layout.addWidget(self.progress_bar)
@@ -1455,6 +1459,8 @@ class SceneView(QtOpenGL.QGLWidget):
         self.files_loader_thread.started.connect(self.files_loader.loadFiles)
         self.files_loader.load_gcode_file_sig.connect(self.loadGCodeFile)
         self.files_loader.load_scene_sig.connect(self.loadScene)
+        self.files_loader.set_progress.connect(self._updateLoadingProgress)
+
         # self.files_loader.finished.connect(progress_dialog.close)
         self.files_loader.finished.connect(self.files_loader_thread.quit)
         self.files_loader.finished.connect(self.files_loader.deleteLater)
@@ -1659,6 +1665,7 @@ class SaveGCodeWorker(QtCore.QObject):
 class FilesLoader(QtCore.QObject):
     load_gcode_file_sig = QtCore.Signal(str)
     load_scene_sig = QtCore.Signal(list)
+    set_progress = QtCore.Signal(float)
     finished = QtCore.Signal()
 
     def __init__(self, sceneview, filenames, machine_size):

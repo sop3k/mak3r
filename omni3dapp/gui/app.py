@@ -2,6 +2,7 @@
 
 import os
 import sys
+import esky
 import platform
 import shutil
 import glob
@@ -10,6 +11,11 @@ from PySide import QtCore, QtGui
 
 from mainwindow import MainWindow
 from omni3dapp.logger import log
+
+YES_BTN = QtGui.QMessageBox.Yes
+NO_BTN = QtGui.QMessageBox.No
+
+UPDATES_URL = "http://localhost:8080"
 
 
 class OmniApp(object):
@@ -66,6 +72,9 @@ class OmniApp(object):
         self.main_window = MainWindow()
         self.splash.finish(self.main_window)
         self.main_window.show()
+
+        self.check_for_updates()
+
         sys.exit(app.exec_())
 
     def set_splash_screen(self):
@@ -95,16 +104,54 @@ class OmniApp(object):
             self.splash.finish()
         # configWizard.configWizard()
 
-    def check_for_updates(self, new_version):
-        pass
-        # if newVersion is not None:
-        #     if self.splash is not None:
-        #         self.splash.Show(False)
-        #     if wx.MessageBox(_("A new version of Cura is available, \
-        #        would you like to download?"), _("New version available"),
-        #            wx.YES_NO | wx.ICON_INFORMATION) == wx.YES:
-        #         webbrowser.open(new_version)
-        #         return True
+    def check_for_updates(self):
+        eskyapp = esky.Esky(sys.executable, UPDATES_URL)
+        newver = eskyapp.find_update()
+        if newver is not None:
+            update_dialog = QtGui.QMessageBox.question(
+                        self.main_window,
+                        _("Update application?"),
+                        _("New version is available. Do you wish to update the "\
+                        "application?"),
+                        YES_BTN | NO_BTN,
+                        YES_BTN
+                        )
+
+            if update_dialog == YES_BTN:
+                eskyapp.fetch_version(newver)
+                # TODO: Show progress bar while installing (or relevant message)
+                eskyapp.install_version(newver)
+
+                QtGui.QMessageBox.information(
+                        self.main_window,
+                        _("Update complete"),
+                        _("Application updated from version {0} to version"\
+                        " {1}.\nYou should restart the application now"\
+                        " to apply changes".format(eskyapp.version, newver))
+                        )
+
+                # restart_dialog = QtGui.QDialog(self.main_window)
+                # restart_dialog.setWindowTitle("Update complete")
+
+                # yes_button = QtGui.QPushButton("Yes")
+                # yes_button.clicked.connect(self.restart)
+
+                # no_button = QtGui.QPushButton("No")
+                # no_button.clicked.connect(restart_dialog.close)
+
+                # label = QtGui.QLabel("Application updated from version {0} to version"\
+                #                 " {1}.\nDo you want to restart the application now"\
+                #                 " and apply changes?".format(eskyapp.version, newver))
+
+                # dialog_layout = QtGui.QVBoxLayout()
+                # dialog_layout.addWidget(label)
+                # dialog_layout.addWidget(yes_button)
+                # dialog_layout.addWidget(no_button)
+
+                # restart_dialog.setLayout(dialog_layout)
+                # restart_dialog.show()
+
+        eskyapp.cleanup()
 
     def after_splash(self):
         from omni3dapp.util import resources, profile, version

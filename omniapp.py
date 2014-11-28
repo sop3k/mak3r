@@ -37,7 +37,6 @@ def main():
     #    return
 
     preference_path = profile.getPreferencePath()
-    log.info("Loading preferences from {0}".format(preference_path))
     profile.loadPreferences(preference_path)
 
     if options.profile is not None:
@@ -79,7 +78,7 @@ def main():
     #    from Cura.gui import app
     #    app.CuraApp(args).MainLoop()
 
-    from gui import app
+    from omni3dapp.gui import app
     app.OmniApp(args)
 
 

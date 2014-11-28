@@ -14,13 +14,11 @@ try:
 except:
     from xml.etree import ElementTree
 
-from util import resources
+from omni3dapp.util import resources
+from omni3dapp.logger import log
 
 def getVersion(getGitVersion = True):
-    if hasattr(sys, 'frozen'):
-        versionFile = os.path.normpath(os.path.join(resources.resourceBasePath, "version"))
-    else:
-        versionFile = os.path.abspath(os.path.join(os.path.split(os.path.abspath(__file__))[0], "../version"))
+    versionFile = os.path.abspath(os.path.join(os.path.split(os.path.abspath(__file__))[0], "../version"))
 
     if getGitVersion:
         gitPath = os.path.abspath(os.path.join(os.path.split(os.path.abspath(__file__))[0], ".."))
@@ -38,7 +36,8 @@ def getVersion(getGitVersion = True):
         version = f.readline()
         f.close()
         return version.strip()
-    log.error("Version file was not found. Cannot import profile file.")
+    log.error("Version file {0} was not found. Cannot import profile " \
+            "file.".format(versionFile))
     return "." #No idea what the version is. TODO:Tell the user.
 
 def isDevVersion():

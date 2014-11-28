@@ -73,7 +73,8 @@ class OmniApp(object):
         self.splash.finish(self.main_window)
         self.main_window.show()
 
-        self.check_for_updates()
+        if hasattr(sys, 'frozen'):
+            self.check_for_updates()
 
         sys.exit(app.exec_())
 

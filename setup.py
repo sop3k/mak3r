@@ -27,6 +27,7 @@ ESKY_OPTIONS = {
         "OpenGL",
         "OpenGL.platform.glx",
         "numpy",
+        "psutil",
         "serial"] + openglimports,
     }
 

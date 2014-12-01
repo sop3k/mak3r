@@ -6,6 +6,7 @@ import esky
 import platform
 import shutil
 import glob
+from urllib2 import URLError
 
 from PySide import QtCore, QtGui
 
@@ -107,50 +108,54 @@ class OmniApp(object):
 
     def check_for_updates(self):
         eskyapp = esky.Esky(sys.executable, UPDATES_URL)
-        newver = eskyapp.find_update()
-        if newver is not None:
-            update_dialog = QtGui.QMessageBox.question(
-                        self.main_window,
-                        _("Update application?"),
-                        _("New version is available. Do you wish to update the "\
-                        "application?"),
-                        YES_BTN | NO_BTN,
-                        YES_BTN
-                        )
+        try:
+            newver = eskyapp.find_update()
+        except URLError:
+            log.error("Could not connect to updates server.")
+        else:
+            if newver is not None:
+                update_dialog = QtGui.QMessageBox.question(
+                            self.main_window,
+                            _("Update application?"),
+                            _("New version is available. Do you wish to update the "\
+                            "application?"),
+                            YES_BTN | NO_BTN,
+                            YES_BTN
+                            )
 
-            if update_dialog == YES_BTN:
-                eskyapp.fetch_version(newver)
-                # TODO: Show progress bar while installing (or relevant message)
-                eskyapp.install_version(newver)
+                if update_dialog == YES_BTN:
+                    eskyapp.fetch_version(newver)
+                    # TODO: Show progress bar while installing (or relevant message)
+                    eskyapp.install_version(newver)
 
-                QtGui.QMessageBox.information(
-                        self.main_window,
-                        _("Update complete"),
-                        _("Application updated from version {0} to version"\
-                        " {1}.\nYou should restart the application now"\
-                        " to apply changes".format(eskyapp.version, newver))
-                        )
+                    QtGui.QMessageBox.information(
+                            self.main_window,
+                            _("Update complete"),
+                            _("Application updated from version {0} to version"\
+                            " {1}.\nYou should restart the application now"\
+                            " to apply changes".format(eskyapp.version, newver))
+                            )
 
-                # restart_dialog = QtGui.QDialog(self.main_window)
-                # restart_dialog.setWindowTitle("Update complete")
+                    # restart_dialog = QtGui.QDialog(self.main_window)
+                    # restart_dialog.setWindowTitle("Update complete")
 
-                # yes_button = QtGui.QPushButton("Yes")
-                # yes_button.clicked.connect(self.restart)
+                    # yes_button = QtGui.QPushButton("Yes")
+                    # yes_button.clicked.connect(self.restart)
 
-                # no_button = QtGui.QPushButton("No")
-                # no_button.clicked.connect(restart_dialog.close)
+                    # no_button = QtGui.QPushButton("No")
+                    # no_button.clicked.connect(restart_dialog.close)
 
-                # label = QtGui.QLabel("Application updated from version {0} to version"\
-                #                 " {1}.\nDo you want to restart the application now"\
-                #                 " and apply changes?".format(eskyapp.version, newver))
+                    # label = QtGui.QLabel("Application updated from version {0} to version"\
+                    #                 " {1}.\nDo you want to restart the application now"\
+                    #                 " and apply changes?".format(eskyapp.version, newver))
 
-                # dialog_layout = QtGui.QVBoxLayout()
-                # dialog_layout.addWidget(label)
-                # dialog_layout.addWidget(yes_button)
-                # dialog_layout.addWidget(no_button)
+                    # dialog_layout = QtGui.QVBoxLayout()
+                    # dialog_layout.addWidget(label)
+                    # dialog_layout.addWidget(yes_button)
+                    # dialog_layout.addWidget(no_button)
 
-                # restart_dialog.setLayout(dialog_layout)
-                # restart_dialog.show()
+                    # restart_dialog.setLayout(dialog_layout)
+                    # restart_dialog.show()
 
         eskyapp.cleanup()
 

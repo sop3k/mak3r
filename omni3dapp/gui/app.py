@@ -33,36 +33,7 @@ class OmniApp(object):
         self.splash = None
         self.load_files = files
 
-        if sys.platform.startswith('win'):
-            # Check for an already running instance,
-            # if another instance is running load files in there
-            from omni3dapp.util import version
-            from ctypes import windll
-            import ctypes
-            import socket
-            import threading
-
-            portNr = 0xCA00 + sum(map(ord, version.getVersion(False)))
-            if len(files) > 0:
-                try:
-                    other_hwnd = windll.user32.FindWindowA(
-                        None, ctypes.c_char_p('Omni 3D App - ' +
-                                              version.getVersion()))
-                    if other_hwnd != 0:
-                        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        sock.sendto('\0'.join(files), ("127.0.0.1", portNr))
-
-                        windll.user32.SetForegroundWindow(other_hwnd)
-                        return
-                except:
-                    log.error("Error loading files into already running \
-                            application")
-
-            socketListener = threading.Thread(target=self.Win32SocketListener,
-                                              args=(portNr,))
-            socketListener.daemon = True
-            socketListener.start()
-        elif sys.platform.startswith('darwin'):
+        if sys.platform.startswith('darwin'):
             # Do not show a splashscreen on OSX, as by Apple guidelines
             self.after_splash()
         else:

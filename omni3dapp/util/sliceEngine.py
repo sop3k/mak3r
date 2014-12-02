@@ -273,7 +273,7 @@ class Engine(QtCore.QObject):
         self._objCount = 0
         self._result = None
         self._modelData = None
-        self._process = None
+        self.engine_process = None
 
         self._serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._serverPortNr = 0xC20A
@@ -351,15 +351,15 @@ class Engine(QtCore.QObject):
         self._serversocket.close()
 
     def abortEngine(self):
-        if self._process is None:
+        if self.engine_process is None:
             return
         try:
-            self._process.terminate()
+            self.engine_process.terminate()
         except Exception, e:
             print "Could not terminate thread: {0}".format(e)
             log.error(e)
         else:
-            self._process = None
+            self.engine_process = None
         finally:
             self._callback(-1.0)
 
@@ -449,31 +449,33 @@ class Engine(QtCore.QObject):
 
     def start_process(self, command_list):
         try:
-            process = QtCore.QProcess(self._parent)
-            process.readyReadStandardOutput.connect(self.read_data)
-            process.readyReadStandardError.connect(self.read_err)
-            process.finished.connect(self.slicing_finished)
-            process.start(getEngineFilename(), command_list,
+            self.engine_process = QtCore.QProcess(self._parent)
+            self.engine_process.readyReadStandardOutput.connect(self.read_data)
+            self.engine_process.readyReadStandardError.connect(self.read_err)
+            self.engine_process.started.connect(self.process_started)
+            self.engine_process.error.connect(self.process_error)
+            self.engine_process.finished.connect(self.slicing_finished)
+            self.engine_process.start(getEngineFilename(), command_list,
                     QtCore.QIODevice.ReadOnly)
         except Exception, e:
             log.error(e)
-            return None
-        else:
-            return process
+            self.engine_process = None
 
     def watchProcess(self, command_list):
         self._callback(-1.0)
 
-        self._process = self.start_process(command_list)
-        if not self._process:
+        self.start_process(command_list)
+        if not self.engine_process:
             return
-        if not self._process.waitForStarted(2000):
+        if not self.engine_process.waitForStarted(2000):
             # TODO: Add dialog or text warning that slicer process could not
             # start
             log.error("Process could not start: " +\
-                    "{0}".format(self._process.exitStatus()))
+                    "{0}".format(self.engine_process.exitStatus()))
             self.abortEngine()
             return
+        else:
+            print "process has started after 2 seconds"
 
         self._result = EngineResult(self._sceneview)
         self._result.addLog('Running: %s' % (''.join(command_list)))
@@ -481,23 +483,25 @@ class Engine(QtCore.QObject):
         self._callback(0.0)
 
     def read_data(self):
-        if not self._process:
+        print "inside read_data"
+        if not self.engine_process:
             return
-        self._process.setReadChannel(
+        self.engine_process.setReadChannel(
                 QtCore.QProcess.ProcessChannel.StandardOutput)
-        data = self._process.read(4096)
+        data = self.engine_process.read(4096)
         while len(data) > 0:
             self._result._gcodeData.write(data)
-            data = self._process.read(4096)
+            data = self.engine_process.read(4096)
 
     def read_err(self):
-        if not self._process:
+        print "inside read_err"
+        if not self.engine_process:
             return
-        self._process.setReadChannel(
+        self.engine_process.setReadChannel(
                 QtCore.QProcess.ProcessChannel.StandardError)
         object_nr = 0
         obj_count = self.getObjCount()
-        line = self._process.readLine()
+        line = self.engine_process.readLine()
         while len(line) > 0:
             try:
                 line = line.data()
@@ -535,10 +539,16 @@ class Engine(QtCore.QObject):
                 self._result._replaceInfo[line.split(':')[1].strip()] = line.split(':')[2].strip()
             else:
                 self._result.addLog(line)
-            line = self._process.readLine()
+            line = self.engine_process.readLine()
+
+    def process_started(self):
+        print "Proces has started"
+
+    def process_error(self, error):
+        print "got error: {0}".format(error)
 
     def slicing_finished(self):
-        if self._process is None:
+        if self.engine_process is None:
             return
 
         if self._result:
@@ -546,7 +556,7 @@ class Engine(QtCore.QObject):
             self._sceneview.viewSelection.show_layers_button()
             self._callback(1.0)
 
-        return_code = self._process.exitCode()
+        return_code = self.engine_process.exitCode()
         if return_code == 0:
             pluginError = pluginInfo.runPostProcessingPlugins(self._result)
             if pluginError is not None:

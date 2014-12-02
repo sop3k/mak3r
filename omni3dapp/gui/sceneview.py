@@ -1433,20 +1433,27 @@ class SceneView(QtOpenGL.QGLWidget):
         if len(filenames) < 1:
             return False
 
-        # progress_dialog = QtGui.QDialog(self._parent)
+        progress_dialog = QtGui.QDialog(self._parent)
         # self.progress_bar = QtGui.QProgressBar(progress_dialog)
         # self.progress_bar.setRange(0, 100)
         # self.progress_bar.setValue(50)
+        dialog_layout = QtGui.QVBoxLayout(progress_dialog)
+        msg_label = QtGui.QLabel(
+            _("Waiting for files to be loaded on the scene..."),
+            progress_dialog
+            )
+        dialog_layout.addWidget(msg_label)
 
-        # dialog_layout = QtGui.QVBoxLayout()
-        # dialog_layout.addWidget(self.progress_bar)
         # progress_dialog.setLayout(dialog_layout)
-        # if len(filenames) > 1:
-        #     msg = _("Loading files...")
-        # else:
-        #     msg = _("Loading file...")
-        # progress_dialog.setWindowTitle(msg)
-        # progress_dialog.show()
+
+        # dialog_layout.addWidget(self.progress_bar)
+
+        if len(filenames) > 1:
+            msg = _("Loading files...")
+        else:
+            msg = _("Loading file...")
+        progress_dialog.setWindowTitle(msg)
+        progress_dialog.show()
         # QtGui.QApplication.processEvents()
 
         self.viewSelection.setValue(0)
@@ -1461,7 +1468,7 @@ class SceneView(QtOpenGL.QGLWidget):
         self.files_loader.load_scene_sig.connect(self.loadScene)
         self.files_loader.set_progress.connect(self._updateLoadingProgress)
 
-        # self.files_loader.finished.connect(progress_dialog.close)
+        self.files_loader.finished.connect(progress_dialog.close)
         self.files_loader.finished.connect(self.files_loader_thread.quit)
         self.files_loader.finished.connect(self.files_loader.deleteLater)
         self.files_loader_thread.finished.connect(self.files_loader_thread.deleteLater)

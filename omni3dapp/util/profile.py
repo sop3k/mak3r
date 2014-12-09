@@ -619,7 +619,7 @@ def getBasePath():
         basePath = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
         #If we have a frozen python install, we need to step out of the library.zip
         if hasattr(sys, 'frozen'):
-            basePath = os.path.normpath(os.path.join(basePath, ".."))
+            basePath = os.path.normpath(os.path.join(basePath, "../.."))
     else:
         basePath = os.path.expanduser('~/.omni3dapp/%s' % getVersion(False))
     if not os.path.isdir(basePath):

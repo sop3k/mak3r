@@ -32,9 +32,7 @@ def getEngineFilename():
     :return: The full path to the engine executable.
     """
     if platform.system() == 'Windows':
-        if version.isDevVersion() and os.path.exists('C:/Software/Cura_SteamEngine/_bin/Release/Cura_SteamEngine.exe'):
-            return 'C:/Software/Cura_SteamEngine/_bin/Release/Cura_SteamEngine.exe'
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'CuraEngine.exe'))
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'CuraEngine/CuraEngine.exe'))
     if hasattr(sys, 'frozen'):
         return os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../..', 'CuraEngine'))
     if os.path.isfile('/usr/bin/CuraEngine'):
@@ -455,6 +453,7 @@ class Engine(QtCore.QObject):
             self.engine_process.started.connect(self.process_started)
             self.engine_process.error.connect(self.process_error)
             self.engine_process.finished.connect(self.slicing_finished)
+            log.info("engine file name: ", getEngineFilename())
             self.engine_process.start(getEngineFilename(), command_list,
                     QtCore.QIODevice.ReadOnly)
         except Exception, e:
@@ -483,7 +482,6 @@ class Engine(QtCore.QObject):
         self._callback(0.0)
 
     def read_data(self):
-        print "inside read_data"
         if not self.engine_process:
             return
         self.engine_process.setReadChannel(
@@ -494,7 +492,6 @@ class Engine(QtCore.QObject):
             data = self.engine_process.read(4096)
 
     def read_err(self):
-        print "inside read_err"
         if not self.engine_process:
             return
         self.engine_process.setReadChannel(

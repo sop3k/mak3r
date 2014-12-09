@@ -11,12 +11,15 @@ from urllib2 import URLError
 from PySide import QtCore, QtGui
 
 from mainwindow import MainWindow
+
 from omni3dapp.logger import log
+from omni3dapp.util import profile
+
 
 YES_BTN = QtGui.QMessageBox.Yes
 NO_BTN = QtGui.QMessageBox.No
 
-UPDATES_URL = "http://localhost:8080"
+UPDATES_URL = "http://localhost:8080/"
 
 
 class OmniApp(object):
@@ -45,8 +48,11 @@ class OmniApp(object):
         self.splash.finish(self.main_window)
         self.main_window.show()
 
-        if hasattr(sys, 'frozen'):
-            self.check_for_updates()
+        if profile.getPreference('check_for_updates') == 'True'and hasattr(sys, 'frozen'):
+            try:
+                self.check_for_updates()
+            except Exception as e:
+                log.error("Something went wrong while fetching updates: {0}".format(e))
 
         sys.exit(app.exec_())
 
@@ -77,8 +83,28 @@ class OmniApp(object):
             self.splash.finish()
         # configWizard.configWizard()
 
+    def get_executable(self):
+        executable = sys.executable
+        if platform.system() == "Windows":
+            # Find correct executable
+            appdir = os.path.dirname(sys.executable)
+            from esky.bootstrap import split_app_version, is_version_dir, \
+                                        pathjoin
+            for nm in os.listdir(appdir):
+                (appnm, ver, platform_name) = split_app_version(nm)
+                if not (ver and platform_name):
+                    continue
+                if is_version_dir(pathjoin(appdir, nm)):
+                    executable = pathjoin(appdir, nm, sys.executable.split("\\")[-1])
+        return executable
+
     def check_for_updates(self):
-        eskyapp = esky.Esky(sys.executable, UPDATES_URL)
+        executable = self.get_executable()
+        try:
+            eskyapp = esky.Esky(executable, UPDATES_URL)
+        except esky.errors.EskyBrokenError as e:
+            log.error("Esky error: {0}".format(e))
+            return
         try:
             newver = eskyapp.find_update()
         except URLError:
@@ -107,27 +133,6 @@ class OmniApp(object):
                             " to apply changes".format(eskyapp.version, newver))
                             )
 
-                    # restart_dialog = QtGui.QDialog(self.main_window)
-                    # restart_dialog.setWindowTitle("Update complete")
-
-                    # yes_button = QtGui.QPushButton("Yes")
-                    # yes_button.clicked.connect(self.restart)
-
-                    # no_button = QtGui.QPushButton("No")
-                    # no_button.clicked.connect(restart_dialog.close)
-
-                    # label = QtGui.QLabel("Application updated from version {0} to version"\
-                    #                 " {1}.\nDo you want to restart the application now"\
-                    #                 " and apply changes?".format(eskyapp.version, newver))
-
-                    # dialog_layout = QtGui.QVBoxLayout()
-                    # dialog_layout.addWidget(label)
-                    # dialog_layout.addWidget(yes_button)
-                    # dialog_layout.addWidget(no_button)
-
-                    # restart_dialog.setLayout(dialog_layout)
-                    # restart_dialog.show()
-
         eskyapp.cleanup()
 
     def after_splash(self):
@@ -153,11 +158,6 @@ class OmniApp(object):
         # If we haven't run it before, run the configuration wizard.
         # if profile.getMachineSetting('machine_type') == 'unknown':
         #     self.run_config_wizard(resources.resourceBasePath)
-
-        # if profile.getPreference('check_for_updates') == 'True':
-        #     res = self.check_for_updates(version.checkForNewerVersion())
-        #     if res:
-        #         return
 
         if profile.getMachineSetting('machine_name') == '':
             log.debug('Machine name not found')

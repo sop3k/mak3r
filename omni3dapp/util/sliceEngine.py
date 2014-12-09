@@ -32,9 +32,11 @@ def getEngineFilename():
     :return: The full path to the engine executable.
     """
     if platform.system() == 'Windows':
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'CuraEngine/CuraEngine.exe'))
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), '../..',
+            'CuraEngine/CuraEngine.exe'))
     if hasattr(sys, 'frozen'):
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../..', 'CuraEngine'))
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), '../../',
+            'CuraEngine/CuraEngine'))
     if os.path.isfile('/usr/bin/CuraEngine'):
         return '/usr/bin/CuraEngine'
     if os.path.isfile('/usr/local/bin/CuraEngine'):
@@ -170,7 +172,8 @@ class SocketListener(QtCore.QObject):
 
     def socketListen(self):
         self.server_socket.listen(1)
-        print 'Listening for engine communications on %d' % (self.server_port_nr)
+        log.info('Listening for engine communications on %d' %
+                    (self.server_port_nr))
         while True:
             try:
                 sock, _ = self.server_socket.accept()
@@ -354,7 +357,6 @@ class Engine(QtCore.QObject):
         try:
             self.engine_process.terminate()
         except Exception, e:
-            print "Could not terminate thread: {0}".format(e)
             log.error(e)
         else:
             self.engine_process = None
@@ -450,10 +452,7 @@ class Engine(QtCore.QObject):
             self.engine_process = QtCore.QProcess(self._parent)
             self.engine_process.readyReadStandardOutput.connect(self.read_data)
             self.engine_process.readyReadStandardError.connect(self.read_err)
-            self.engine_process.started.connect(self.process_started)
-            self.engine_process.error.connect(self.process_error)
             self.engine_process.finished.connect(self.slicing_finished)
-            log.info("engine file name: ", getEngineFilename())
             self.engine_process.start(getEngineFilename(), command_list,
                     QtCore.QIODevice.ReadOnly)
         except Exception, e:
@@ -473,8 +472,6 @@ class Engine(QtCore.QObject):
                     "{0}".format(self.engine_process.exitStatus()))
             self.abortEngine()
             return
-        else:
-            print "process has started after 2 seconds"
 
         self._result = EngineResult(self._sceneview)
         self._result.addLog('Running: %s' % (''.join(command_list)))
@@ -537,12 +534,6 @@ class Engine(QtCore.QObject):
             else:
                 self._result.addLog(line)
             line = self.engine_process.readLine()
-
-    def process_started(self):
-        print "Proces has started"
-
-    def process_error(self, error):
-        print "got error: {0}".format(error)
 
     def slicing_finished(self):
         if self.engine_process is None:

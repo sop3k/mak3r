@@ -54,6 +54,8 @@ setup(name="mak3r",
           ],
       package_data={"omni3dapp": ["version"]},
       scripts=["omniapp.py"],
-      data_files = [('resources/images', IMAGES)],
+      data_files = [("resources/images", IMAGES),
+                    ("CuraEngine", ["CuraEngine/CuraEngine"])
+                    ],
       options=dict(bdist_esky=ESKY_OPTIONS),
      )

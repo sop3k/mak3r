@@ -107,7 +107,11 @@ class OmniApp(object):
         # configWizard.configWizard()
 
     def check_for_updates(self):
-        eskyapp = esky.Esky(sys.executable, UPDATES_URL)
+        try:
+            eskyapp = esky.Esky(sys.executable, UPDATES_URL)
+        except esky.errors.EskyBrokenError as e:
+            log.error("Esky error: {0}".format(e))
+            return
         try:
             newver = eskyapp.find_update()
         except URLError:

@@ -7,6 +7,7 @@ __copyright__ = "Copyright (C) 2013 David Braam - Released under terms of the AG
 import os
 import sys
 import glob
+import platform
 
 import gettext
 
@@ -25,12 +26,14 @@ if sys.platform.startswith('darwin'):
             resourceBasePath = os.path.join(os.path.dirname(__file__), "../../../../../")
     else:
         resourceBasePath = os.path.join(os.path.dirname(__file__), "../../resources")
+elif platform.system() == "Windows" and hasattr(sys, 'frozen'):
+    resourceBasePath = os.path.join(os.path.dirname(__file__), "../../../resources")
 else:
     resourceBasePath = os.path.join(os.path.dirname(__file__), "../../resources")
 
-def getPathForResource(dir, subdir, resource_name):
-    assert os.path.isdir(dir), "{p} is not a directory".format(p=dir)
-    path = os.path.normpath(os.path.join(dir, subdir, resource_name))
+def getPathForResource(direc, subdir, resource_name):
+    assert os.path.isdir(direc), "{p} is not a directory".format(p=direc)
+    path = os.path.normpath(os.path.join(direc, subdir, resource_name))
     assert os.path.isfile(path), "{p} is not a file.".format(p=path)
     return path
 

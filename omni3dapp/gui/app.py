@@ -25,11 +25,6 @@ UPDATES_URL = "http://localhost:8080/"
 class OmniApp(object):
 
     def __init__(self, files):
-        # TODO: check out and redirect stdout in Qt
-        # if platform.system() == "Windows" and not 'PYCHARM_HOSTED' in os.environ:
-        #     super(CuraApp, self).__init__(redirect=True, filename='output.txt')
-        # else:
-        #     super(CuraApp, self).__init__(redirect=False)
         app = QtGui.QApplication(sys.argv)
 
         self.main_window = None
@@ -44,11 +39,16 @@ class OmniApp(object):
             self.splash.show()
             app.processEvents()
             self.after_splash()
+        # self.main_window = QtDeclarative.QDeclarativeView()
+        # engine = self.main_window.engine()
+        # engine.quit.connect(app.quit)
+        # self.main_window.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
         self.main_window = MainWindow()
         self.splash.finish(self.main_window)
         self.main_window.show()
 
-        if profile.getPreference('check_for_updates') == 'True'and hasattr(sys, 'frozen'):
+        if profile.getPreference('check_for_updates') == 'True' and \
+                hasattr(sys, 'frozen'):
             try:
                 self.check_for_updates()
             except Exception as e:
@@ -81,7 +81,6 @@ class OmniApp(object):
         self.loadFiles = [exampleFile]
         if self.splash is not None:
             self.splash.finish()
-        # configWizard.configWizard()
 
     def get_executable(self):
         executable = sys.executable

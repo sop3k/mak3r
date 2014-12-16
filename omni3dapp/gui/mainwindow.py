@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import re
+import os
+import sys
 import subprocess
 import traceback
 
-from PySide import QtCore, QtGui
+from PySide import QtCore, QtGui, QtDeclarative
 
-from mainwindow_ui import Ui_MainWindow
+# from mainwindow_ui import Ui_MainWindow
 from omni3dapp.util import profile
 from omni3dapp.util.printing import host
 from omni3dapp.gui.util.gcode_text_styling import GCodeSyntaxHighlighter
@@ -45,23 +47,28 @@ class MainWindow(QtGui.QMainWindow):
                 QtCore.QSettings.IniFormat)
         self.model_files_history_actions = []
 
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
+        # self.ui = Ui_MainWindow()
+        # self.ui.setupUi(self)
 
-        self.set_up_fields()
+        self.qmlview = QtDeclarative.QDeclarativeView()
+        self.qmlview.rootContext().setContextProperty("mainwindow", self)
+        self.qmlview.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
+        self.setCentralWidget(self.qmlview)
+
+        # self.set_up_fields()
 
         # Create a scene to present and modify 3d objects
         self.setup_scene()
 
         # Class that enables connecting to printer
-        self.pc = host.PrinterConnection(self)
+        # self.pc = host.PrinterConnection(self)
 
-        self.connect_actions()
-        self.connect_buttons()
+        # self.connect_actions()
+        # self.connect_buttons()
 
         # As a printer is not connected at the start of the app, set the gui
         # disconnected
-        self.enable_elements(False)
+        # self.enable_elements(False)
 
         # self.timer = QtCore.QTimer(self)
         # self.timer.timeout.connect(self.onTimer)
@@ -69,12 +76,20 @@ class MainWindow(QtGui.QMainWindow):
 
         self.lastTriedClipboard = profile.getProfileString()
 
-        self.update_slice_mode()
-        self.scene.setFocus()
+        # self.update_slice_mode()
+        # self.scene.setFocus()
+
+    def find_data_file(self, filename):
+        if hasattr(sys, 'frozen'):
+            datadir = os.path.dirname(sys.executable)
+        else:
+            datadir = os.path.dirname(__file__)
+        return os.path.join(datadir, filename)
 
     def setup_scene(self):
         self.scene = sceneview.SceneView(self)
-        self.ui.horizontalLayout_3.addWidget(self.scene)
+        # self.ui.horizontalLayout_3.addWidget(self.scene)
+        self.qmlview.rootContext().setContextProperty("scene", self.scene)
 
     def set_up_fields(self):
         for key, val in profile.settingsDictionary.iteritems():
@@ -503,6 +518,10 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.connect_btn.clicked.connect(self.connect_printer)
 
         self.set_statusbar(_("Disconnected."))
+
+    @QtCore.Slot()
+    def load_file(self):
+        print "Load file clicked"
 
     def eventFilter(self, obj, evt):
         if obj == self.ui.commandbox:

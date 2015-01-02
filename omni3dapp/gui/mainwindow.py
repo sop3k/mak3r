@@ -16,7 +16,8 @@ from omni3dapp.gui import sceneview
 from omni3dapp.logger import log
 
 
-class MainWindow(QtGui.QMainWindow):
+# class MainWindow(QtGui.QMainWindow):
+class MainWindow(QtGui.QGraphicsView):
 
     MAX_MRU_FILES = 5
     NORMAL_MODE_ONLY_ITEMS = [
@@ -50,11 +51,6 @@ class MainWindow(QtGui.QMainWindow):
         # self.ui = Ui_MainWindow()
         # self.ui.setupUi(self)
 
-        self.qmlview = QtDeclarative.QDeclarativeView()
-        self.qmlview.rootContext().setContextProperty("mainwindow", self)
-        self.qmlview.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
-        self.setCentralWidget(self.qmlview)
-
         # self.set_up_fields()
 
         # Create a scene to present and modify 3d objects
@@ -79,6 +75,14 @@ class MainWindow(QtGui.QMainWindow):
         # self.update_slice_mode()
         # self.scene.setFocus()
 
+    def resizeEvent(self, event):
+        scene = self.scene()
+        if scene:
+            new_rect = QtCore.QRect(QtCore.QPoint(0, 0), event.size())
+            scene.setSceneRect(new_rect)
+
+        super(MainWindow, self).resizeEvent(event)
+
     def find_data_file(self, filename):
         if hasattr(sys, 'frozen'):
             datadir = os.path.dirname(sys.executable)
@@ -87,9 +91,10 @@ class MainWindow(QtGui.QMainWindow):
         return os.path.join(datadir, filename)
 
     def setup_scene(self):
-        self.scene = sceneview.SceneView(self)
+        pass
+        # self.scene = sceneview.SceneView()
         # self.ui.horizontalLayout_3.addWidget(self.scene)
-        self.qmlview.rootContext().setContextProperty("scene", self.scene)
+        # self.qmlview.rootContext().setContextProperty("scene", self.scene)
 
     def set_up_fields(self):
         for key, val in profile.settingsDictionary.iteritems():

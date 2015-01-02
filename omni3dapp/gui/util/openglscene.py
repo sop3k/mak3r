@@ -37,7 +37,7 @@ class animation(object):
 class glGuiControl(object):
     def __init__(self, parent, pos):
         self._parent = parent
-        self._base = parent._base
+        self._base = parent
         self._pos = pos
         self._size = (0, 0, 1, 1)
         self._parent.add(self)

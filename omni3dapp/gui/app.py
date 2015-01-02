@@ -8,10 +8,13 @@ import shutil
 import glob
 from urllib2 import URLError
 
-from PySide import QtCore, QtGui
+from PySide import QtCore, QtGui, QtDeclarative, QtOpenGL
 
 from mainwindow import MainWindow
 
+# from omni3dapp.gui.sceneview import SceneView
+from omni3dapp.gui.graphicsscene import SceneView
+# from omni3dapp.gui.samplegl import OpenGLScene
 from omni3dapp.logger import log
 from omni3dapp.util import profile
 
@@ -31,6 +34,9 @@ class OmniApp(object):
         self.splash = None
         self.load_files = files
 
+        # QtDeclarative.qmlRegisterType(SampleGLView, 'Sample', 1, 0,
+        #         'SampleGLView')
+
         if sys.platform.startswith('darwin'):
             # Do not show a splashscreen on OSX, as by Apple guidelines
             self.after_splash()
@@ -43,7 +49,37 @@ class OmniApp(object):
         # engine = self.main_window.engine()
         # engine.quit.connect(app.quit)
         # self.main_window.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
+        gl_format = QtOpenGL.QGLFormat()
+        gl_format.setSampleBuffers(True)
+        gl_widget = QtOpenGL.QGLWidget(gl_format)
+
         self.main_window = MainWindow()
+        self.main_window.setViewport(gl_widget)
+        self.main_window.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
+
+        # self.scene = OpenGLScene()
+        self.scene = SceneView()
+
+        palette = QtGui.QPalette()
+        palette.setColor(QtGui.QPalette.Base, QtCore.Qt.transparent)
+
+        self.qmlview = QtDeclarative.QDeclarativeView()
+        self.qmlview.rootContext().setContextProperty("mainwindow", self)
+        self.qmlview.setSource(QtCore.QUrl(self.main_window.find_data_file("qml/main.qml")))
+
+        self.qmlview.setPalette(palette)
+
+        # self.setCentralWidget(self.qmlview)
+        # self.scene.setCentralWidget(self.qmlview)
+
+        self.scene.addWidget(self.qmlview)
+        self.qmlview.move(QtCore.QPoint(0,0))
+        self.qmlview.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+
+        self.main_window.setScene(self.scene)
+
+        self.main_window.resize(1024, 768)
+
         self.splash.finish(self.main_window)
         self.main_window.show()
 

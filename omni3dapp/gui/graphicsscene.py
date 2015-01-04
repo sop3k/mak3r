@@ -1,0 +1,1003 @@
+import os
+import sys
+import math
+import time
+import numpy
+import traceback
+
+from PySide import QtCore, QtGui
+
+import OpenGL
+OpenGL.ERROR_CHECKING = False
+from OpenGL.GLU import *
+from OpenGL.GL import *
+
+from omni3dapp.util import version
+from omni3dapp.util import objectscene
+from omni3dapp.util import profile
+from omni3dapp.util import meshLoader
+from omni3dapp.util import resources
+from omni3dapp.gui.util import previewTools
+from omni3dapp.gui.util import openglscene, openglHelpers
+from omni3dapp.util.shortcuts import *
+from omni3dapp.logger import log
+
+
+class SceneView(QtGui.QGraphicsScene):
+
+    def __init__(self, *args):
+        super(SceneView, self).__init__(*args)
+        self.shownError = False
+        self.machineSize = None
+        self.objectShader = None
+        self.platformTexture = None
+
+        self.viewport = None
+        self.modelMatrix = None
+        self.projMatrix = None
+        self.tempMatrix = None
+
+        self.yaw = 30
+        self.pitch = 60
+        self.zoom = 300
+        self.scene = objectscene.Scene()
+        self.viewTarget = numpy.array([0, 0, 0], numpy.float32)
+        self.animZoom = None
+
+        self.objColors = [None, None, None, None]
+        self.selectedObj = None
+        self.focusObj = None
+
+        self.mouseX = -1
+        self.mouseY = -1
+        self.mouseState = None
+        self.mouse3Dpos = None
+
+        self.viewMode = 'normal'
+
+        self.glReleaseList = []
+        self.refreshQueued = False
+        self.idleCalled = False
+
+        self.platformMesh = {}
+
+        self.container = openglscene.glGuiContainer(self, (0, 0))
+        self.tool = previewTools.toolNone(self)
+
+        self.updateProfileToControls()
+
+        self.loadObjectShader()
+
+    def add(self, ctrl):
+        if hasattr(self, '_container'):
+            self.container.add(ctrl)
+
+    def getObjectCenterPos(self):
+        if self.selectedObj is None:
+            return [0.0, 0.0, 0.0]
+        pos = self.selectedObj.getPosition()
+        size = self.selectedObj.getSize()
+        return [pos[0], pos[1],
+                size[2]/2 - profile.getProfileSettingFloat('object_sink')]
+
+    def getMouseRay(self, x, y):
+        if self.viewport is None:
+            return numpy.array([0, 0, 0], numpy.float32),\
+                numpy.array([0, 0, 1], numpy.float32)
+        p0 = openglHelpers.unproject(
+            x, self.viewport[1] + self.viewport[3] - y, 0,
+            self.modelMatrix, self.projMatrix, self.viewport)
+        p1 = openglHelpers.unproject(
+            x, self.viewport[1] + self.viewport[3] - y, 1,
+            self.modelMatrix, self.projMatrix, self.viewport)
+        p0 -= self.viewTarget
+        p1 -= self.viewTarget
+        return p0, p1
+
+    def getMachineSize(self):
+        if self.machineSize is not None:
+            return self.machineSize
+        return numpy.array([
+            profile.getMachineSettingFloat('machine_width'),
+            profile.getMachineSettingFloat('machine_depth'),
+            profile.getMachineSettingFloat('machine_height')])
+
+    def selectObject(self, obj, zoom=True):
+        if obj != self.selectedObj:
+            self.selectedObj = obj
+            self.updateModelSettingsToControls()
+            self.updateToolButtons()
+        if zoom and obj is not None:
+            newZoom = obj.getBoundaryCircle() * 6
+            if newZoom > numpy.max(self.machineSize) * 3:
+                newZoom = numpy.max(self.machineSize) * 3
+            self.animZoom = openglscene.animation(
+                self, self.zoom, newZoom, 0.5)
+
+    def loadObjectShader(self):
+        if self.objectShader is not None:
+            return
+
+        if openglHelpers.hasShaderSupport():
+            self.objectShader = openglHelpers.GLShader("""
+                varying float light_amount;
+
+                void main(void)
+                {
+                    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+                    gl_FrontColor = gl_Color;
+
+                    light_amount = abs(
+                        dot(normalize(gl_NormalMatrix * gl_Normal),
+                        normalize(gl_LightSource[0].position.xyz)));
+                    light_amount += 0.2;
+                }
+                                """, """
+                varying float light_amount;
+
+                void main(void)
+                {
+                    gl_FragColor = vec4(gl_Color.xyz * light_amount,
+                                        gl_Color[3]);
+                }
+            """)
+            self.objectOverhangShader = openglHelpers.GLShader("""
+                uniform float cosAngle;
+                uniform mat3 rotMatrix;
+                varying float light_amount;
+
+                void main(void)
+                {
+                    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+                    gl_FrontColor = gl_Color;
+
+                    light_amount = abs(
+                        dot(normalize(gl_NormalMatrix * gl_Normal),
+                        normalize(gl_LightSource[0].position.xyz)));
+                    light_amount += 0.2;
+                    if (normalize(rotMatrix * gl_Normal).z < -cosAngle)
+                    {
+                        light_amount = -10.0;
+                    }
+                }
+            """, """
+                varying float light_amount;
+
+                void main(void)
+                {
+                    if (light_amount == -10.0)
+                    {
+                        gl_FragColor = vec4(1.0, 0.0, 0.0, gl_Color[3]);
+                    }else{
+                        gl_FragColor = vec4(gl_Color.xyz * light_amount,
+                                            gl_Color[3]);
+                    }
+                }
+                                """)
+
+        # Could not make shader.
+        if self.objectShader is None or not self.objectShader.isValid():
+            self.objectShader = openglHelpers.GLFakeShader()
+            self.objectOverhangShader = openglHelpers.GLFakeShader()
+
+    def setMouse3DPos(self):
+        glFlush()
+        n = glReadPixels(self.mouseX, self.height() - 1 - self.mouseY,
+                         1, 1, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)[0][0] >> 8
+        if n < len(self.scene.objects()):
+            self.focusObj = self.scene.objects()[n]
+        else:
+            self.focusObj = None
+        f = glReadPixels(self.mouseX, self.height() - 1 - self.mouseY,
+                         1, 1, GL_DEPTH_COMPONENT, GL_FLOAT)[0][0]
+        self.mouse3Dpos = openglHelpers.unproject(
+            self.mouseX, self.viewport[1] + self.viewport[3] - self.mouseY,
+            f, self.modelMatrix, self.projMatrix, self.viewport)
+        self.mouse3Dpos -= self.viewTarget
+
+    def initializeGL(self):
+        self.viewport = glGetIntegerv(GL_VIEWPORT)
+        self.modelMatrix = glGetDoublev(GL_MODELVIEW_MATRIX)
+        self.projMatrix = glGetDoublev(GL_PROJECTION_MATRIX)
+
+        glClearColor(1, 1, 1, 1)
+        glClear(
+            GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT
+            )
+
+        glDisable(GL_STENCIL_TEST)
+        glDisable(GL_BLEND)
+        glEnable(GL_DEPTH_TEST)
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable(GL_BLEND)
+
+    def init3DView(self):
+        # set viewing projection
+        # glViewport(0, 0, self.width(), self.height())
+        # GL.glViewport((width - side) / 2, (height - side) / 2, side, side)
+        glLoadIdentity()
+
+        glLightfv(GL_LIGHT0, GL_POSITION, [0.2, 0.2, 1.0, 0.0])
+
+        glDisable(GL_RESCALE_NORMAL)
+        glDisable(GL_LIGHTING)
+        glDisable(GL_LIGHT0)
+        glEnable(GL_DEPTH_TEST)
+        glDisable(GL_CULL_FACE)
+        glDisable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+        glClearColor(0.9, 0.9, 0.9, 1.0)
+        glClearStencil(0)
+        glClearDepth(1.0)
+
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        aspect = float(self.width()) / float(self.height())
+        gluPerspective(45.0, aspect, 1.0, numpy.max(self.machineSize) * 4)
+
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+        glClear(
+            GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT
+            )
+
+    def renderObject(self, obj, brightness=0, addSink=True):
+        glPushMatrix()
+        if addSink:
+            glTranslate(obj.getPosition()[0],
+                        obj.getPosition()[1],
+                        obj.getSize()[2] / 2 - profile.getProfileSettingFloat(
+                            'object_sink')
+                        )
+        else:
+            glTranslate(obj.getPosition()[0],
+                        obj.getPosition()[1],
+                        obj.getSize()[2] / 2)
+
+        if self.tempMatrix is not None and obj == self.selectedObj:
+            glMultMatrixf(openglHelpers.convert3x3MatrixTo4x4(self.tempMatrix))
+
+        offset = obj.getDrawOffset()
+        glTranslate(-offset[0], -offset[1], -offset[2] - obj.getSize()[2] / 2)
+
+        glMultMatrixf(openglHelpers.convert3x3MatrixTo4x4(obj.getMatrix()))
+
+        n = 0
+        for mesh in obj._meshList:
+            if mesh.vbo is None:
+                mesh.vbo = openglHelpers.GLVBO(GL_TRIANGLES, mesh.vertexes,
+                                               mesh.normal)
+            if brightness != 0:
+                glColor4fv(map(lambda idx: idx * brightness,
+                           self.objColors[n]))
+                n += 1
+            mesh.vbo.render()
+        glPopMatrix()
+
+    def loadObject(self, obj):
+        if obj._loadAnim is not None:
+            if obj._loadAnim.isDone():
+                obj._loadAnim = None
+            else:
+                return
+        brightness = 1.0
+        if self.focusObj == obj:
+            brightness = 1.2
+        elif self.focusObj is not None or \
+                self.selectedObj is not None and \
+                obj != self.selectedObj:
+            brightness = 0.8
+
+        if self.selectedObj == obj or self.selectedObj is None:
+            # If we want transparent, then first render a solid black model
+            # to remove the printer size lines.
+            if self.viewMode == 'transparent':
+                glColor4f(0, 0, 0, 0)
+                self.renderObject(obj)
+                glEnable(GL_BLEND)
+                glBlendFunc(GL_ONE, GL_ONE)
+                glDisable(GL_DEPTH_TEST)
+                brightness *= 0.5
+            if self.viewMode == 'xray':
+                glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE)
+            glStencilOp(GL_INCR, GL_INCR, GL_INCR)
+            glEnable(GL_STENCIL_TEST)
+
+        if self.viewMode == 'overhang':
+            if self.selectedObj == obj and self.tempMatrix is not None:
+                self.objectOverhangShader.setUniform(
+                    'rotMatrix', obj.getMatrix() * self.tempMatrix
+                    )
+            else:
+                self.objectOverhangShader.setUniform(
+                    'rotMatrix', obj.getMatrix()
+                    )
+
+        if not self.scene.checkPlatform(obj):
+            glColor4f(0.5 * brightness, 0.5 * brightness, 0.5 * brightness,
+                      0.8 * brightness)
+            self.renderObject(obj)
+        else:
+            self.renderObject(obj, brightness)
+        glDisable(GL_STENCIL_TEST)
+        glDisable(GL_BLEND)
+        glEnable(GL_DEPTH_TEST)
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
+
+    def prepareViewMode(self):
+        if self.viewMode == 'gcode':
+            return
+        glStencilFunc(GL_ALWAYS, 1, 1)
+        glStencilOp(GL_INCR, GL_INCR, GL_INCR)
+
+        if self.viewMode == 'overhang':
+            self.objectOverhangShader.bind()
+            self.objectOverhangShader.setUniform(
+                'cosAngle',
+                math.cos(math.radians(
+                    90 - profile.getProfileSettingFloat('support_angle'))
+                    )
+                )
+        else:
+            self.objectShader.bind()
+
+        for obj in self.scene.objects():
+            self.loadObject(obj)
+
+        if self.viewMode == 'xray':
+            glPushMatrix()
+            glLoadIdentity()
+            glEnable(GL_STENCIL_TEST)
+            glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP)  # Keep values
+            glDisable(GL_DEPTH_TEST)
+            for i in xrange(2, 15, 2):  # All even values
+                glStencilFunc(GL_EQUAL, i, 0xFF)
+                glColor(float(i)/10, float(i)/10, float(i)/5)
+                glBegin(GL_QUADS)
+                glVertex3f(-1000, -1000, -10)
+                glVertex3f(1000, -1000, -10)
+                glVertex3f(1000, 1000, -10)
+                glVertex3f(-1000, 1000, -10)
+                glEnd()
+            for i in xrange(1, 15, 2):  # All odd values
+                glStencilFunc(GL_EQUAL, i, 0xFF)
+                glColor(float(i)/10, 0, 0)
+                glBegin(GL_QUADS)
+                glVertex3f(-1000, -1000, -10)
+                glVertex3f(1000, -1000, -10)
+                glVertex3f(1000, 1000, -10)
+                glVertex3f(-1000, 1000, -10)
+                glEnd()
+            glPopMatrix()
+            glDisable(GL_STENCIL_TEST)
+            glEnable(GL_DEPTH_TEST)
+
+        self.objectShader.unbind()
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable(GL_BLEND)
+
+    def loadGLTexture(self, filename):
+        tex = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, tex)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+
+        filepath = resources.getPathForImage(filename)
+        img = QtGui.QImage(filepath)
+        rgbData = ''.join([bit for bit in img.bits()])
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width(), img.height(), 0,
+                     GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, rgbData)
+        return tex
+
+    def drawScene(self, painter):
+        glDisable(GL_DEPTH_TEST)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glDisable(GL_LIGHTING)
+        glColor4ub(255, 255, 255, 255)
+
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0, self.width()-1, self.height()-1, 0, -1000.0, 1000.0)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+
+        self.container.draw(painter)
+
+    def drawUltimaker(self, machine):
+        if machine not in self.platformMesh:
+            meshes = meshLoader.loadMeshes(resources.getPathForMesh(
+                                           machine + '_platform.stl'))
+            if len(meshes) > 0:
+                self.platformMesh[machine] = meshes[0]
+            else:
+                self.platformMesh[machine] = None
+            if machine == 'ultimaker2':
+                self.platformMesh[machine]._drawOffset = numpy.array(
+                    [0, -37, 145], numpy.float32)
+            else:
+                self.platformMesh[machine]._drawOffset = numpy.array(
+                    [0, 0, 2.5], numpy.float32)
+        glColor4f(1, 1, 1, 0.5)
+        self.objectShader.bind()
+        self.renderObject(self.platformMesh[machine], False, False)
+        self.objectShader.unbind()
+
+        # For the Ultimaker 2 render the texture on the back plate
+        # to show the Ultimaker2 text.
+        if machine == 'ultimaker2':
+            if not hasattr(self.platformMesh[machine], 'texture'):
+                self.platformMesh[machine].texture = self.loadGLTexture(
+                    'Ultimaker2backplate.png')
+            glBindTexture(GL_TEXTURE_2D, self.platformMesh[machine].texture)
+            glEnable(GL_TEXTURE_2D)
+            glPushMatrix()
+            glColor4f(1, 1, 1, 1)
+
+            glTranslate(0, 150, -5)
+            h = 50
+            d = 8
+            w = 100
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_DST_COLOR, GL_ZERO)
+            glBegin(GL_QUADS)
+            glTexCoord2f(1, 0)
+            glVertex3f(w, 0, h)
+            glTexCoord2f(0, 0)
+            glVertex3f(-w, 0, h)
+            glTexCoord2f(0, 1)
+            glVertex3f(-w, 0, 0)
+            glTexCoord2f(1, 1)
+            glVertex3f(w, 0, 0)
+
+            glTexCoord2f(1, 0)
+            glVertex3f(-w, d, h)
+            glTexCoord2f(0, 0)
+            glVertex3f(w, d, h)
+            glTexCoord2f(0, 1)
+            glVertex3f(w, d, 0)
+            glTexCoord2f(1, 1)
+            glVertex3f(-w, d, 0)
+            glEnd()
+            glDisable(GL_TEXTURE_2D)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glPopMatrix()
+
+    def drawMachine(self):
+        glEnable(GL_CULL_FACE)
+        glEnable(GL_BLEND)
+
+        size = self.getMachineSize()
+
+        machine = profile.getMachineSetting('machine_type')
+        if machine.startswith('ultimaker'):
+            self.drawUltimaker(machine)
+        else:
+            glColor4f(0, 0, 0, 1)
+            glLineWidth(3)
+            glBegin(GL_LINES)
+            glVertex3f(-size[0] / 2, -size[1] / 2, 0)
+            glVertex3f(-size[0] / 2, -size[1] / 2, 10)
+            glVertex3f(-size[0] / 2, -size[1] / 2, 0)
+            glVertex3f(-size[0] / 2+10, -size[1] / 2, 0)
+            glVertex3f(-size[0] / 2, -size[1] / 2, 0)
+            glVertex3f(-size[0] / 2, -size[1] / 2+10, 0)
+            glEnd()
+
+        glDepthMask(False)
+
+        polys = profile.getMachineSizePolygons()
+        height = profile.getMachineSettingFloat('machine_height')
+        circular = profile.getMachineSetting('machine_shape') == 'Circular'
+        glBegin(GL_QUADS)
+        # Draw the sides of the build volume.
+        for n in xrange(0, len(polys[0])):
+            if not circular:
+                if n % 2 == 0:
+                    glColor4ub(5, 171, 231, 96)
+                else:
+                    glColor4ub(5, 171, 231, 64)
+            else:
+                glColor4ub(5, 171, 231, 96)
+
+            glVertex3f(polys[0][n][0], polys[0][n][1], height)
+            glVertex3f(polys[0][n][0], polys[0][n][1], 0)
+            glVertex3f(polys[0][n-1][0], polys[0][n-1][1], 0)
+            glVertex3f(polys[0][n-1][0], polys[0][n-1][1], height)
+        glEnd()
+
+        # Draw top of build volume.
+        glColor4ub(5, 171, 231, 128)
+        glBegin(GL_TRIANGLE_FAN)
+        for p in polys[0][::-1]:
+            glVertex3f(p[0], p[1], height)
+        glEnd()
+
+        # Draw checkerboard
+        if self.platformTexture is None:
+            self.platformTexture = self.loadGLTexture('checkerboard.png')
+        glColor4f(1, 1, 1, 0.5)
+        glBindTexture(GL_TEXTURE_2D, self.platformTexture)
+        glEnable(GL_TEXTURE_2D)
+        glBegin(GL_TRIANGLE_FAN)
+        for p in polys[0]:
+            glTexCoord2f(p[0]/20, p[1]/20)
+            glVertex3f(p[0], p[1], 0)
+        glEnd()
+
+        # Draw no-go zones. (clips in case of UM2)
+        glDisable(GL_TEXTURE_2D)
+        glColor4ub(127, 127, 127, 200)
+        for poly in polys[1:]:
+            glBegin(GL_TRIANGLE_FAN)
+            for p in poly:
+                glTexCoord2f(p[0]/20, p[1]/20)
+                glVertex3f(p[0], p[1], 0)
+            glEnd()
+
+        glDepthMask(True)
+        glDisable(GL_BLEND)
+        glDisable(GL_CULL_FACE)
+
+    def drawBoxShadow(self):
+        # Draw the object box-shadow, so you can see where it collides
+        # with other objects.
+        if self.selectedObj is not None:
+            glEnable(GL_BLEND)
+            glEnable(GL_CULL_FACE)
+            glColor4f(0, 0, 0, 0.16)
+            glDepthMask(False)
+            for obj in self.scene.objects():
+                glPushMatrix()
+                glTranslatef(obj.getPosition()[0], obj.getPosition()[1], 0)
+                glBegin(GL_TRIANGLE_FAN)
+                for p in obj._boundaryHull[::-1]:
+                    glVertex3f(p[0], p[1], 0)
+                glEnd()
+                glPopMatrix()
+            if self.scene.isOneAtATime():  # Check print sequence mode.
+                glPushMatrix()
+                glColor4f(0, 0, 0, 0.06)
+                glTranslatef(self.selectedObj.getPosition()[0],
+                             self.selectedObj.getPosition()[1], 0)
+                glBegin(GL_TRIANGLE_FAN)
+                for p in self.selectedObj._printAreaHull[::-1]:
+                    glVertex3f(p[0], p[1], 0)
+                glEnd()
+                glBegin(GL_TRIANGLE_FAN)
+                for p in self.selectedObj._headAreaMinHull[::-1]:
+                    glVertex3f(p[0], p[1], 0)
+                glEnd()
+                glPopMatrix()
+            glDepthMask(True)
+            glDisable(GL_CULL_FACE)
+
+        # Draw the outline of the selected object on top
+        # of everything else except the GUI.
+        if self.selectedObj is not None and self.selectedObj._loadAnim is None:
+            glDisable(GL_DEPTH_TEST)
+            glEnable(GL_CULL_FACE)
+            glEnable(GL_STENCIL_TEST)
+            glDisable(GL_BLEND)
+            glStencilFunc(GL_EQUAL, 0, 255)
+
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+            glLineWidth(4)
+            glColor4f(1, 1, 1, 0.5)
+            self.renderObject(self.selectedObj)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
+            glViewport(0, 0, self.width(), self.height())
+            glDisable(GL_STENCIL_TEST)
+            glDisable(GL_CULL_FACE)
+            glEnable(GL_DEPTH_TEST)
+
+        if self.selectedObj is not None:
+            glPushMatrix()
+            pos = self.getObjectCenterPos()
+            glTranslate(pos[0], pos[1], pos[2])
+            self.tool.onDraw()
+            glPopMatrix()
+
+    def queueRefresh(self):
+        if self.idleCalled:
+            self.update()
+        else:
+            self.refreshQueued = True
+
+    def sceneUpdated(self):
+        pass
+        # self._sceneUpdateTimer.singleShot(500, self._onRunEngine)
+        # self._engine.abortEngine()
+        # self._scene.updateSizeOffsets()
+        # self.queueRefresh()
+
+    def reloadScene(self):
+        fileList = []
+        for obj in self.scene.objects():
+            fileList.append(obj.getOriginFilename())
+        self.onDeleteAll()
+        self.loadScene(fileList)
+
+    def onPaint(self):
+        self.init3DView()
+        glTranslate(0.0, 0.0, -self.zoom)
+        glRotate(-self.pitch, 1.0, 0.0, 0.0)
+        glRotate(self.yaw, 0.0, 0.0, 1.0)
+        glTranslate(-self.viewTarget[0],
+                    -self.viewTarget[1],
+                    -self.viewTarget[2])
+
+        if self.viewMode != 'gcode':
+            for n in xrange(0, len(self.scene.objects())):
+                obj = self.scene.objects()[n]
+                glColor4ub((n >> 16) & 0xFF, (n >> 8) & 0xFF, (n >> 0) &
+                           0xFF, 0xFF)
+                self.renderObject(obj)
+
+        if self.mouseX > -1:  # mouse has not passed over the opengl window.
+            self.setMouse3DPos()
+
+        if self.objectShader is not None:
+            self.objectShader.unbind()
+        # self._engineResultView.onDraw()
+
+        self.prepareViewMode()
+        self.drawMachine()
+        if self.viewMode != 'gcode':
+            self.drawBoxShadow()
+
+        if self.viewMode == 'overhang' and not \
+                openglHelpers.hasShaderSupport():
+            glDisable(GL_DEPTH_TEST)
+            glPushMatrix()
+            glLoadIdentity()
+            glTranslate(0, -4, -10)
+            glColor4ub(60, 60, 60, 255)
+            openglHelpers.glDrawStringCenter(
+                _("Overhang view not working due to lack of OpenGL shaders \
+                   support."))
+            glPopMatrix()
+
+    def paintGL(self, painter):
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+
+        self.idleCalled = False
+
+        try:
+            for obj in self.glReleaseList:
+                obj.release()
+            renderStartTime = time.time()
+
+            self.onPaint()
+
+            self.drawScene(painter)
+
+            glFlush()
+            if version.isDevVersion():
+                renderTime = time.time() - renderStartTime
+                if renderTime == 0:
+                    renderTime = 0.001
+                glLoadIdentity()
+                glTranslated(10.0, self.height() - 30.0, -1.0)
+                glColor4f(0.2, 0.2, 0.2, 0.5)
+                openglHelpers.glDrawStringLeft("fps:%d" % (1 / renderTime))
+        except:
+            # When an exception happens, catch it and show a message box.
+            # If the exception is not caught the draw function bugs out.
+            # Only show this exception once so we do not overload the user
+            # with popups.
+            if self.shownError:
+                return
+            errStr = _("An error has occurred during the 3D view drawing.")
+            tb = traceback.extract_tb(sys.exc_info()[2])
+            errStr += "\n%s: '%s'" % (str(sys.exc_info()[0].__name__),
+                                      str(sys.exc_info()[1]))
+            for n in xrange(len(tb)-1, -1, -1):
+                locationInfo = tb[n]
+                errStr += "\n @ %s:%s:%d" % (os.path.basename(locationInfo[0]),
+                                             locationInfo[2], locationInfo[1])
+
+            traceback.print_exc()
+            log.error(errStr)
+            # TODO: show modal box with error message
+            # wx.CallAfter(wx.MessageBox, errStr, _("3D window error"),
+            # wx.OK | wx.ICON_EXCLAMATION)
+            self.shownError = True
+
+    def drawBackground(self, painter, rect):
+        if painter.paintEngine().type() != QtGui.QPaintEngine.OpenGL2:
+            QtCore.qWarning('OpenGLScene: drawBackground needs a QGLWidget '
+                            + 'to be set as viewport on the '
+                            + 'graphics view')
+            return
+
+        painter.beginNativePainting()
+
+        self.initializeGL()
+        self.paintGL(painter)
+
+        painter.endNativePainting()
+
+        QtCore.QTimer.singleShot(20, self.update)
+
+    def updateProfileToControls(self):
+        self.machineSize = self.getMachineSize()
+        self.objColors[0] = profile.getPreferenceColour('model_colour')
+        self.objColors[1] = profile.getPreferenceColour('model_colour2')
+        self.objColors[2] = profile.getPreferenceColour('model_colour3')
+        self.objColors[3] = profile.getPreferenceColour('model_colour4')
+        self.scene.updateMachineDimensions(self.machineSize)
+        self.updateModelSettingsToControls()
+
+    def updateModelSettingsToControls(self):
+        if self.selectedObj is None:
+            return
+        # scale = self.selectedObj.getScale()
+        # size = self.selectedObj.getSize()
+
+        # self.scaleXctrl.setValue(round(scale[0], 2))
+        # self.scaleYctrl.setValue(round(scale[1], 2))
+        # self.scaleZctrl.setValue(round(scale[2], 2))
+
+        # self.scaleXmmctrl.setValue(round(size[0], 2))
+        # self.scaleYmmctrl.setValue(round(size[1], 2))
+        # self.scaleZmmctrl.setValue(round(size[2], 2))
+
+    def onCenter(self):
+        if self.focusObj is None:
+            return
+        self.focusObj.setPosition(numpy.array([0.0, 0.0]))
+        self.scene.pushFree(self.selectedObj)
+        self.sceneUpdated()
+
+    def onMultiply(self):
+        if self.focusObj is None:
+            return
+        obj = self.focusObj
+        cnt, res = QtGui.QInputDialog.getInteger(
+            self, _("Multiply"), _("Number of copies"), 1, 1, 100)
+        if not res:
+            return
+        n = 0
+        while True:
+            n += 1
+            newObj = obj.copy()
+            self.scene.add(newObj)
+            self.scene.centerAll()
+            if not self.scene.checkPlatform(newObj):
+                break
+            if n > cnt:
+                break
+        if n <= cnt:
+            pass
+            # TODO: create notofication popups (as what instead of popup)
+            # self.notification.message("Could not create more than %d \
+            #         items" % (n - 1))
+        self.scene.remove(newObj)
+        self.scene.centerAll()
+        self.sceneUpdated()
+
+    def onSplitObject(self):
+        log.debug("Not implemented yet")
+        pass
+        # TODO: implement splitting object
+        # if self.focusObj is None:
+        #     return
+        # self.scene.remove(self.focusObj)
+        # for obj in self.focusObj.split(self.splitCallback):
+        #     if numpy.max(obj.getSize()) > 2.0:
+        #         self.scene.add(obj)
+        # self.scene.centerAll()
+        # self.selectObject(None)
+        # self.sceneUpdated()
+
+    def onMergeObjects(self):
+        # TODO: test the implementation of merging objects
+        log.debug("Not implemented yet")
+        # if self.selectedObj is None or self.focusObj is None \
+        #         or self.selectedObj == self.focusObj:
+        #     if len(self.scene.objects()) == 2:
+        #         self.scene.merge(self.scene.objects()[0],
+        #                 self.scene.objects()[1])
+        #         self.sceneUpdated()
+        #     return
+        # self.scene.merge(self.selectedObj, self.focusObj)
+        # self.sceneUpdated()
+
+    def onDeleteAll(self):
+        while len(self.scene.objects()) > 0:
+            self.onDeleteObject(self.scene.objects()[0])
+        self.cleanResult()
+
+    def onDeleteObject(self, obj=None):
+        if not obj:
+            obj = self.focusObj
+        if obj == self.selectedObj:
+            self.selectObject(None)
+        if obj == self.focusObj:
+            self.focusObj = None
+        self.scene.remove(obj)
+        for mesh in obj._meshList:
+            if mehs.vbo is not None and mesh.vbo.decRef():
+                self.glReleaseList.append(mesh.vbo)
+        if len(self.scene.objects()) == 0:
+            self.cleanResult()
+        import gc
+        gc.collect()
+        self.sceneUpdated()
+
+    def cleanResult(self):
+        pass
+        # self._engineResultView.setResult(None)
+        # self.viewSelection.hide_layers_button()
+
+    def create_context_menu(self, evt):
+        menu = QtGui.QMenu(self)
+        if self.focusObj is not None:
+            menu.addAction(QtGui.QAction(_("Center on platform"), menu,
+                           triggered=self.onCenter))
+            menu.addAction(QtGui.QAction(_("Delete object"), menu,
+                           triggered=self.onDeleteObject))
+            menu.addAction(QtGui.QAction(_("Multiply object"), menu,
+                           triggered=self.onMultiply))
+            menu.addAction(QtGui.QAction(_("Split object into parts"), menu,
+                           triggered=self.onSplitObject))
+
+        if ((self.selectedObj != self.focusObj and
+            self.focusObj is not None) or
+            len(self.scene.objects()) == 2) and \
+                int(profile.getMachineSetting('extruder_amount')) > 1:
+            menu.addAction(QtGui.QAction(_("Dual extrusion merge"),
+                           menu, triggered=self.onMergeObjects))
+
+        if len(self.scene.objects()) > 0:
+            menu.addAction(QtGui.QAction(_("Delete all objects"), menu,
+                           triggered=self.onDeleteAll))
+            menu.addAction(QtGui.QAction(_("Reload all objects"), menu,
+                           triggered=self.reloadScene))
+
+        if not menu.isEmpty():
+            menu.exec_(evt.globalPos())
+
+    def wheelEvent(self, evt):
+        delta = evt.delta()
+        delta = delta/abs(delta)
+        self.zoom *= 1.0 - delta / 10.0
+        if self.zoom < 1.0:
+            self.zoom = 1.0
+        if self.zoom > numpy.max(self.machineSize) * 3:
+            self.zoom = numpy.max(self.machineSize) * 3
+        self.update()
+
+    def guiMouseMoveEvent(self, evt):
+        self.update()
+        pos = evt.scenePos()
+        self.container.onMouseMoveEvent(pos.x(), pos.y())
+
+    def mousePressEvent(self, evt):
+        self.setFocus()
+        pos = evt.scenePos()
+        if self.container.onMousePressEvent(pos.x(), pos.y(), evt.button()):
+            self.update()
+            return
+        self.onMouseDown(evt)
+
+    def mouseDoubleClickEvent(self, evt):
+        self.mouseState = 'doubleClick'
+
+    def mouseReleaseEvent(self, evt):
+        pos = evt.scenePos()
+        if self.container.onMouseReleaseEvent(pos.x(), pos.y()):
+            self.update()
+            return
+        self.onMouseUp(evt)
+
+    def onMouseDown(self, evt):
+        pos = evt.scenePos()
+        self.mouseX = pos.x()
+        self.mouseY = pos.y()
+        self.mouseClick3DPos = self.mouse3Dpos
+        self.mouseClickFocus = self.focusObj
+
+        if self.mouseState == 'dragObject' and self.selectedObj is not None:
+            self.scene.pushFree(self.selectedObj)
+            self.sceneUpdated()
+        self.mouseState = 'dragOrClick'
+
+        p0, p1 = self.getMouseRay(self.mouseX, self.mouseY)
+        p0 -= self.getObjectCenterPos() - self.viewTarget
+        p1 -= self.getObjectCenterPos() - self.viewTarget
+        if self.tool.onDragStart(p0, p1):
+            self.mouseState = 'tool'
+        if self.mouseState == 'dragOrClick' and evt.buttons() == LEFT_BUTTON \
+                and self.focusObj is not None:
+                    self.selectObject(self.focusObj, False)
+                    self.queueRefresh()
+
+    def onMouseUp(self, evt):
+        curr_buttons = evt.buttons()
+        last_button = evt.button()
+        if not curr_buttons == NO_BUTTON:
+            return
+        if self.mouseState == 'dragOrClick':
+            if last_button == LEFT_BUTTON:
+                self.selectObject(self.focusObj)
+            elif last_button == RIGHT_BUTTON:
+                self.create_context_menu(evt)
+        elif self.mouseState == 'dragObject' and self.selectedObj is not None:
+            self.scene.pushFree(self.selectedObj)
+            self.sceneUpdated()
+        elif self.mouseState == 'tool':
+            if self.tempMatrix is not None and self.selectedObj is not None:
+                self.selectedObj.applyMatrix(self.tempMatrix)
+                self.scene.pushFree(self.selectedObj)
+                self.selectObject(self.selectedObj)
+            self.tempMatrix = None
+            self.tool.onDragEnd()
+            self.sceneUpdated()
+        self.mouseState = None
+
+    def mouseMoveEvent(self, evt):
+        pos = evt.scenePos()
+        x, y = pos.x(), pos.y()
+        p0, p1 = self.getMouseRay(x, y)
+        p0 -= self.getObjectCenterPos() - self.viewTarget
+        p1 -= self.getObjectCenterPos() - self.viewTarget
+
+        buttons = evt.buttons()
+        if buttons != NO_BUTTON and self.mouseState is not None:
+            if self.mouseState == 'tool':
+                self.tool.onDrag(p0, p1, evt)
+            elif buttons == RIGHT_BUTTON:
+                self.mouseState = 'drag'
+                if evt.modifiers() == SHIFT_KEY:
+                    a = math.cos(math.radians(self.yaw)) / 3.0
+                    b = math.sin(math.radians(self.yaw)) / 3.0
+                    self.viewTarget[0] += float(x - self.mouseX) * -a
+                    self.viewTarget[1] += float(x - self.mouseX) * b
+                    self.viewTarget[0] += float(y - self.mouseY) * b
+                    self.viewTarget[1] += float(y - self.mouseY) * a
+                else:
+                    self.yaw += x - self.mouseX
+                    self.pitch -= y - self.mouseY
+                if self.pitch > 170:
+                    self.pitch = 170
+                if self.pitch < 10:
+                    self.pitch = 10
+            elif buttons == MIDDLE_BUTTON or \
+                    buttons == (RIGHT_BUTTON or LEFT_BUTTON):
+                self.mouseState = 'drag'
+                self.zoom += y - self.mouseY
+                if self.zoom < 1:
+                    self.zoom = 1
+                if self.zoom > numpy.max(self.machineSize) * 3:
+                    self.zoom = numpy.max(self.machineSize) * 3
+            elif buttons == LEFT_BUTTON and self.selectedObj is not None and \
+                    self.selectedObj == self.mouseClickFocus:
+                self.mouseState = 'dragObject'
+                z = max(0, self.mouseClick3DPos[2])
+                p0, p1 = self.getMouseRay(self.mouseX, self.mouseY)
+                p2, p3 = self.getMouseRay(x, y)
+                p0[2] -= z
+                p1[2] -= z
+                p2[2] -= z
+                p3[2] -= z
+                cursorZ0 = p0 - (p1 - p0) * (p0[2] / (p1[2] - p0[2]))
+                cursorZ1 = p2 - (p3 - p2) * (p2[2] / (p3[2] - p2[2]))
+                diff = cursorZ1 - cursorZ0
+                self.selectedObj.setPosition(
+                    self.selectedObj.getPosition() + diff[0:2])
+        if buttons == NO_BUTTON or self.mouseState != 'tool':
+            self.tool.onMouseMove(p0, p1)
+
+        self.mouseX = x
+        self.mouseY = y
+
+        self.guiMouseMoveEvent(evt)
+
+    def loadScene(self, filelist):
+        # TODO: implement loading scene
+        pass

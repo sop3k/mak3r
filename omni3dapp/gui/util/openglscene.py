@@ -19,7 +19,7 @@ class animation(object):
         self._end = end
         self._startTime = time.time()
         self._runTime = runTime
-        gui._animationList.append(self)
+        gui.animationList.append(self)
 
     def isDone(self):
         return time.time() > self._startTime + self._runTime

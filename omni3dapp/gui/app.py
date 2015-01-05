@@ -57,14 +57,15 @@ class OmniApp(object):
         self.main_window.setViewport(gl_widget)
         self.main_window.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
 
-        # self.scene = OpenGLScene()
-        self.scene = SceneView()
+        self.scene = SceneView(self.main_window)
 
         palette = QtGui.QPalette()
         palette.setColor(QtGui.QPalette.Base, QtCore.Qt.transparent)
 
         self.qmlview = QtDeclarative.QDeclarativeView()
         self.qmlview.rootContext().setContextProperty("mainwindow", self)
+        self.qmlview.rootContext().setContextProperty(
+            "graphicsscene", self.scene)
         self.qmlview.setSource(QtCore.QUrl(self.main_window.find_data_file("qml/main.qml")))
 
         self.qmlview.setPalette(palette)

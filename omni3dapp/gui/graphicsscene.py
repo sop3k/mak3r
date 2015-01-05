@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import math
@@ -18,6 +19,7 @@ from omni3dapp.util import profile
 from omni3dapp.util import meshLoader
 from omni3dapp.util import resources
 from omni3dapp.gui.util import previewTools
+from omni3dapp.gui.tools import imageToMesh
 from omni3dapp.gui.util import openglscene, openglHelpers
 from omni3dapp.util.shortcuts import *
 from omni3dapp.logger import log
@@ -25,8 +27,10 @@ from omni3dapp.logger import log
 
 class SceneView(QtGui.QGraphicsScene):
 
-    def __init__(self, *args):
+    def __init__(self, mainwindow=None, *args):
         super(SceneView, self).__init__(*args)
+        self.mainwindow = mainwindow
+
         self.shownError = False
         self.machineSize = None
         self.objectShader = None
@@ -55,6 +59,7 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.viewMode = 'normal'
 
+        self.animationList = []
         self.glReleaseList = []
         self.refreshQueued = False
         self.idleCalled = False
@@ -64,9 +69,14 @@ class SceneView(QtGui.QGraphicsScene):
         self.container = openglscene.glGuiContainer(self, (0, 0))
         self.tool = previewTools.toolNone(self)
 
-        self.updateProfileToControls()
 
         self.loadObjectShader()
+
+        self.idleTimer = QtCore.QTimer(self)
+        self.idleTimer.timeout.connect(self.onIdle)
+        self.idleTimer.start(0)
+
+        self.updateProfileToControls()
 
     def add(self, ctrl):
         if hasattr(self, '_container'):
@@ -201,9 +211,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.projMatrix = glGetDoublev(GL_PROJECTION_MATRIX)
 
         glClearColor(1, 1, 1, 1)
-        glClear(
-            GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT
-            )
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
 
         glDisable(GL_STENCIL_TEST)
         glDisable(GL_BLEND)
@@ -239,9 +247,7 @@ class SceneView(QtGui.QGraphicsScene):
 
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        glClear(
-            GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT
-            )
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
 
     def renderObject(self, obj, brightness=0, addSink=True):
         glPushMatrix()
@@ -576,23 +582,25 @@ class SceneView(QtGui.QGraphicsScene):
 
         # Draw the outline of the selected object on top
         # of everything else except the GUI.
-        if self.selectedObj is not None and self.selectedObj._loadAnim is None:
-            glDisable(GL_DEPTH_TEST)
-            glEnable(GL_CULL_FACE)
-            glEnable(GL_STENCIL_TEST)
-            glDisable(GL_BLEND)
-            glStencilFunc(GL_EQUAL, 0, 255)
+        # if self.selectedObj is not None and self.selectedObj._loadAnim is None:
+        #     glDisable(GL_DEPTH_TEST)
+        #     glEnable(GL_CULL_FACE)
+        #     glEnable(GL_STENCIL_TEST)
+        #     glDisable(GL_BLEND)
+        #     glStencilFunc(GL_EQUAL, 0, 255)
 
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-            glLineWidth(4)
-            glColor4f(1, 1, 1, 0.5)
-            self.renderObject(self.selectedObj)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        #     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        #     glLineWidth(4)
+        #     glColor4f(1, 1, 1, 0.5)
+        #     self.renderObject(self.selectedObj)
+        #     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
-            glViewport(0, 0, self.width(), self.height())
-            glDisable(GL_STENCIL_TEST)
-            glDisable(GL_CULL_FACE)
-            glEnable(GL_DEPTH_TEST)
+        #     # TODO: check if setting viewport is needed;
+        #     # if so, fix error with wrong parameter types
+        #     # glViewport(0, 0, self.width(), self.height())
+        #     glDisable(GL_STENCIL_TEST)
+        #     glDisable(GL_CULL_FACE)
+        #     glEnable(GL_DEPTH_TEST)
 
         if self.selectedObj is not None:
             glPushMatrix()
@@ -621,6 +629,15 @@ class SceneView(QtGui.QGraphicsScene):
         self.onDeleteAll()
         self.loadScene(fileList)
 
+    def onIdle(self):
+        self.idleCalled = True
+        if len(self.animationList) > 0 or self.refreshQueued:
+            self.refreshQueued = False
+            for anim in self.animationList:
+                if anim.isDone():
+                    self.animationList.remove(anim)
+            self.update()
+
     def onPaint(self):
         self.init3DView()
         glTranslate(0.0, 0.0, -self.zoom)
@@ -630,18 +647,31 @@ class SceneView(QtGui.QGraphicsScene):
                     -self.viewTarget[1],
                     -self.viewTarget[2])
 
+        # TODO: sprawdzic czy potrzebne
+        self.viewport = glGetIntegerv(GL_VIEWPORT)
+        self.modelMatrix = glGetDoublev(GL_MODELVIEW_MATRIX)
+        self.projMatrix = glGetDoublev(GL_PROJECTION_MATRIX)
+        glClearColor(1,1,1,1)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
+
         if self.viewMode != 'gcode':
             for n in xrange(0, len(self.scene.objects())):
                 obj = self.scene.objects()[n]
-                glColor4ub((n >> 16) & 0xFF, (n >> 8) & 0xFF, (n >> 0) &
-                           0xFF, 0xFF)
+                glColor4ub((n >> 16) & 0xFF, (n >> 8) & 0xFF, (n >> 0) & 0xFF, 0xFF)
                 self.renderObject(obj)
 
         if self.mouseX > -1:  # mouse has not passed over the opengl window.
             self.setMouse3DPos()
 
-        if self.objectShader is not None:
-            self.objectShader.unbind()
+        # TODO: sprawdzić czy potrzebne
+        self.init3DView()
+        glTranslate(0,0,-self.zoom)
+        glRotate(-self.pitch, 1,0,0)
+        glRotate(self.yaw, 0,0,1)
+        glTranslate(-self.viewTarget[0],-self.viewTarget[1],-self.viewTarget[2])
+
+        # if self.objectShader is not None:
+        self.objectShader.unbind()
         # self._engineResultView.onDraw()
 
         self.prepareViewMode()
@@ -724,6 +754,7 @@ class SceneView(QtGui.QGraphicsScene):
         QtCore.QTimer.singleShot(20, self.update)
 
     def updateProfileToControls(self):
+        self.scene.updateSizeOffsets(True)
         self.machineSize = self.getMachineSize()
         self.objColors[0] = profile.getPreferenceColour('model_colour')
         self.objColors[1] = profile.getPreferenceColour('model_colour2')
@@ -746,6 +777,21 @@ class SceneView(QtGui.QGraphicsScene):
         # self.scaleYmmctrl.setValue(round(size[1], 2))
         # self.scaleZmmctrl.setValue(round(size[2], 2))
 
+    def updateToolButtons(self):
+        if self.selectedObj is None:
+            hidden = True
+        else:
+            hidden = False
+        # self.rotateToolButton.setHidden(hidden)
+        # self.scaleToolButton.setHidden(hidden)
+        # self.mirrorToolButton.setHidden(hidden)
+        # if hidden:
+        #     self.rotateToolButton.setSelected(False)
+        #     self.scaleToolButton.setSelected(False)
+        #     self.scaleForm.setSelected(False)
+        #     self.mirrorToolButton.setSelected(False)
+        #     self.onToolSelect(0)
+
     def onCenter(self):
         if self.focusObj is None:
             return
@@ -758,7 +804,7 @@ class SceneView(QtGui.QGraphicsScene):
             return
         obj = self.focusObj
         cnt, res = QtGui.QInputDialog.getInteger(
-            self, _("Multiply"), _("Number of copies"), 1, 1, 100)
+            self.mainwindow, _("Multiply"), _("Number of copies"), 1, 1, 100)
         if not res:
             return
         n = 0
@@ -821,7 +867,7 @@ class SceneView(QtGui.QGraphicsScene):
             self.focusObj = None
         self.scene.remove(obj)
         for mesh in obj._meshList:
-            if mehs.vbo is not None and mesh.vbo.decRef():
+            if mesh.vbo is not None and mesh.vbo.decRef():
                 self.glReleaseList.append(mesh.vbo)
         if len(self.scene.objects()) == 0:
             self.cleanResult()
@@ -835,7 +881,7 @@ class SceneView(QtGui.QGraphicsScene):
         # self.viewSelection.hide_layers_button()
 
     def create_context_menu(self, evt):
-        menu = QtGui.QMenu(self)
+        menu = QtGui.QMenu()
         if self.focusObj is not None:
             menu.addAction(QtGui.QAction(_("Center on platform"), menu,
                            triggered=self.onCenter))
@@ -860,7 +906,8 @@ class SceneView(QtGui.QGraphicsScene):
                            triggered=self.reloadScene))
 
         if not menu.isEmpty():
-            menu.exec_(evt.globalPos())
+            pos = evt.scenePos()
+            menu.exec_(QtCore.QPoint(pos.x(), pos.y()))
 
     def wheelEvent(self, evt):
         delta = evt.delta()
@@ -885,6 +932,8 @@ class SceneView(QtGui.QGraphicsScene):
             return
         self.onMouseDown(evt)
 
+        super(SceneView, self).mousePressEvent(evt)
+
     def mouseDoubleClickEvent(self, evt):
         self.mouseState = 'doubleClick'
 
@@ -894,6 +943,8 @@ class SceneView(QtGui.QGraphicsScene):
             self.update()
             return
         self.onMouseUp(evt)
+
+        super(SceneView, self).mouseReleaseEvent(evt)
 
     def onMouseDown(self, evt):
         pos = evt.scenePos()
@@ -998,6 +1049,187 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.guiMouseMoveEvent(evt)
 
+        super(SceneView, self).mouseMoveEvent(evt)
+
+    def loadObjectsOntoScene(self, objList):
+        for obj in objList:
+            self.scene.add(obj)
+            if not self.scene.checkPlatform(obj):
+                self.scene.centerAll()
+            self.selectObject(obj)
+            if obj.getScale()[0] < 1.0:
+                # TODO: show warning
+                # self.notification.message("Warning: Object scaled down.")
+                pass
+
+    def loadFileOntoScene(self, filename):
+        try:
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in imageToMesh.supportedExtensions():
+                # TODO: implement converting images (do we need that?)
+                # imageToMesh.convertImageDialog(self, filename).Show()
+                objList = []
+            else:
+                objList = meshLoader.loadMeshes(filename)
+        except Exception, e:
+            traceback.print_exc()
+            log.error(e)
+        else:
+            self.loadObjectsOntoScene(objList)
+
+    @QtCore.Slot(list)
     def loadScene(self, filelist):
-        # TODO: implement loading scene
-        pass
+        for filename in filelist:
+            self.loadFileOntoScene(filename)
+        self.sceneUpdated()
+
+    @QtCore.Slot()
+    def showLoadModel(self, button=LEFT_BUTTON):
+        if button is not LEFT_BUTTON:
+            return
+
+        img_extentions = imageToMesh.supportedExtensions()
+        mesh_extentions = meshLoader.loadSupportedExtensions()
+
+        wildcard_filter = ';;'.join([
+            "All ({0})",
+            "Mesh files ({1})",
+            "Image files ({2})",
+            "GCode files ({3})"]).format(
+                ' '.join(map(lambda s: '*' + s,
+                             mesh_extentions + img_extentions +
+                             ['.g', '.gcode'])),
+                ' '.join(map(lambda s: '*' + s, mesh_extentions)),
+                ' '.join(map(lambda s: '*' + s, img_extentions)),
+                ' '.join(map(lambda s: '*' + s, ['.g', '.gcode'])))
+
+        file_dialog = QtGui.QFileDialog(
+            self.mainwindow,
+            _("Open 3D model"),
+            os.path.split(profile.getPreference('lastFile'))[0],
+            wildcard_filter)
+
+        if (file_dialog.exec_()):
+            filenames = file_dialog.selectedFiles()
+        else:
+            return False
+
+        if len(filenames) < 1:
+            return False
+
+        progress_dialog = QtGui.QDialog(self.mainwindow)
+        # self.progress_bar = QtGui.QProgressBar(progress_dialog)
+        # self.progress_bar.setRange(0, 100)
+        # self.progress_bar.setValue(50)
+        dialog_layout = QtGui.QVBoxLayout(progress_dialog)
+        msg_label = QtGui.QLabel(
+            _("Waiting for files to be loaded on the scene..."),
+            progress_dialog
+            )
+        dialog_layout.addWidget(msg_label)
+
+        # progress_dialog.setLayout(dialog_layout)
+
+        # dialog_layout.addWidget(self.progress_bar)
+
+        if len(filenames) > 1:
+            msg = _("Loading files...")
+        else:
+            msg = _("Loading file...")
+        progress_dialog.setWindowTitle(msg)
+        progress_dialog.show()
+        # QtGui.QApplication.processEvents()
+
+        # TODO: uncomment
+        # self.viewSelection.setValue(0)
+
+        profile.putPreference('lastFile', filenames[0])
+
+        self.files_loader = FilesLoader(self, filenames, self.machineSize)
+        self.files_loader_thread = QtCore.QThread(self.mainwindow)
+        self.files_loader.moveToThread(self.files_loader_thread)
+        self.files_loader_thread.started.connect(self.files_loader.loadFiles)
+        # TODO: uncomment
+        # self.files_loader.load_gcode_file_sig.connect(self.loadGCodeFile)
+        self.files_loader.load_scene_sig.connect(self.loadScene)
+
+        self.files_loader.finished.connect(progress_dialog.close)
+        self.files_loader.finished.connect(self.files_loader_thread.quit)
+        self.files_loader.finished.connect(self.files_loader.deleteLater)
+        self.files_loader_thread.finished.connect(
+            self.files_loader_thread.deleteLater)
+
+        self.files_loader_thread.start()
+
+
+class FilesLoader(QtCore.QObject):
+    load_gcode_file_sig = QtCore.Signal(str)
+    load_scene_sig = QtCore.Signal(list)
+    finished = QtCore.Signal()
+
+    def __init__(self, sceneview, filenames, machine_size):
+        super(FilesLoader, self).__init__()
+        self.sceneview = sceneview
+        self.filenames = filenames
+        self.machine_size = machine_size
+
+    def loadFiles(self):
+        main_window = self.sceneview.mainwindow
+        # only one GCODE file can be active
+        # so if single gcode file, process this
+        # otherwise ignore all gcode files
+        if len(self.filenames) == 1:
+            filename = self.filenames[0]
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in ['.g', '.gcode']:
+                # main_window.add_to_model_mru(filename)
+                self.load_gcode_file_sig.emit(filename)
+                self.finished.emit()
+                return
+        # process directories and special file types
+        # and keep scene files for later processing
+        self.loadMultipleFiles()
+
+        self.finished.emit()
+
+    def loadMultipleFiles(self):
+        scene_filenames = []
+        ignored_types = dict()
+        # use file list as queue
+        # pop first entry for processing and append new files at end
+        while self.filenames:
+            filename = self.filenames.pop(0)
+            if os.path.isdir(filename):
+                # directory: queue all included files and directories
+                self.filenames.extend(os.path.join(filename, f)
+                                      for f in os.listdir(filename))
+            else:
+                ext = os.path.splitext(filename)[1].lower()
+                if ext == '.ini':
+                    profile.loadProfile(filename)
+                    # main_window.addToProfileMRU(filename)
+                elif ext in meshLoader.loadSupportedExtensions() or \
+                        ext in imageToMesh.supportedExtensions():
+                    scene_filenames.append(filename)
+                    # main_window.add_to_model_mru(filename)
+                else:
+                    ignored_types[ext] = 1
+        if ignored_types:
+            ignored_types = ignored_types.keys()
+            ignored_types.sort()
+            # TODO: add notofication
+            # self.notification.message(
+            #     "ignored: " + " ".join("*" + type for type in ignored_types))
+        self.sceneview.updateProfileToControls()
+        # now process all the scene files
+        if scene_filenames:
+            self.loadSceneFiles(scene_filenames)
+            self.sceneview.selectObject(None)
+            newZoom = numpy.max(self.machine_size)
+            self.sceneview.animZoom = openglscene.animation(
+                self.sceneview, self.sceneview.zoom, newZoom, 0.5)
+
+    def loadSceneFiles(self, filenames):
+        # self.sceneview.youMagineButton.setDisabled(False)
+        # self.loadScene(filenames)
+        self.load_scene_sig.emit(filenames)

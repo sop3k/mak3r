@@ -3,3 +3,7 @@
 *.gcode
 *.stl
 *.STL
+build/
+dist/
+*.egg*
+TODO

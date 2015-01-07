@@ -27,8 +27,8 @@ from omni3dapp.logger import log
 
 class SceneView(QtGui.QGraphicsScene):
 
-    def __init__(self, mainwindow=None, *args):
-        super(SceneView, self).__init__(*args)
+    def __init__(self, top=0, left=0, width=0, height=0, mainwindow=None, *args):
+        super(SceneView, self).__init__(top, left, width, height, *args)
         self.mainwindow = mainwindow
 
         self.shownError = False
@@ -68,7 +68,6 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.container = openglscene.glGuiContainer(self, (0, 0))
         self.tool = previewTools.toolNone(self)
-
 
         self.loadObjectShader()
 
@@ -211,7 +210,8 @@ class SceneView(QtGui.QGraphicsScene):
         self.projMatrix = glGetDoublev(GL_PROJECTION_MATRIX)
 
         glClearColor(1, 1, 1, 1)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
+                GL_STENCIL_BUFFER_BIT)
 
         glDisable(GL_STENCIL_TEST)
         glDisable(GL_BLEND)
@@ -247,7 +247,8 @@ class SceneView(QtGui.QGraphicsScene):
 
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
+                GL_STENCIL_BUFFER_BIT)
 
     def renderObject(self, obj, brightness=0, addSink=True):
         glPushMatrix()
@@ -495,7 +496,7 @@ class SceneView(QtGui.QGraphicsScene):
         glDepthMask(False)
 
         polys = profile.getMachineSizePolygons()
-        height = profile.getMachineSettingFloat('machine_height')
+        height = size[2]
         circular = profile.getMachineSetting('machine_shape') == 'Circular'
         glBegin(GL_QUADS)
         # Draw the sides of the build volume.
@@ -582,25 +583,25 @@ class SceneView(QtGui.QGraphicsScene):
 
         # Draw the outline of the selected object on top
         # of everything else except the GUI.
-        # if self.selectedObj is not None and self.selectedObj._loadAnim is None:
-        #     glDisable(GL_DEPTH_TEST)
-        #     glEnable(GL_CULL_FACE)
-        #     glEnable(GL_STENCIL_TEST)
-        #     glDisable(GL_BLEND)
-        #     glStencilFunc(GL_EQUAL, 0, 255)
+        if self.selectedObj is not None and self.selectedObj._loadAnim is None:
+            glDisable(GL_DEPTH_TEST)
+            glEnable(GL_CULL_FACE)
+            glEnable(GL_STENCIL_TEST)
+            glDisable(GL_BLEND)
+            glStencilFunc(GL_EQUAL, 0, 255)
 
-        #     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-        #     glLineWidth(4)
-        #     glColor4f(1, 1, 1, 0.5)
-        #     self.renderObject(self.selectedObj)
-        #     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+            glLineWidth(4)
+            glColor4f(1, 1, 1, 0.5)
+            self.renderObject(self.selectedObj)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
-        #     # TODO: check if setting viewport is needed;
-        #     # if so, fix error with wrong parameter types
-        #     # glViewport(0, 0, self.width(), self.height())
-        #     glDisable(GL_STENCIL_TEST)
-        #     glDisable(GL_CULL_FACE)
-        #     glEnable(GL_DEPTH_TEST)
+            # TODO: check if setting viewport is needed;
+            # if so, fix error with wrong parameter types
+            # glViewport(0, 0, self.width(), self.height())
+            glDisable(GL_STENCIL_TEST)
+            glDisable(GL_CULL_FACE)
+            glEnable(GL_DEPTH_TEST)
 
         if self.selectedObj is not None:
             glPushMatrix()
@@ -651,13 +652,15 @@ class SceneView(QtGui.QGraphicsScene):
         self.viewport = glGetIntegerv(GL_VIEWPORT)
         self.modelMatrix = glGetDoublev(GL_MODELVIEW_MATRIX)
         self.projMatrix = glGetDoublev(GL_PROJECTION_MATRIX)
-        glClearColor(1,1,1,1)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
+        glClearColor(1, 1, 1, 1)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
+                GL_STENCIL_BUFFER_BIT)
 
         if self.viewMode != 'gcode':
             for n in xrange(0, len(self.scene.objects())):
                 obj = self.scene.objects()[n]
-                glColor4ub((n >> 16) & 0xFF, (n >> 8) & 0xFF, (n >> 0) & 0xFF, 0xFF)
+                glColor4ub((n >> 16) & 0xFF, (n >> 8) & 0xFF, (n >> 0) & 0xFF,
+                           0xFF)
                 self.renderObject(obj)
 
         if self.mouseX > -1:  # mouse has not passed over the opengl window.
@@ -665,10 +668,11 @@ class SceneView(QtGui.QGraphicsScene):
 
         # TODO: sprawdzić czy potrzebne
         self.init3DView()
-        glTranslate(0,0,-self.zoom)
-        glRotate(-self.pitch, 1,0,0)
-        glRotate(self.yaw, 0,0,1)
-        glTranslate(-self.viewTarget[0],-self.viewTarget[1],-self.viewTarget[2])
+        glTranslate(0, 0, -self.zoom)
+        glRotate(-self.pitch, 1, 0, 0)
+        glRotate(self.yaw, 0, 0, 1)
+        glTranslate(-self.viewTarget[0], -self.viewTarget[1],
+                    -self.viewTarget[2])
 
         # if self.objectShader is not None:
         self.objectShader.unbind()
@@ -1051,6 +1055,70 @@ class SceneView(QtGui.QGraphicsScene):
 
         super(SceneView, self).mouseMoveEvent(evt)
 
+    def keyPressEvent(self, evt):
+        code = evt.key()
+        modifiers = evt.modifiers()
+        # if self._engineResultView.onKeyChar(code, modifiers) or \
+        #         self._container.keyPressEvent(code, modifiers):
+        #     self.queueRefresh()
+        #     return
+        if code == QtCore.Qt.Key_Delete or \
+                (code == QtCore.Qt.Key_Backspace and
+                 sys.platform.startswith("darwin")):
+            if self.selectedObj is not None:
+                self.deleteObject(self.selectedObj)
+                self.queueRefresh()
+        if code == QtCore.Qt.Key_Up:
+            if modifiers == SHIFT_KEY:
+                self.zoom /= 1.2
+                if self.zoom < 1:
+                    self.zoom = 1
+            else:
+                self.pitch -= 15
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_Down:
+            if modifiers == SHIFT_KEY:
+                self.zoom *= 1.2
+                if self.zoom > numpy.max(self.machineSize) * 3:
+                    self.zoom = numpy.max(self.machineSize) * 3
+            else:
+                self.pitch += 15
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_Left:
+            self.changeCamera(yaw=self.yaw-15)
+        elif code == QtCore.Qt.Key_Right:
+            self.changeCamera(yaw=self.yaw+15)
+        elif evt.text == QtCore.Qt.Key_Plus:
+            self.zoom /= 1.2
+            if self.zoom < 1:
+                self.zoom = 1
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_Minus:
+            self.zoom *= 1.2
+            if self.zoom > numpy.max(self.machineSize) * 3:
+                self.zoom = numpy.max(self.machineSize) * 3
+            self.queueRefresh()
+        elif code == QtCore.Qt.Key_Home:
+            self.changeCamera(yaw=30, pitch=60)
+        elif code == QtCore.Qt.Key_PageUp:
+            self.changeCamera(yaw=0, pitch=0)
+        elif code == QtCore.Qt.Key_PageDown:
+            self.changeCamera(yaw=0, pitch=90)
+        elif code == QtCore.Qt.Key_End:
+            self.changeCamera(yaw=90, pitch=90)
+
+        # if code == QtCore.Qt.Key_F3 and modifiers == SHIFT_KEY:
+        #     ShaderEditor(self, self.shaderUpdate,
+        #             self._objectLoadShader.getVertexShader(),
+        #             self._objectLoadShader.getFragmentShader())
+
+    def changeCamera(self, yaw=None, pitch=None):
+        if yaw is not None:
+            self.yaw = yaw
+        if pitch is not None:
+            self.pitch = pitch
+        self.queueRefresh()
+
     def loadObjectsOntoScene(self, objList):
         for obj in objList:
             self.scene.add(obj)
@@ -1082,6 +1150,27 @@ class SceneView(QtGui.QGraphicsScene):
         for filename in filelist:
             self.loadFileOntoScene(filename)
         self.sceneUpdated()
+
+    def loadGCodeFile(self, filename):
+        # TODO: to implement
+        print "loading gcode file..."
+    #     self.onDeleteAll()
+    #     #Cheat the engine results to load a GCode file into it.
+    #     self._engine.abortEngine()
+    #     self._engine._result = sliceEngine.EngineResult(self)
+
+    #     with open(filename, "rU") as f:
+    #         self._engine._result.setGCode(f.read())
+
+    #     self._engine._result.setFinished(True)
+    #     self._engineResultView.setResult(self._engine._result)
+
+    #     self.printButton.setBottomText('')
+    #     if self._parent.pc.is_online():
+    #         self.printButton.setDisabled(False)
+
+    #     self.viewSelection.show_layers_button()
+    #     self.viewSelection.setValue(4)
 
     @QtCore.Slot()
     def showLoadModel(self, button=LEFT_BUTTON):
@@ -1150,7 +1239,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.files_loader.moveToThread(self.files_loader_thread)
         self.files_loader_thread.started.connect(self.files_loader.loadFiles)
         # TODO: uncomment
-        # self.files_loader.load_gcode_file_sig.connect(self.loadGCodeFile)
+        self.files_loader.load_gcode_file_sig.connect(self.loadGCodeFile)
         self.files_loader.load_scene_sig.connect(self.loadScene)
 
         self.files_loader.finished.connect(progress_dialog.close)

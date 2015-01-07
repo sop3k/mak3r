@@ -8,15 +8,14 @@ import traceback
 
 from PySide import QtCore, QtGui, QtDeclarative
 
-# from mainwindow_ui import Ui_MainWindow
 from omni3dapp.util import profile
 from omni3dapp.util.printing import host
 from omni3dapp.gui.util.gcode_text_styling import GCodeSyntaxHighlighter
 from omni3dapp.gui import sceneview
+from omni3dapp.gui.graphicsscene import SceneView
 from omni3dapp.logger import log
 
 
-# class MainWindow(QtGui.QMainWindow):
 class MainWindow(QtGui.QGraphicsView):
 
     MAX_MRU_FILES = 5
@@ -73,13 +72,14 @@ class MainWindow(QtGui.QGraphicsView):
         self.lastTriedClipboard = profile.getProfileString()
 
         # self.update_slice_mode()
-        # self.scene.setFocus()
 
     def resizeEvent(self, event):
         scene = self.scene()
         if scene:
             new_rect = QtCore.QRect(QtCore.QPoint(0, 0), event.size())
             scene.setSceneRect(new_rect)
+
+        self.qmlview.setGeometry(new_rect)
 
         super(MainWindow, self).resizeEvent(event)
 
@@ -91,10 +91,24 @@ class MainWindow(QtGui.QGraphicsView):
         return os.path.join(datadir, filename)
 
     def setup_scene(self):
-        pass
-        # self.scene = sceneview.SceneView()
-        # self.ui.horizontalLayout_3.addWidget(self.scene)
-        # self.qmlview.rootContext().setContextProperty("scene", self.scene)
+        self.sceneview = SceneView(self)
+
+        self.qmlview = QtDeclarative.QDeclarativeView()
+        self.qmlview.rootContext().setContextProperty("mainwindow", self)
+        self.qmlview.rootContext().setContextProperty(
+            "graphicsscene", self.sceneview)
+        self.qmlview.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
+        self.qmlview.setResizeMode(QtDeclarative.QDeclarativeView.SizeRootObjectToView)
+
+        palette = QtGui.QPalette()
+        palette.setColor(QtGui.QPalette.Base, QtCore.Qt.transparent)
+        self.qmlview.setPalette(palette)
+
+        self.sceneview.addWidget(self.qmlview)
+        self.qmlview.move(QtCore.QPoint(0,0))
+        self.qmlview.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+
+        self.setScene(self.sceneview)
 
     def set_up_fields(self):
         for key, val in profile.settingsDictionary.iteritems():

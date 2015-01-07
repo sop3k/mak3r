@@ -21,4 +21,11 @@ Rectangle {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 25
     }
+
+    ViewSelect {
+        id: view_select
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: 25
+    }
 }

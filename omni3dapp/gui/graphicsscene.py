@@ -27,8 +27,8 @@ from omni3dapp.logger import log
 
 class SceneView(QtGui.QGraphicsScene):
 
-    def __init__(self, top=0, left=0, width=0, height=0, mainwindow=None, *args):
-        super(SceneView, self).__init__(top, left, width, height, *args)
+    def __init__(self, mainwindow=None, *args):
+        super(SceneView, self).__init__(*args)
         self.mainwindow = mainwindow
 
         self.shownError = False

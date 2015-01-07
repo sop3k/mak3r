@@ -94,11 +94,11 @@ class MainWindow(QtGui.QGraphicsView):
         self.sceneview = SceneView(self)
 
         self.qmlview = QtDeclarative.QDeclarativeView()
-        self.qmlview.rootContext().setContextProperty("mainwindow", self)
+        # self.qmlview.rootContext().setContextProperty("mainwindow", self)
         self.qmlview.rootContext().setContextProperty(
             "graphicsscene", self.sceneview)
         self.qmlview.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
-        self.qmlview.setResizeMode(QtDeclarative.QDeclarativeView.SizeRootObjectToView)
+        self.qmlview.setResizeMode(self.qmlview.SizeRootObjectToView)
 
         palette = QtGui.QPalette()
         palette.setColor(QtGui.QPalette.Base, QtCore.Qt.transparent)

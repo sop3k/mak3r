@@ -4,8 +4,9 @@ import QtQuick 1.0
 
 Rectangle {
     id: all_view_selections
-    width: 158
+    width: 200
     height: 32
+    color: parent.color
 
     Image {
         id: image_normal
@@ -23,9 +24,9 @@ Rectangle {
     }
 
     Image {
-        id: image_transparent
+        id: image_xray
         x: 0
-        y: 79
+        y: 0
         anchors.right: parent.right
         anchors.rightMargin: 42
         anchors.verticalCenter: parent.verticalCenter
@@ -52,9 +53,11 @@ Rectangle {
         MouseArea {
             id: mouse_area_normal
             x: 0
-            y: 0
             width: 32
             height: 32
+            onClicked: {
+                graphicsscene.setViewMode('normal');
+            }
         }
     }
 
@@ -73,12 +76,15 @@ Rectangle {
             y: 0
             width: 32
             height: 32
+            onClicked: {
+                graphicsscene.setViewMode('overhang');
+            }
         }
     }
 
     Rectangle {
-        id: rect_transparent
-        x: 1
+        id: rect_xray
+        x: 0
         y: 0
         width: 32
         height: 32
@@ -88,11 +94,14 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
 
         MouseArea {
-            id: mouse_area_transparent
+            id: mouse_area_xray
             x: 0
             y: 0
             width: 32
             height: 32
+            onClicked: {
+                graphicsscene.setViewMode('xray');
+            }
         }
     }
 
@@ -112,6 +121,38 @@ Rectangle {
             y: 0
             width: 32
             height: 32
+            onClicked: {
+                graphicsscene.setViewMode('gcode');
+            }
+        }
+    }
+
+    Image {
+        id: image_transparent
+        x: 0
+        y: 0
+        anchors.horizontalCenter: parent.horizontalCenter
+        source: "resources/icons/external-link-4x.png"
+    }
+
+    Rectangle {
+        id: rect_transparent
+        x: 0
+        y: 0
+        width: 32
+        height: 32
+        color: "#00000000"
+        anchors.horizontalCenter: parent.horizontalCenter
+
+        MouseArea {
+            id: mouse_area_transparent
+            x: 0
+            y: 0
+            width: 32
+            height: 32
+            onClicked: {
+                graphicsscene.setViewMode('transparent');
+            }
         }
     }
 }

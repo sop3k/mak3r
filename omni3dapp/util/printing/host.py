@@ -73,7 +73,6 @@ class PrinterConnection(Pronsole):
     def __init__(self, parent):
         Pronsole.__init__(self, parent)
         self.parent = parent
-        self.ui = parent.ui
         self.paused = False
         self.sdprinting = False
         self.pauseScript = "pause.gcode"
@@ -160,15 +159,15 @@ class PrinterConnection(Pronsole):
         self.guisignals.setonline.connect(self.online_gui) 
         self.guisignals.setoffline.connect(self.offline_gui) 
         self.guisignals.enable_printing.connect(
-                self.parent.scene.enable_printing)
+                self.parent.sceneview.enable_printing)
         self.guisignals.set_printtemp_target.connect(
-                self.parent.scene.set_printtemp_target)
+                self.parent.sceneview.set_printtemp_target)
         self.guisignals.set_bedtemp_target.connect(
-                self.parent.scene.set_bedtemp_target)
+                self.parent.sceneview.set_bedtemp_target)
         self.guisignals.set_printtemp_value.connect(
-                self.parent.scene.set_printtemp_value)
+                self.parent.sceneview.set_printtemp_value)
         self.guisignals.set_bedtemp_value.connect(
-                self.parent.scene.set_bedtemp_value)
+                self.parent.sceneview.set_bedtemp_value)
 
     def connect(self, port_val, baud_val):
         self.guisignals.addtext.emit(_('Connecting...'))
@@ -226,8 +225,9 @@ class PrinterConnection(Pronsole):
         if portslist:    
             if not port:
                 port = portslist[0]
-            self.ui.port_type.clear()
-            self.ui.port_type.addItems(portslist)
+            # TODO: set fields
+            # self.ui.port_type.clear()
+            # self.ui.port_type.addItems(portslist)
             self.parent.set_statusbar(_("Found active ports."))
         else:
             self.parent.set_statusbar(_("Did not find any connected ports."))
@@ -395,7 +395,7 @@ class PrinterConnection(Pronsole):
         Pronsole.endcb(self)
         if self.p.queueindex == 0:
             self.p.runSmallScript(self.endScript)
-            self.parent.scene.on_endprint()
+            self.parent.sceneview.on_endprint()
 
     def move_axis(self, axis, curr_pos, step, mach_size):
         # self.zb.clearRepeat()
@@ -448,7 +448,7 @@ class PrinterConnection(Pronsole):
             self.paused = True
             # self.p.runSmallScript(self.pauseScript)
             self.extra_print_time += int(time.time() - self.starttime)
-            self.parent.scene.on_pauseprint()
+            self.parent.sceneview.on_pauseprint()
             # wx.CallAfter(self.pausebtn.SetLabel, _("Resume"))
             # wx.CallAfter(self.toolbarsizer.Layout)
         else:
@@ -458,7 +458,7 @@ class PrinterConnection(Pronsole):
                 self.p.send_now("M24")
             else:
                 self.p.resume()
-            self.parent.scene.on_resumeprint()
+            self.parent.sceneview.on_resumeprint()
             # wx.CallAfter(self.pausebtn.SetLabel, _("Pause"))
             # wx.CallAfter(self.toolbarsizer.Layout)
 
@@ -507,8 +507,8 @@ class PrinterConnection(Pronsole):
         self.guisignals.addtext.emit(msg)
         self.guisignals.setonline.emit()
         self.guisignals.enable_printing.emit()
-        self.parent.scene.printtemp_gauge.setHidden(False)
-        self.parent.scene.bedtemp_gauge.setHidden(False)
+        self.parent.sceneview.printtemp_gauge.setHidden(False)
+        self.parent.sceneview.bedtemp_gauge.setHidden(False)
 
     @QtCore.Slot()
     def online_gui(self):

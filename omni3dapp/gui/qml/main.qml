@@ -27,5 +27,15 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         anchors.topMargin: 25
+        opacity: 0
     }
+
+    function showViewSelect() {
+        view_select.opacity = 1
+    }
+
+    function hideViewSelect() {
+        view_select.opacity = 0
+    }
+
 }

@@ -269,7 +269,7 @@ class Engine(QtCore.QObject):
     def __init__(self, sceneview, progressCallback):
         super(Engine, self).__init__(sceneview)
         self._sceneview = sceneview
-        self._parent = sceneview._parent
+        self._parent = sceneview.mainwindow
         self._callback = progressCallback
         self._objCount = 0
         self._result = None
@@ -541,7 +541,7 @@ class Engine(QtCore.QObject):
 
         if self._result:
             self._result.setFinished(True)
-            self._sceneview.viewSelection.show_layers_button()
+            self._sceneview.show_layers_button()
             self._callback(1.0)
 
         return_code = self.engine_process.exitCode()

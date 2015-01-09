@@ -101,7 +101,7 @@ class GCode(object):
         self.currentPath['extruder'] = self.currentExtruder
 
         self.currentLayer.append(self.currentPath)
-        self.parse_line_timer = QtCore.QTimer(self._sceneview._parent)
+        self.parse_line_timer = QtCore.QTimer(self._sceneview.mainwindow)
 
         self.parse_line_timer.singleShot(0, self._parse_line)
 
@@ -321,7 +321,7 @@ class GCode(object):
         self._sceneview.set_printing_gcode(self.printing_gcode)
         if self.progressCallback is not None and self._fileSize > 0:
             self.progressCallback(float(self.gcodeFile.tell()) / float(self._fileSize))
-            self._sceneview.updateGL()
+            self._sceneview.update()
 
 
 def getCodeInt(line, code):

@@ -29,7 +29,7 @@ class EngineResultView(object):
         self._layer20VBOs = []
 
         self.layerSelect = openglscene.glSlider(self._parent, 10000, 0, 1,
-                (-1,-2), lambda : self._parent.updateGL())
+                (-1,-2), lambda : self._parent.update())
 
     def setResult(self, result):
         if self._result == result:
@@ -91,7 +91,7 @@ class EngineResultView(object):
             viewZ = result._polygons[layerNr]['inset0'][0][0][2]
         else:
             viewZ = layerNr * profile.getProfileSettingFloat('layer_height') + profile.getProfileSettingFloat('bottom_thickness')
-        self._parent._viewTarget[2] = viewZ
+        self._parent.viewTarget[2] = viewZ
         msize = max(profile.getMachineSettingFloat('machine_width'), profile.getMachineSettingFloat('machine_depth'))
         lineTypeList = [
             ('inset0',     'WALL-OUTER', [1,0,0,1]),

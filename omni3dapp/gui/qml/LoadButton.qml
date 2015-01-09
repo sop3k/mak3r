@@ -67,7 +67,9 @@ Rectangle {
         MouseArea {
             id: mousearea_load_folder
             anchors.fill: parent
-            onClicked: { graphicsscene.showLoadModel() }
+            onClicked: {
+                graphicsscene.showLoadModel();
+            }
         }
     }
 

@@ -56,7 +56,7 @@ class MainWindow(QtGui.QGraphicsView):
         self.setup_scene()
 
         # Class that enables connecting to printer
-        # self.pc = host.PrinterConnection(self)
+        self.pc = host.PrinterConnection(self)
 
         # self.connect_actions()
         # self.connect_buttons()
@@ -99,6 +99,8 @@ class MainWindow(QtGui.QGraphicsView):
             "graphicsscene", self.sceneview)
         self.qmlview.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
         self.qmlview.setResizeMode(self.qmlview.SizeRootObjectToView)
+
+        self.qmlobject = self.qmlview.rootObject()
 
         palette = QtGui.QPalette()
         palette.setColor(QtGui.QPalette.Base, QtCore.Qt.transparent)
@@ -154,149 +156,127 @@ class MainWindow(QtGui.QGraphicsView):
             self.ui.commandbox.history = [u""]
             self.ui.commandbox.histindex = 1
 
-    def connect_actions(self):
-        self.ui.actionSwitch_to_quickprint.triggered.connect(self.on_simple_switch)
-        self.ui.actionSwitch_to_expert_mode.triggered.connect(self.on_normal_switch)
-        self.ui.actionLoad_model_file_tCTRL_L.triggered.connect(self.scene.showLoadModel)
-        self.ui.actionSave_model.triggered.connect(self.scene.showSaveModel)
-        self.ui.actionReload_platform.triggered.connect(self.scene.reloadScene)
-        self.ui.actionClear_platform.triggered.connect(self.scene.onDeleteAll)
-        self.ui.actionPrint.triggered.connect(self.scene.onPrintButton)
-        self.ui.actionSave_GCode.triggered.connect(self.scene.showSaveGCode)
+    # def connect_actions(self):
+    #     self.ui.actionSwitch_to_quickprint.triggered.connect(self.on_simple_switch)
+    #     self.ui.actionSwitch_to_expert_mode.triggered.connect(self.on_normal_switch)
+    #     self.ui.actionLoad_model_file_tCTRL_L.triggered.connect(self.scene.showLoadModel)
+    #     self.ui.actionSave_model.triggered.connect(self.scene.showSaveModel)
+    #     self.ui.actionReload_platform.triggered.connect(self.scene.reloadScene)
+    #     self.ui.actionClear_platform.triggered.connect(self.scene.onDeleteAll)
+    #     self.ui.actionPrint.triggered.connect(self.scene.onPrintButton)
+    #     self.ui.actionSave_GCode.triggered.connect(self.scene.showSaveGCode)
 
-        self.ui.commandbox.returnPressed.connect(self.pc.sendline)
-        self.ui.commandbox.installEventFilter(self)
+    #     self.ui.commandbox.returnPressed.connect(self.pc.sendline)
+    #     self.ui.commandbox.installEventFilter(self)
 
-        for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
-            if elem.objectName().startswith('move'):
-                elem.clicked.connect(self.move_axis)
-            else:
-                elem.clicked.connect(self.home_pos)
+    #     for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
+    #         if elem.objectName().startswith('move'):
+    #             elem.clicked.connect(self.move_axis)
+    #         else:
+    #             elem.clicked.connect(self.home_pos)
 
-        # Simple panel actions
-        self.connect_actions_simple_mode()
-        # Normal panel actions
-        self.connect_actions_normal_mode()
+    #     # Simple panel actions
+    #     self.connect_actions_simple_mode()
+    #     # Normal panel actions
+    #     self.connect_actions_normal_mode()
 
-    def connect_actions_simple_mode(self):
-        self.ui.high_quality.toggled.connect(self.scene.sceneUpdated)
-        self.ui.normal_quality.toggled.connect(self.scene.sceneUpdated)
-        self.ui.fast_low_quality.toggled.connect(self.scene.sceneUpdated)
-        self.ui.pla.toggled.connect(self.scene.sceneUpdated)
-        self.ui.abs.toggled.connect(self.scene.sceneUpdated)
-        self.ui.simple_filament_diameter.textChanged.connect(
-                self.scene.sceneUpdated)
-        self.ui.print_support_structure.stateChanged.connect(
-                self.scene.sceneUpdated)
+    # def connect_actions_simple_mode(self):
+    #     self.ui.high_quality.toggled.connect(self.scene.sceneUpdated)
+    #     self.ui.normal_quality.toggled.connect(self.scene.sceneUpdated)
+    #     self.ui.fast_low_quality.toggled.connect(self.scene.sceneUpdated)
+    #     self.ui.pla.toggled.connect(self.scene.sceneUpdated)
+    #     self.ui.abs.toggled.connect(self.scene.sceneUpdated)
+    #     self.ui.simple_filament_diameter.textChanged.connect(
+    #             self.scene.sceneUpdated)
+    #     self.ui.print_support_structure.stateChanged.connect(
+    #             self.scene.sceneUpdated)
 
-    def connect_actions_normal_mode(self):
-        # For each element in self.normal or self.tabWidget
-        for elem in self.ui.normal.findChildren(QtGui.QWidget):
-            if elem.objectName() in self.SETTING_CHANGE_WHITELIST:
-                continue
-            if isinstance(elem, QtGui.QDoubleSpinBox):
-                elem.valueChanged.connect(self.on_value_changed)
-            elif isinstance(elem, QtGui.QCheckBox):
-                elem.stateChanged.connect(self.on_state_changed)
-            elif isinstance(elem, QtGui.QLineEdit):
-                elem.textChanged.connect(self.on_text_changed)
-            elif isinstance(elem, QtGui.QComboBox):
-                elem.currentIndexChanged.connect(self.on_index_changed)
+    # def connect_actions_normal_mode(self):
+    #     # For each element in self.normal or self.tabWidget
+    #     for elem in self.ui.normal.findChildren(QtGui.QWidget):
+    #         if elem.objectName() in self.SETTING_CHANGE_WHITELIST:
+    #             continue
+    #         if isinstance(elem, QtGui.QDoubleSpinBox):
+    #             elem.valueChanged.connect(self.on_value_changed)
+    #         elif isinstance(elem, QtGui.QCheckBox):
+    #             elem.stateChanged.connect(self.on_state_changed)
+    #         elif isinstance(elem, QtGui.QLineEdit):
+    #             elem.textChanged.connect(self.on_text_changed)
+    #         elif isinstance(elem, QtGui.QComboBox):
+    #             elem.currentIndexChanged.connect(self.on_index_changed)
 
-    def connect_buttons(self):
-        self.ui.connect_btn.clicked.connect(self.connect_printer)
-        self.ui.port_btn.clicked.connect(self.pc.rescanports)
-        self.ui.send_btn.clicked.connect(self.pc.sendline)
-        self.ui.set_bedtemp_btn.clicked.connect(self.bedtemp)
-        self.ui.set_printtemp_btn.clicked.connect(self.settemp)
+    # def connect_buttons(self):
+    #     self.ui.connect_btn.clicked.connect(self.connect_printer)
+    #     self.ui.port_btn.clicked.connect(self.pc.rescanports)
+    #     self.ui.send_btn.clicked.connect(self.pc.sendline)
+    #     self.ui.set_bedtemp_btn.clicked.connect(self.bedtemp)
+    #     self.ui.set_printtemp_btn.clicked.connect(self.settemp)
 
-    def on_simple_switch(self, *args, **kwargs):
-        profile.putPreference('startMode', 'Simple')
-        self.update_slice_mode(is_simple=True)
+    # def on_simple_switch(self, *args, **kwargs):
+    #     profile.putPreference('startMode', 'Simple')
+    #     self.update_slice_mode(is_simple=True)
 
-    def on_normal_switch(self, *args, **kwargs):
-        profile.putPreference('startMode', 'Normal')
-        self.update_slice_mode(is_simple=False)
+    # def on_normal_switch(self, *args, **kwargs):
+    #     profile.putPreference('startMode', 'Normal')
+    #     self.update_slice_mode(is_simple=False)
 
-    def update_slice_mode(self, is_simple=None):
-        if not is_simple:
-            is_simple = profile.getPreference('startMode') == 'Simple'
-        self.ui.slice_modes.setCurrentIndex(int(is_simple))
+    # def update_slice_mode(self, is_simple=None):
+    #     if not is_simple:
+    #         is_simple = profile.getPreference('startMode') == 'Simple'
+    #     self.ui.slice_modes.setCurrentIndex(int(is_simple))
 
-        for item in self.NORMAL_MODE_ONLY_ITEMS:
-            action = self.findChild(QtGui.QAction, 'action{0}'.format(item))
-            action.setEnabled(not is_simple)
-        if is_simple:
-            self.ui.actionSwitch_to_quickprint.setChecked(True)
-            self.ui.actionSwitch_to_expert_mode.setChecked(False)
-        else:
-            self.ui.actionSwitch_to_expert_mode.setChecked(True)
-            self.ui.actionSwitch_to_quickprint.setChecked(False)
+    #     for item in self.NORMAL_MODE_ONLY_ITEMS:
+    #         action = self.findChild(QtGui.QAction, 'action{0}'.format(item))
+    #         action.setEnabled(not is_simple)
+    #     if is_simple:
+    #         self.ui.actionSwitch_to_quickprint.setChecked(True)
+    #         self.ui.actionSwitch_to_expert_mode.setChecked(False)
+    #     else:
+    #         self.ui.actionSwitch_to_expert_mode.setChecked(True)
+    #         self.ui.actionSwitch_to_quickprint.setChecked(False)
 
-        # Set splitter sash position & size
-        # if isSimple:
-        #     # Save normal mode sash
-        #     self.normalSashPos = self.splitter.GetSashPosition()
+    #     self.scene.updateProfileToControls()
+    #     self.scene._scene.pushFree()
 
-        #     # Change location of sash to width of quick mode pane
-        #     (width, height) = self.simpleSettingsPanel.GetSizer().GetSize()
-        #     self.splitter.SetSashPosition(width, True)
+    # def setupSlice(self):
+    #     put = profile.setTempOverride
+    #     get = profile.getProfileSetting
+    #     for setting in profile.settingsList:
+    #         if not setting.isProfile():
+    #             continue
+    #         profile.setTempOverride(setting.getName(), setting.getDefault())
 
-        #     # Disable sash
-        #     self.splitter.SetSashSize(0)
-        # else:
-        #     self.splitter.SetSashPosition(self.normalSashPos, True)
-        #     # Enabled sash
-        #     self.splitter.SetSashSize(4)
+    #     if self.ui.print_support_structure.isChecked():
+    #         put('support', _("Exterior Only"))
 
-        # self.defaultFirmwareInstallMenuItem.Enable(firmwareInstall.getDefaultFirmware() is not None)
-        # if profile.getMachineSetting('machine_type') == 'ultimaker2':
-        #     self.bedLevelWizardMenuItem.Enable(False)
-        #     self.headOffsetWizardMenuItem.Enable(False)
-        # if int(profile.getMachineSetting('extruder_amount')) < 2:
-        #     self.headOffsetWizardMenuItem.Enable(False)
-        self.scene.updateProfileToControls()
-        self.scene._scene.pushFree()
+    #     nozzle_size = float(get('nozzle_size'))
+    #     if self.ui.normal_quality.isChecked():
+    #         put('layer_height', '0.2')
+    #         put('wall_thickness', nozzle_size * 2.0)
+    #         put('layer_height', '0.10')
+    #         put('fill_density', '20')
+    #     elif self.ui.fast_low_quality.isChecked():
+    #         put('wall_thickness', nozzle_size * 2.5)
+    #         put('layer_height', '0.20')
+    #         put('fill_density', '10')
+    #         put('print_speed', '60')
+    #         put('cool_min_layer_time', '3')
+    #         put('bottom_layer_speed', '30')
+    #     elif self.ui.high_quality.isChecked():
+    #         put('wall_thickness', nozzle_size * 2.0)
+    #         put('layer_height', '0.06')
+    #         put('fill_density', '20')
+    #         put('bottom_layer_speed', '15')
+    #     # elif self.printTypeJoris.GetValue():
+    #     #     put('wall_thickness', nozzle_size * 1.5)
 
-    def setupSlice(self):
-        put = profile.setTempOverride
-        get = profile.getProfileSetting
-        for setting in profile.settingsList:
-            if not setting.isProfile():
-                continue
-            profile.setTempOverride(setting.getName(), setting.getDefault())
-
-        if self.ui.print_support_structure.isChecked():
-            put('support', _("Exterior Only"))
-
-        nozzle_size = float(get('nozzle_size'))
-        if self.ui.normal_quality.isChecked():
-            put('layer_height', '0.2')
-            put('wall_thickness', nozzle_size * 2.0)
-            put('layer_height', '0.10')
-            put('fill_density', '20')
-        elif self.ui.fast_low_quality.isChecked():
-            put('wall_thickness', nozzle_size * 2.5)
-            put('layer_height', '0.20')
-            put('fill_density', '10')
-            put('print_speed', '60')
-            put('cool_min_layer_time', '3')
-            put('bottom_layer_speed', '30')
-        elif self.ui.high_quality.isChecked():
-            put('wall_thickness', nozzle_size * 2.0)
-            put('layer_height', '0.06')
-            put('fill_density', '20')
-            put('bottom_layer_speed', '15')
-        # elif self.printTypeJoris.GetValue():
-        #     put('wall_thickness', nozzle_size * 1.5)
-
-        put('filament_diameter', self.ui.filament_diameter.text())
-        if self.ui.abs.isChecked():
-            put('print_bed_temperature', '100')
-            put('platform_adhesion', 'Brim')
-            put('filament_flow', '107')
-            put('print_temperature', '245')
-        put('plugin_config', '')
+    #     put('filament_diameter', self.ui.filament_diameter.text())
+    #     if self.ui.abs.isChecked():
+    #         put('print_bed_temperature', '100')
+    #         put('platform_adhesion', 'Brim')
+    #         put('filament_flow', '107')
+    #         put('print_temperature', '245')
+    #     put('plugin_config', '')
 
     # def onTimer(self, e):
     #     # Check if there is something in the clipboard
@@ -335,40 +315,40 @@ class MainWindow(QtGui.QGraphicsView):
         # TODO - loading plugins:
         # self.pluginPanel.updateProfileToControls()
 
-    def update_profile_to_controls_all(self):
-        self.scene.updateProfileToControls()
-        self.update_profile_to_controls_normal_panel()
+    # def update_profile_to_controls_all(self):
+    #     self.scene.updateProfileToControls()
+    #     self.update_profile_to_controls_normal_panel()
 
-    def on_value_changed(self):
-        elem = QtCore.QObject.sender(self)
-        self.on_setting_change(elem.objectName(), elem.value())
+    # def on_value_changed(self):
+    #     elem = QtCore.QObject.sender(self)
+    #     self.on_setting_change(elem.objectName(), elem.value())
 
-    def on_state_changed(self):
-        elem = QtCore.QObject.sender(self)
-        self.on_setting_change(elem.objectName(), elem.isChecked())
+    # def on_state_changed(self):
+    #     elem = QtCore.QObject.sender(self)
+    #     self.on_setting_change(elem.objectName(), elem.isChecked())
 
-    def on_text_changed(self):
-        elem = QtCore.QObject.sender(self)
-        self.on_setting_change(elem.objectName(), elem.text())
+    # def on_text_changed(self):
+    #     elem = QtCore.QObject.sender(self)
+    #     self.on_setting_change(elem.objectName(), elem.text())
 
-    def on_index_changed(self):
-        elem = QtCore.QObject.sender(self)
-        self.on_setting_change(elem.objectName(),
-                elem.itemText(elem.currentIndex()))
+    # def on_index_changed(self):
+    #     elem = QtCore.QObject.sender(self)
+    #     self.on_setting_change(elem.objectName(),
+    #             elem.itemText(elem.currentIndex()))
 
-    def on_setting_change(self, obj_name, value):
-        try:
-            profile.settingsDictionary[obj_name].setValue(value)
-        except KeyError as e:
-            log.error("Key not found in preferences: {0}".format(e))
-        self.validate_normal_mode()
+    # def on_setting_change(self, obj_name, value):
+    #     try:
+    #         profile.settingsDictionary[obj_name].setValue(value)
+    #     except KeyError as e:
+    #         log.error("Key not found in preferences: {0}".format(e))
+    #     self.validate_normal_mode()
 
     def validate_normal_mode(self):
         # TODO: improve dictionary structure so that we can easily get normal
         # mode elements
         # for elem in normal_mode_elems:
         #     elem.validate()
-        self.scene.sceneUpdated()
+        self.sceneview.sceneUpdated()
 
     # def _validate(self):
     #     for setting in self.settingControlList:
@@ -401,7 +381,7 @@ class MainWindow(QtGui.QGraphicsView):
 
         # load model
         profile.putPreference('lastFile', filename)
-        self.scene.loadFiles([filename])
+        self.sceneview.loadFiles([filename])
 
     def add_to_model_mru(self, filename):
         files = self.get_model_files_history()
@@ -436,7 +416,9 @@ class MainWindow(QtGui.QGraphicsView):
         return QtCore.QFileInfo(full_filename).fileName()
 
     def set_statusbar(self, msg):
-        self.statusBar().showMessage(msg)
+        # TODO: set status somewhere
+        print msg
+        # self.statusBar().showMessage(msg)
 
     def connect_printer(self):
         port_val = self.ui.port_type.itemText(self.ui.port_type.currentIndex())
@@ -462,7 +444,7 @@ class MainWindow(QtGui.QGraphicsView):
 
     def terminate_thread(self, thread_name):
         try:
-            thread = getattr(self.scene._engine, thread_name, None)
+            thread = getattr(self.sceneview._engine, thread_name, None)
             if not thread:
                 return None
             thread.terminate()
@@ -526,7 +508,7 @@ class MainWindow(QtGui.QGraphicsView):
         self.set_statusbar(_("Connected to printer."))
 
         if self.pc.fgcode:
-            self.scene.printButton.setDisabled(False)
+            self.sceneview.printButton.setDisabled(False)
 
     def set_disconnected(self):
         self.enable_elements(False)
@@ -537,10 +519,6 @@ class MainWindow(QtGui.QGraphicsView):
         self.ui.connect_btn.clicked.connect(self.connect_printer)
 
         self.set_statusbar(_("Disconnected."))
-
-    @QtCore.Slot()
-    def load_file(self):
-        print "Load file clicked"
 
     def eventFilter(self, obj, evt):
         if obj == self.ui.commandbox:

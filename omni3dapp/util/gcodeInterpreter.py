@@ -318,7 +318,7 @@ class GCode(object):
             path['points'] = numpy.array(path['points'], numpy.float32)
             path['extrusion'] = numpy.array(path['extrusion'], numpy.float32)
         self.layerList.append(self.currentLayer)
-        self._sceneview.set_printing_gcode(self.printing_gcode)
+        self._sceneview.setPrintingGcode(self.printing_gcode)
         if self.progressCallback is not None and self._fileSize > 0:
             self.progressCallback(float(self.gcodeFile.tell()) / float(self._fileSize))
             self._sceneview.update()

@@ -136,7 +136,7 @@ class EngineResult(object):
         self._gcodeInterpreter.progressCallback = self._gcodeInterpreterCallback
         self._gcodeLoadCallback = engine_results_view._gcodeLoadCallback
 
-        self._gcodeInterpreter.load(self._gcodeData)
+        # self._gcodeInterpreter.load(self._gcodeData)
 
     # def submitInfoOnline(self):
     #     if profile.getPreference('submit_slice_information') != 'True':
@@ -541,7 +541,7 @@ class Engine(QtCore.QObject):
 
         if self._result:
             self._result.setFinished(True)
-            self._sceneview.show_layers_button()
+            self._sceneview.showLayersButton()
             self._callback(1.0)
 
         return_code = self.engine_process.exitCode()

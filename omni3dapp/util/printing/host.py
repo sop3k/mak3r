@@ -159,15 +159,15 @@ class PrinterConnection(Pronsole):
         self.guisignals.setonline.connect(self.online_gui) 
         self.guisignals.setoffline.connect(self.offline_gui) 
         self.guisignals.enable_printing.connect(
-                self.parent.sceneview.enable_printing)
+                self.parent.sceneview.enablePrinting)
         self.guisignals.set_printtemp_target.connect(
-                self.parent.sceneview.set_printtemp_target)
+                self.parent.sceneview.setPrinttempTarget)
         self.guisignals.set_bedtemp_target.connect(
-                self.parent.sceneview.set_bedtemp_target)
+                self.parent.sceneview.setBedtempTarget)
         self.guisignals.set_printtemp_value.connect(
-                self.parent.sceneview.set_printtemp_value)
+                self.parent.sceneview.setPrinttempValue)
         self.guisignals.set_bedtemp_value.connect(
-                self.parent.sceneview.set_bedtemp_value)
+                self.parent.sceneview.setBedtempValue)
 
     def connect(self, port_val, baud_val):
         self.guisignals.addtext.emit(_('Connecting...'))
@@ -395,7 +395,7 @@ class PrinterConnection(Pronsole):
         Pronsole.endcb(self)
         if self.p.queueindex == 0:
             self.p.runSmallScript(self.endScript)
-            self.parent.sceneview.on_endprint()
+            self.parent.sceneview.onEndprint()
 
     def move_axis(self, axis, curr_pos, step, mach_size):
         # self.zb.clearRepeat()
@@ -448,7 +448,7 @@ class PrinterConnection(Pronsole):
             self.paused = True
             # self.p.runSmallScript(self.pauseScript)
             self.extra_print_time += int(time.time() - self.starttime)
-            self.parent.sceneview.on_pauseprint()
+            self.parent.sceneview.onPauseprint()
             # wx.CallAfter(self.pausebtn.SetLabel, _("Resume"))
             # wx.CallAfter(self.toolbarsizer.Layout)
         else:
@@ -458,7 +458,7 @@ class PrinterConnection(Pronsole):
                 self.p.send_now("M24")
             else:
                 self.p.resume()
-            self.parent.sceneview.on_resumeprint()
+            self.parent.sceneview.onResumeprint()
             # wx.CallAfter(self.pausebtn.SetLabel, _("Pause"))
             # wx.CallAfter(self.toolbarsizer.Layout)
 

@@ -72,18 +72,20 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.platformMesh = {}
 
-        self.container = openglscene.glGuiContainer(self, (0, 0))
+        # self.container = openglscene.glGuiContainer(self, (0, 0))
+        self.container = openglscene.Container(self)
         self.tool = previewTools.toolNone(self)
 
         self.loadObjectShader()
 
-        self.printButton = openglscene.glButton(self, 6, _("Print"), (1,0), self.onPrintButton)
+        self.printButton = openglscene.glButton(self, 6, _("Print"), (1, 0),
+                                                self.onPrintButton)
         self.printButton.setDisabled(True)
 
-        self.printtemp_gauge = openglscene.glTempGauge(parent=self, size=(400, 10),
-            pos=(0, -2), title="Heater:")
-        self.bedtemp_gauge = openglscene.glTempGauge(parent=self, size=(400, 10),
-            pos=(0, -1), title="Bed:")
+        self.printtemp_gauge = openglscene.glTempGauge(
+            parent=self, size=(400, 10), pos=(0, -2), title="Heater:")
+        self.bedtemp_gauge = openglscene.glTempGauge(
+            parent=self, size=(400, 10), pos=(0, -1), title="Bed:")
 
         self.engine = sliceEngine.Engine(self, self.updateEngineProgress)
         self.engineResultView = engineResultView.EngineResultView(self)
@@ -98,7 +100,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.updateProfileToControls()
 
     def add(self, ctrl):
-        if hasattr(self, '_container'):
+        if hasattr(self, 'container'):
             self.container.add(ctrl)
 
     def getObjectCenterPos(self):
@@ -826,10 +828,11 @@ class SceneView(QtGui.QGraphicsScene):
         self.slicing_finished = result is not None and result.isFinished()
         if not self.slicing_finished:
             if self.printButton.getProgressBar() is not None and \
-                    progressValue >= 0.0 and abs(
-                        self.printButton.getProgressBar()-progressValue) < 0.01:
+                    progressValue >= 0.0 and \
+                    abs(self.printButton.getProgressBar() -
+                        progressValue) < 0.01:
                 return
-        printing_enabled = self.is_printing_enabled()
+        printing_enabled = self.isPrintingEnabled()
         self.printButton.setDisabled(not printing_enabled)
         if progressValue >= 0.0:
             self.printButton.setProgressBar(progressValue)
@@ -839,7 +842,8 @@ class SceneView(QtGui.QGraphicsScene):
         if self.slicing_finished:
             self.printButton.setProgressBar(None)
             text = '%s' % (result.getPrintTime())
-            for e in xrange(0, int(profile.getMachineSetting('extruder_amount'))):
+            for e in xrange(0, int(profile.getMachineSetting(
+                                   'extruder_amount'))):
                 amount = result.getFilamentAmount(e)
                 if amount is None:
                     continue
@@ -935,18 +939,19 @@ class SceneView(QtGui.QGraphicsScene):
         gc.collect()
         self.sceneUpdated()
 
-    def hide_layers_button(self):
+    def hideLayersButton(self):
         print "hiding layers button"
 
-    def show_layers_button(self):
+    def showLayersButton(self):
         print "showing layers button"
 
     def cleanResult(self):
         self.engineResultView.setResult(None)
-        # self.hide_layers_button()
+        self.setViewMode('normal')
+        self.hideLayersButton()
         self.mainwindow.qmlobject.hideViewSelect()
 
-    def create_context_menu(self, evt):
+    def createContextMenu(self, evt):
         menu = QtGui.QMenu()
         if self.focusObj is not None:
             menu.addAction(QtGui.QAction(_("Center on platform"), menu,
@@ -1043,7 +1048,7 @@ class SceneView(QtGui.QGraphicsScene):
             if last_button == LEFT_BUTTON:
                 self.selectObject(self.focusObj)
             elif last_button == RIGHT_BUTTON:
-                self.create_context_menu(evt)
+                self.createContextMenu(evt)
         elif self.mouseState == 'dragObject' and self.selectedObj is not None:
             self.scene.pushFree(self.selectedObj)
             self.sceneUpdated()
@@ -1215,7 +1220,7 @@ class SceneView(QtGui.QGraphicsScene):
 
     def loadGCodeFile(self, filename):
         self.onDeleteAll()
-        #Cheat the engine results to load a GCode file into it.
+        # Cheat the engine results to load a GCode file into it.
         self.engine.abortEngine()
         self.engine._result = sliceEngine.EngineResult(self)
 
@@ -1229,13 +1234,14 @@ class SceneView(QtGui.QGraphicsScene):
         if self.mainwindow.pc.is_online():
             self.printButton.setDisabled(False)
 
-        self.show_layers_button()
+        self.showLayersButton()
         self.setViewMode('gcode')
 
     @QtCore.Slot(str)
     def setViewMode(self, viewmode='normal'):
         if viewmode not in self.VIEW_MODES:
-            log.error("Trying to set undefined view mode: {0}".format(viewmode))
+            log.error("Trying to set undefined view mode: {0}".format(
+                viewmode))
             return
         self.viewMode = viewmode
         if viewmode == 'gcode':
@@ -1244,7 +1250,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.engineResultView.setEnabled(self.viewMode == 'gcode')
         self.queueRefresh()
 
-    def set_printing_gcode(self, gcode):
+    def setPrintingGcode(self, gcode):
         self.mainwindow.pc.fgcode = gcode
 
     def loadLayers(self):
@@ -1252,47 +1258,47 @@ class SceneView(QtGui.QGraphicsScene):
             return
         self.engine._result.getGCodeLayers(self.engineResultView)
 
-    def is_printing_enabled(self):
+    def isPrintingEnabled(self):
         return self.slicing_finished and self.mainwindow.is_online()
 
     @QtCore.Slot()
-    def enable_printing(self):
-        if self.is_printing_enabled():
+    def enablePrinting(self):
+        if self.isPrintingEnabled():
             self.printButton.setDisabled(False)
             self.update()
 
     @QtCore.Slot(float)
-    def set_printtemp_target(self, temp):
+    def setPrinttempTarget(self, temp):
         self.printtemp_gauge.setTarget(temp)
 
     @QtCore.Slot(float)
-    def set_bedtemp_target(self, temp):
+    def setBedtempTarget(self, temp):
         self.bedtemp_gauge.setTarget(temp)
 
     @QtCore.Slot(float)
-    def set_printtemp_value(self, temp):
+    def setPrinttempValue(self, temp):
         self.printtemp_gauge.setValue(temp)
 
     @QtCore.Slot(float)
-    def set_bedtemp_value(self, temp):
+    def setBedtempValue(self, temp):
         self.bedtemp_gauge.setValue(temp)
 
-    def on_startprint(self):
+    def onStartprint(self):
         self.printButton.setImageID(30)
         self.printButton.setTooltip(_("Pause"))
         self.printButton.setCallback(self.mainwindow.pc.pause)
 
-    def on_endprint(self):
+    def onEndprint(self):
         self.printButton.setImageID(6)
         self.printButton.setTooltip(_("Print"))
 
-    def on_pauseprint(self):
-        self.printButton.setImageID(6)
-        self.printButton.setTooltip(_("Resume"))
+    # def on_pauseprint(self):
+    #     self.printButton.setImageID(6)
+    #     self.printButton.setTooltip(_("Resume"))
 
-    def on_resumeprint(self):
-        self.printButton.setImageID(30)
-        self.printButton.setTooltip(_("Pause"))
+    # def on_resumeprint(self):
+    #     self.printButton.setImageID(30)
+    #     self.printButton.setTooltip(_("Pause"))
 
     def onPrintButton(self, button=LEFT_BUTTON):
         self.on_startprint()
@@ -1369,7 +1375,8 @@ class SceneView(QtGui.QGraphicsScene):
         self.files_loader.load_scene_sig.connect(self.loadScene)
 
         self.files_loader.finished.connect(progress_dialog.close)
-        self.files_loader.finished.connect(self.mainwindow.qmlobject.showViewSelect)
+        self.files_loader.finished.connect(
+            self.mainwindow.qmlobject.showViewSelect)
         self.files_loader.finished.connect(self.files_loader_thread.quit)
         self.files_loader.finished.connect(self.files_loader.deleteLater)
         self.files_loader_thread.finished.connect(

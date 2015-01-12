@@ -86,7 +86,7 @@ class glGuiControl(object):
 class glGuiContainer(glGuiControl):
     def __init__(self, parent, pos):
         self._glGuiControlList = []
-        glGuiLayoutButtons(self)
+        # glGuiLayoutButtons(self)
         super(glGuiContainer, self).__init__(parent, pos)
 
     def add(self, ctrl):
@@ -266,6 +266,8 @@ class glButton(glGuiControl):
         return x0 + w / 2, y0 + h / 2
 
     def draw(self, painter=None):
+        # TODO: change if needed
+        return
         if self._hidden:
             return
 
@@ -873,6 +875,7 @@ class glSlider(glGuiControl):
 
         w, h = self.getMinSize()
         pos = self._getPixelPos()
+        print "slider's pos: ", pos
 
         glPushMatrix()
         glTranslatef(pos[0], pos[1], 0)
@@ -1140,3 +1143,22 @@ class glTempGauge(glGuiControl):
 #     def onMousePressEvent(self, x, y, button):
 #         for elem in self._container:
 #             elem.onMousePressEvent(x, y, button)
+
+class Container(object):
+    def __init__(self, parent):
+        self.parent = parent
+        self.all_elements = []
+
+    def add(self, ctrl):
+        self.all_elements.append(ctrl)
+
+    def draw(self, painter=None):
+        for elem in self.all_elements:
+            elem.draw(painter)
+
+    def onMouseMoveEvent(self, x, y):
+        handled = False
+        for ctrl in self.all_elements:
+            if ctrl.onMouseMoveEvent(x, y):
+                handled = True
+        return handled

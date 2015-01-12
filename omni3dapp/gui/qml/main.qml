@@ -38,4 +38,21 @@ Rectangle {
         view_select.opacity = 0
     }
 
+    LayersSlider {
+        id: layers_slider
+        width: 200
+        height: 12
+        opacity: 0
+        anchors.top: parent.top
+        anchors.topMargin: 64
+        anchors.horizontalCenter: parent.horizontalCenter
+    }
+
+    function showLayersSlider() {
+        layers_slider.opacity = 1
+    }
+
+    function hideLayersSlider() {
+        layers_slider.opacity = 0
+    }
 }

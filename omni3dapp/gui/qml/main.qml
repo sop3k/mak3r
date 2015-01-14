@@ -40,6 +40,7 @@ Rectangle {
 
     LayersSlider {
         id: layers_slider
+        objectName: "layers_slider"
         width: 200
         height: 12
         opacity: 0
@@ -48,11 +49,15 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
     }
 
-    function showLayersSlider() {
-        layers_slider.opacity = 1
+    function setLayersSliderVisible(val) {
+        layers_slider.opacity = val;
     }
 
-    function hideLayersSlider() {
-        layers_slider.opacity = 0
+    PrintButton {
+        id: print_button
+        anchors.right: parent.right
+        anchors.rightMargin: 25
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 25
     }
 }

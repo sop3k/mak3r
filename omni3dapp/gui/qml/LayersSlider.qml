@@ -1,16 +1,36 @@
 import Qt 4.7
 
  Item {
-     id: slider; width: 400; height: 16
+     id: slider;
+     width: 400;
+     height: 16
+     objectName: "layers_slider_item";
 
-     // value is read/write.
-     property real value: 1
+     // value is read/write
+     property real value: 1;
      onValueChanged: updatePos();
-     property real maximum: 1
-     property real minimum: 1
-     property int xMax: width - handle.width - 4
+     property real minimum: 1;
+     property real maximum: 1;
+     property int xMax: width - handle.width - 4;
      onXMaxChanged: updatePos();
      onMinimumChanged: updatePos();
+
+     function setRange(min, max) {
+         minimum = min;
+         maximum = max;
+     }
+
+     function getValue() {
+         return value;
+     }
+
+     function getMaxValue() {
+         return maximum;
+     }
+
+     function setValue(val) {
+         value = val;
+     }
 
      function updatePos() {
          if (maximum > minimum) {
@@ -25,8 +45,10 @@ import Qt 4.7
      }
 
      Rectangle {
-         anchors.fill: parent
-         border.color: "white"; border.width: 0; radius: 8
+         anchors.fill: parent;
+         border.color: "white";
+         border.width: 0;
+         radius: 8;
          gradient: Gradient {
              GradientStop { position: 0.0; color: "#66343434" }
              GradientStop { position: 1.0; color: "#66000000" }
@@ -34,7 +56,8 @@ import Qt 4.7
      }
 
      Rectangle {
-         id: handle; smooth: true
+         id: handle;
+         smooth: true;
          y: 2; width: 30; height: slider.height-4; radius: 6
          gradient: Gradient {
              GradientStop { position: 0.0; color: "lightgray" }
@@ -43,10 +66,13 @@ import Qt 4.7
 
          MouseArea {
              id: mouse
-             anchors.fill: parent; drag.target: parent
-             drag.axis: Drag.XAxis; drag.minimumX: 2; drag.maximumX: slider.xMax+2
+             anchors.fill: parent;
+             drag.target: parent;
+             drag.axis: Drag.XAxis;
+             drag.minimumX: 2;
+             drag.maximumX: slider.xMax+2;
              onPositionChanged: {
-                value = (maximum - minimum) * (handle.x-2) / slider.xMax + minimum;
+                 value = (maximum - minimum) * (handle.x-2) / slider.xMax + minimum;
              }
          }
      }

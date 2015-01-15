@@ -39,8 +39,8 @@ class EngineResultView(object):
         self._layerVBOs = []
         self._layer20VBOs = []
 
-        self.layerSelect = openglscene.glSlider(
-            self._parent, 10000, 0, 0, (-1,-2), lambda : self._parent.update())
+        self.layerSelect = self._parent.mainwindow.qmlobject.findChild(
+            QtCore.QObject, "layers_slider")
 
     def setResult(self, result):
         if self._result == result:
@@ -62,13 +62,9 @@ class EngineResultView(object):
 
     def setEnabled(self, enabled):
         self._enabled = enabled
-        self.layerSelect.setHidden(not enabled)
+        self._parent.mainwindow.qmlobject.setLayersSliderVisible(int(enabled))
         if not enabled and self._gcodeLayers:
             self._gcodeLayers = None
-        if enabled:
-            self._parent.mainwindow.qmlobject.showLayersSlider()
-        else:
-            self._parent.mainwindow.qmlobject.hideLayersSlider()
 
     def _gcodeLoadCallback(self, result, progress, layers):
         # TODO: test what happens if the result is True
@@ -88,7 +84,7 @@ class EngineResultView(object):
                 self.layerSelect.setRange(0, len(self._result._polygons) - 1)
 
     def getLayerNr(self):
-        layerNr = self.layerSelect.getValue()
+        layerNr = int(self.layerSelect.getValue())
         if layerNr == self.layerSelect.getMaxValue() and \
                 self._result is not None and len(self._result._polygons) > 0:
             layerNr = max(layerNr, len(self._result._polygons) - 1)

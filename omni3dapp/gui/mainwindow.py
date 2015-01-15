@@ -53,6 +53,7 @@ class MainWindow(QtGui.QGraphicsView):
         # self.set_up_fields()
 
         # Create a scene to present and modify 3d objects
+        self.setup_qmlview()
         self.setup_scene()
 
         # Class that enables connecting to printer
@@ -90,17 +91,19 @@ class MainWindow(QtGui.QGraphicsView):
             datadir = os.path.dirname(__file__)
         return os.path.join(datadir, filename)
 
-    def setup_scene(self):
-        self.sceneview = SceneView(self)
-
+    def setup_qmlview(self):
         self.qmlview = QtDeclarative.QDeclarativeView()
-        # self.qmlview.rootContext().setContextProperty("mainwindow", self)
-        self.qmlview.rootContext().setContextProperty(
-            "graphicsscene", self.sceneview)
         self.qmlview.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
         self.qmlview.setResizeMode(self.qmlview.SizeRootObjectToView)
 
         self.qmlobject = self.qmlview.rootObject()
+
+    def setup_scene(self):
+        self.sceneview = SceneView(self)
+
+        # self.qmlview.rootContext().setContextProperty("mainwindow", self)
+        self.qmlview.rootContext().setContextProperty(
+            "graphicsscene", self.sceneview)
 
         palette = QtGui.QPalette()
         palette.setColor(QtGui.QPalette.Base, QtCore.Qt.transparent)

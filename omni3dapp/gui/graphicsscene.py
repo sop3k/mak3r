@@ -37,6 +37,7 @@ class SceneView(QtGui.QGraphicsScene):
         super(SceneView, self).__init__(*args)
         self.mainwindow = mainwindow
 
+        self.focus = None
         self.shownError = False
         self.machineSize = None
         self.objectShader = None
@@ -73,7 +74,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.platformMesh = {}
 
         # self.container = openglscene.glGuiContainer(self, (0, 0))
-        self.container = openglscene.Container(self)
+        # self.container = openglscene.Container(self)
         self.tool = previewTools.toolNone(self)
 
         self.loadObjectShader()
@@ -258,7 +259,7 @@ class SceneView(QtGui.QGraphicsScene):
         glDisable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-        glClearColor(0.9, 0.9, 0.9, 1.0)
+        glClearColor(0.2, 0.2, 0.2, 1.0)
         glClearStencil(0)
         glClearDepth(1.0)
 
@@ -433,7 +434,8 @@ class SceneView(QtGui.QGraphicsScene):
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        self.container.draw(painter)
+        if hasattr(self, 'container'):
+            self.container.draw(painter)
 
     def drawUltimaker(self, machine):
         if machine not in self.platformMesh:
@@ -993,14 +995,16 @@ class SceneView(QtGui.QGraphicsScene):
     def guiMouseMoveEvent(self, evt):
         self.update()
         pos = evt.scenePos()
-        self.container.onMouseMoveEvent(pos.x(), pos.y())
+        if hasattr(self, 'container'):
+            self.container.onMouseMoveEvent(pos.x(), pos.y())
 
     def mousePressEvent(self, evt):
         self.setFocus()
         pos = evt.scenePos()
-        if self.container.onMousePressEvent(pos.x(), pos.y(), evt.button()):
-            self.update()
-            return
+        if hasattr(self, 'container'):
+            if self.container.onMousePressEvent(pos.x(), pos.y(), evt.button()):
+                self.update()
+                return
         self.onMouseDown(evt)
 
         super(SceneView, self).mousePressEvent(evt)
@@ -1010,9 +1014,10 @@ class SceneView(QtGui.QGraphicsScene):
 
     def mouseReleaseEvent(self, evt):
         pos = evt.scenePos()
-        if self.container.onMouseReleaseEvent(pos.x(), pos.y()):
-            self.update()
-            return
+        if hasattr(self, 'container'):
+            if self.container.onMouseReleaseEvent(pos.x(), pos.y()):
+                self.update()
+                return
         self.onMouseUp(evt)
 
         super(SceneView, self).mouseReleaseEvent(evt)
@@ -1126,7 +1131,8 @@ class SceneView(QtGui.QGraphicsScene):
         code = evt.key()
         modifiers = evt.modifiers()
         if self.engineResultView.onKeyChar(code, modifiers) or \
-                self.container.keyPressEvent(code, modifiers):
+                (hasattr(self, 'container') and
+                 self.container.keyPressEvent(code, modifiers)):
             self.queueRefresh()
             return
         if code == QtCore.Qt.Key_Delete or \

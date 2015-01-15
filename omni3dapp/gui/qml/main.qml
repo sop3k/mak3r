@@ -6,20 +6,12 @@ Rectangle {
     id: page
     color: "transparent"
 
-    LoadButton {
-        id: load_button
+    Bars {
+        id: bars
         anchors.left: parent.left
-        anchors.leftMargin: 25
+        anchors.leftMargin: 0
         anchors.top: parent.top
-        anchors.topMargin: 25
-    }
-
-    ConfigButton {
-        id: config_button
-        anchors.left: parent.left
-        anchors.leftMargin: 25
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 25
+        anchors.topMargin: 0
     }
 
     ViewSelect {
@@ -59,5 +51,11 @@ Rectangle {
         anchors.rightMargin: 25
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 25
+    }
+
+    Loader {
+        id: loader
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 0
     }
 }

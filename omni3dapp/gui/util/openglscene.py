@@ -74,7 +74,7 @@ class glGuiControl(object):
         return False
 
     def hasFocus(self):
-        return self._base._focus == self
+        return self._base.focus == self
 
     def onMouseReleaseEvent(self, x, y):
         pass
@@ -378,7 +378,7 @@ class glRadioButton(glButton):
         self._selected = value
 
     def _onRadioSelect(self, button):
-        self._base._focus = None
+        self._base.focus = None
         for ctrl in self._group:
             if ctrl != self:
                 ctrl.setSelected(False)
@@ -400,9 +400,9 @@ class glComboButton(glButton):
 
     def _onComboOpenSelect(self, button):
         if self.hasFocus():
-            self._base._focus = None
+            self._base.focus = None
         else:
-            self._base._focus = self
+            self._base.focus = self
 
     def hide_layers_button(self):
         self._imageIDs = self._allImageIDs[:-1]
@@ -469,7 +469,7 @@ class glComboButton(glButton):
             if 0 <= x - pos[0] <= bs and 0 <= y - pos[1] - bs <= bs * len(self._imageIDs):
                 self._selection = int((y - pos[1] - bs) / bs)
                 self._imageID = self._imageIDs[self._selection]
-                self._base._focus = None
+                self._base.focus = None
                 self._comboCallback()
                 return True
         return super(glComboButton, self).onMousePressEvent(x, y, button)
@@ -497,8 +497,8 @@ class glFrame(glGuiContainer):
     def setHidden(self, value):
         self._hidden = value
         for child in self._glGuiControlList:
-            if self._base._focus == child:
-                self._base._focus = None
+            if self._base.focus == child:
+                self._base.focus = None
         self.setSelected(not value)
 
     def getSelected(self):
@@ -766,7 +766,7 @@ class glNumberCtrl(glGuiControl):
         return True
 
     def setFocus(self):
-        self._base._focus = self
+        self._base.focus = self
         self._selectPos = len(self._value)
         return True
 
@@ -924,7 +924,7 @@ class glSlider(glGuiControl):
         return -w/2 <= x - pos[0] <= w/2 and -h/2 <= y - pos[1] <= h/2
 
     def setFocus(self):
-        self._base._focus = self
+        self._base.focus = self
         return True
 
     def onMouseMoveEvent(self, x, y):
@@ -950,7 +950,7 @@ class glSlider(glGuiControl):
 
     def onMouseReleaseEvent(self, x, y):
         if self.hasFocus():
-            self._base._focus = None
+            self._base.focus = None
             return True
         return False
 

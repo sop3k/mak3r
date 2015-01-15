@@ -39,7 +39,7 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.focus = None
         self.shownError = False
-        self.machineSize = None
+        self._machineSize = None
         self.objectShader = None
         self.platformTexture = None
 
@@ -52,7 +52,8 @@ class SceneView(QtGui.QGraphicsScene):
         self.pitch = 60
         self.zoom = 300
         self.scene = objectscene.Scene()
-        self.viewTarget = numpy.array([0, 0, 0], numpy.float32)
+        # self.viewTarget = numpy.array([0, 0, 0], numpy.float32)
+        self.viewTarget = numpy.array([20, 20, 20], numpy.float32)
         self.animZoom = None
 
         self.objColors = [None, None, None, None]
@@ -126,13 +127,11 @@ class SceneView(QtGui.QGraphicsScene):
         p1 -= self.viewTarget
         return p0, p1
 
-    def getMachineSize(self):
-        if self.machineSize is not None:
-            return self.machineSize
-        return numpy.array([
-            profile.getMachineSettingFloat('machine_width'),
-            profile.getMachineSettingFloat('machine_depth'),
-            profile.getMachineSettingFloat('machine_height')])
+    @property
+    def machineSize(self):
+        if self._machineSize is None:
+            self._machineSize = numpy.array(profile.getMachineSizeList())
+        return self._machineSize
 
     def selectObject(self, obj, zoom=True):
         if obj != self.selectedObj:
@@ -246,7 +245,7 @@ class SceneView(QtGui.QGraphicsScene):
     def init3DView(self):
         # set viewing projection
         # glViewport(0, 0, self.width(), self.height())
-        # GL.glViewport((width - side) / 2, (height - side) / 2, side, side)
+        # glViewport((self.width() - side) / 2, (self.height() - side) / 2, side, side)
         glLoadIdentity()
 
         glLightfv(GL_LIGHT0, GL_POSITION, [0.2, 0.2, 1.0, 0.0])
@@ -265,7 +264,8 @@ class SceneView(QtGui.QGraphicsScene):
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        aspect = float(self.width()) / float(self.height())
+        aspect = self.width() / self.height()
+        # gluPerspective(45.0, aspect, 1.0, numpy.max(self.machineSize) * 4)
         gluPerspective(45.0, aspect, 1.0, numpy.max(self.machineSize) * 4)
 
         glMatrixMode(GL_MODELVIEW)
@@ -500,14 +500,14 @@ class SceneView(QtGui.QGraphicsScene):
         glEnable(GL_CULL_FACE)
         glEnable(GL_BLEND)
 
-        size = self.getMachineSize()
+        size = self.machineSize
 
         machine = profile.getMachineSetting('machine_type')
         if machine.startswith('ultimaker'):
             self.drawUltimaker(machine)
         else:
             glColor4f(0, 0, 0, 1)
-            glLineWidth(3)
+            glLineWidth(4)
             glBegin(GL_LINES)
             glVertex3f(-size[0] / 2, -size[1] / 2, 0)
             glVertex3f(-size[0] / 2, -size[1] / 2, 10)
@@ -521,25 +521,35 @@ class SceneView(QtGui.QGraphicsScene):
 
         polys = profile.getMachineSizePolygons()
         height = size[2]
-        circular = profile.getMachineSetting('machine_shape') == 'Circular'
-        glBegin(GL_QUADS)
-        # Draw the sides of the build volume.
-        for n in xrange(0, len(polys[0])):
-            if not circular:
-                if n % 2 == 0:
-                    glColor4ub(5, 171, 231, 96)
-                else:
-                    glColor4ub(5, 171, 231, 64)
-            else:
-                glColor4ub(5, 171, 231, 96)
 
+        # Draw the build volume mesh
+
+        # TODO: how should it look like for cicrular machine shape?
+        # circular = profile.getMachineSetting('machine_shape') == 'Circular'
+        glColor4f(0.6, 0.6, 0.6, 1)
+        glLineWidth(1.3)
+        glBegin(GL_LINES)
+        for n in xrange(0, len(polys[0])):
             glVertex3f(polys[0][n][0], polys[0][n][1], height)
             glVertex3f(polys[0][n][0], polys[0][n][1], 0)
+
+            glVertex3f(polys[0][n][0], polys[0][n][1], height)
+            glVertex3f(polys[0][n-1][0], polys[0][n-1][1], height)
+            glVertex3f(polys[0][n][0], polys[0][n][1], 0)
+            glVertex3f(polys[0][n-1][0], polys[0][n-1][1], 0)
+
             glVertex3f(polys[0][n-1][0], polys[0][n-1][1], 0)
             glVertex3f(polys[0][n-1][0], polys[0][n-1][1], height)
         glEnd()
 
-        # Draw top of build volume.
+        # glColor4ub(5, 171, 231, 96)
+        # glBegin(GL_QUADS)
+        # n = 0
+        # glVertex3f(polys[0][n][0], polys[0][n][1], height)
+        # glVertex3f(polys[0][n][0], polys[0][n][1], 0)
+        # glVertex3f(polys[0][n-1][0], polys[0][n-1][1], 0)
+        # glVertex3f(polys[0][n-1][0], polys[0][n-1][1], height)
+        # glEnd()
         glColor4ub(5, 171, 231, 128)
         glBegin(GL_TRIANGLE_FAN)
         for p in polys[0][::-1]:
@@ -547,26 +557,26 @@ class SceneView(QtGui.QGraphicsScene):
         glEnd()
 
         # Draw checkerboard
-        if self.platformTexture is None:
-            self.platformTexture = self.loadGLTexture('checkerboard.png')
-        glColor4f(1, 1, 1, 0.5)
-        glBindTexture(GL_TEXTURE_2D, self.platformTexture)
-        glEnable(GL_TEXTURE_2D)
-        glBegin(GL_TRIANGLE_FAN)
-        for p in polys[0]:
-            glTexCoord2f(p[0]/20, p[1]/20)
-            glVertex3f(p[0], p[1], 0)
-        glEnd()
+        # if self.platformTexture is None:
+        #     self.platformTexture = self.loadGLTexture('checkerboard.png')
+        # glColor4f(1, 1, 1, 0.5)
+        # glBindTexture(GL_TEXTURE_2D, self.platformTexture)
+        # glEnable(GL_TEXTURE_2D)
+        # glBegin(GL_TRIANGLE_FAN)
+        # for p in polys[0]:
+        #     glTexCoord2f(p[0]/20, p[1]/20)
+        #     glVertex3f(p[0], p[1], 0)
+        # glEnd()
 
-        # Draw no-go zones. (clips in case of UM2)
-        glDisable(GL_TEXTURE_2D)
-        glColor4ub(127, 127, 127, 200)
-        for poly in polys[1:]:
-            glBegin(GL_TRIANGLE_FAN)
-            for p in poly:
-                glTexCoord2f(p[0]/20, p[1]/20)
-                glVertex3f(p[0], p[1], 0)
-            glEnd()
+        # # Draw no-go zones. (clips in case of UM2)
+        # glDisable(GL_TEXTURE_2D)
+        # glColor4ub(127, 127, 127, 200)
+        # for poly in polys[1:]:
+        #     glBegin(GL_TRIANGLE_FAN)
+        #     for p in poly:
+        #         glTexCoord2f(p[0]/20, p[1]/20)
+        #         glVertex3f(p[0], p[1], 0)
+        #     glEnd()
 
         glDepthMask(True)
         glDisable(GL_BLEND)
@@ -787,7 +797,6 @@ class SceneView(QtGui.QGraphicsScene):
         self.scene.arrangeAll()
         self.sceneUpdated()
         self.scene.updateSizeOffsets(True)
-        self.machineSize = self.getMachineSize()
         self.objColors[0] = profile.getPreferenceColour('model_colour')
         self.objColors[1] = profile.getPreferenceColour('model_colour2')
         self.objColors[2] = profile.getPreferenceColour('model_colour3')

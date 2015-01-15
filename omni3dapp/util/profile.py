@@ -1111,29 +1111,65 @@ def getMachineCenterCoords():
         return [0, 0]
     return [getMachineSettingFloat('machine_width') / 2, getMachineSettingFloat('machine_depth') / 2]
 
-#Returns a list of convex polygons, first polygon is the allowed area of the machine,
-# the rest of the polygons are the dis-allowed areas of the machine.
+def getMachineSizeList():
+    return [
+        getMachineSettingFloat('machine_width'),
+        getMachineSettingFloat('machine_depth'),
+        getMachineSettingFloat('machine_height')
+        ]
+
 def getMachineSizePolygons():
-    size = numpy.array([getMachineSettingFloat('machine_width'), getMachineSettingFloat('machine_depth'), getMachineSettingFloat('machine_height')], numpy.float32)
+    """
+    Returns a list of convex polygons.
+    first polygon is the allowed area of the machine,
+    the rest of the polygons are the dis-allowed areas of the machine.
+    """
+    size = numpy.array(getMachineSizeList(), numpy.float32)
+
     ret = []
     if getMachineSetting('machine_shape') == 'Circular':
         # Circle platform for delta printers...
         circle = []
         steps = 32
         for n in xrange(0, steps):
-            circle.append([math.cos(float(n)/steps*2*math.pi) * size[0]/2, math.sin(float(n)/steps*2*math.pi) * size[1]/2])
+            circle.append([math.cos(float(n)/steps*2*math.pi) * size[0]/2,
+                           math.sin(float(n)/steps*2*math.pi) * size[1]/2])
         ret.append(numpy.array(circle, numpy.float32))
     else:
-        ret.append(numpy.array([[-size[0]/2,-size[1]/2],[size[0]/2,-size[1]/2],[size[0]/2, size[1]/2], [-size[0]/2, size[1]/2]], numpy.float32))
+        ret.append(numpy.array([
+            [-size[0]/2, -size[1]/2],
+            [size[0]/2, -size[1]/2],
+            [size[0]/2, size[1]/2],
+            [-size[0]/2, size[1]/2]], numpy.float32))
 
     if getMachineSetting('machine_type') == 'ultimaker2':
         #UM2 no-go zones
         w = 25
         h = 10
-        ret.append(numpy.array([[-size[0]/2,-size[1]/2],[-size[0]/2+w+2,-size[1]/2], [-size[0]/2+w,-size[1]/2+h], [-size[0]/2,-size[1]/2+h]], numpy.float32))
-        ret.append(numpy.array([[ size[0]/2-w-2,-size[1]/2],[ size[0]/2,-size[1]/2], [ size[0]/2,-size[1]/2+h],[ size[0]/2-w,-size[1]/2+h]], numpy.float32))
-        ret.append(numpy.array([[-size[0]/2+w+2, size[1]/2],[-size[0]/2, size[1]/2], [-size[0]/2, size[1]/2-h],[-size[0]/2+w, size[1]/2-h]], numpy.float32))
-        ret.append(numpy.array([[ size[0]/2, size[1]/2],[ size[0]/2-w-2, size[1]/2], [ size[0]/2-w, size[1]/2-h],[ size[0]/2, size[1]/2-h]], numpy.float32))
+        ret.append(numpy.array([
+            [-size[0]/2, -size[1]/2],
+            [-size[0]/2+w+2, -size[1]/2],
+            [-size[0]/2+w, -size[1]/2+h],
+            [-size[0]/2, -size[1]/2+h]
+            ], numpy.float32))
+        ret.append(numpy.array([
+            [size[0]/2-w-2, -size[1]/2],
+            [size[0]/2, -size[1]/2],
+            [size[0]/2, -size[1]/2+h],
+            [size[0]/2-w, -size[1]/2+h]
+            ], numpy.float32))
+        ret.append(numpy.array([
+            [-size[0]/2+w+2, size[1]/2],
+            [-size[0]/2, size[1]/2],
+            [-size[0]/2, size[1]/2-h],
+            [-size[0]/2+w, size[1]/2-h]
+            ], numpy.float32))
+        ret.append(numpy.array([
+            [size[0]/2, size[1]/2],
+            [size[0]/2-w-2, size[1]/2],
+            [size[0]/2-w, size[1]/2-h],
+            [size[0]/2, size[1]/2-h]
+            ], numpy.float32))
     return ret
 
 #returns the number of extruders minimal used. Normally this returns 1, but with dual-extrusion support material it returns 2

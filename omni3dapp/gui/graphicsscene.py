@@ -53,7 +53,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.zoom = 300
         self.scene = objectscene.Scene()
         # self.viewTarget = numpy.array([0, 0, 0], numpy.float32)
-        self.viewTarget = numpy.array([20, 20, 20], numpy.float32)
+        self.viewTarget = numpy.array([25, 25, 25], numpy.float32)
         self.animZoom = None
 
         self.objColors = [None, None, None, None]
@@ -265,7 +265,6 @@ class SceneView(QtGui.QGraphicsScene):
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         aspect = self.width() / self.height()
-        # gluPerspective(45.0, aspect, 1.0, numpy.max(self.machineSize) * 4)
         gluPerspective(45.0, aspect, 1.0, numpy.max(self.machineSize) * 4)
 
         glMatrixMode(GL_MODELVIEW)
@@ -437,136 +436,64 @@ class SceneView(QtGui.QGraphicsScene):
         if hasattr(self, 'container'):
             self.container.draw(painter)
 
-    def drawUltimaker(self, machine):
-        if machine not in self.platformMesh:
-            meshes = meshLoader.loadMeshes(resources.getPathForMesh(
-                                           machine + '_platform.stl'))
-            if len(meshes) > 0:
-                self.platformMesh[machine] = meshes[0]
-            else:
-                self.platformMesh[machine] = None
-            if machine == 'ultimaker2':
-                self.platformMesh[machine]._drawOffset = numpy.array(
-                    [0, -37, 145], numpy.float32)
-            else:
-                self.platformMesh[machine]._drawOffset = numpy.array(
-                    [0, 0, 2.5], numpy.float32)
-        glColor4f(1, 1, 1, 0.5)
-        self.objectShader.bind()
-        self.renderObject(self.platformMesh[machine], False, False)
-        self.objectShader.unbind()
-
-        # For the Ultimaker 2 render the texture on the back plate
-        # to show the Ultimaker2 text.
-        if machine == 'ultimaker2':
-            if not hasattr(self.platformMesh[machine], 'texture'):
-                self.platformMesh[machine].texture = self.loadGLTexture(
-                    'Ultimaker2backplate.png')
-            glBindTexture(GL_TEXTURE_2D, self.platformMesh[machine].texture)
-            glEnable(GL_TEXTURE_2D)
-            glPushMatrix()
-            glColor4f(1, 1, 1, 1)
-
-            glTranslate(0, 150, -5)
-            h = 50
-            d = 8
-            w = 100
-            glEnable(GL_BLEND)
-            glBlendFunc(GL_DST_COLOR, GL_ZERO)
-            glBegin(GL_QUADS)
-            glTexCoord2f(1, 0)
-            glVertex3f(w, 0, h)
-            glTexCoord2f(0, 0)
-            glVertex3f(-w, 0, h)
-            glTexCoord2f(0, 1)
-            glVertex3f(-w, 0, 0)
-            glTexCoord2f(1, 1)
-            glVertex3f(w, 0, 0)
-
-            glTexCoord2f(1, 0)
-            glVertex3f(-w, d, h)
-            glTexCoord2f(0, 0)
-            glVertex3f(w, d, h)
-            glTexCoord2f(0, 1)
-            glVertex3f(w, d, 0)
-            glTexCoord2f(1, 1)
-            glVertex3f(-w, d, 0)
-            glEnd()
-            glDisable(GL_TEXTURE_2D)
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-            glPopMatrix()
-
     def drawMachine(self):
         glEnable(GL_CULL_FACE)
         glEnable(GL_BLEND)
 
         size = self.machineSize
 
-        machine = profile.getMachineSetting('machine_type')
-        if machine.startswith('ultimaker'):
-            self.drawUltimaker(machine)
-        else:
-            glColor4f(0, 0, 0, 1)
-            glLineWidth(4)
-            glBegin(GL_LINES)
-            glVertex3f(-size[0] / 2, -size[1] / 2, 0)
-            glVertex3f(-size[0] / 2, -size[1] / 2, 10)
-            glVertex3f(-size[0] / 2, -size[1] / 2, 0)
-            glVertex3f(-size[0] / 2+10, -size[1] / 2, 0)
-            glVertex3f(-size[0] / 2, -size[1] / 2, 0)
-            glVertex3f(-size[0] / 2, -size[1] / 2+10, 0)
-            glEnd()
+        glColor4f(0, 0, 0, 1)
+        glLineWidth(4)
+        glBegin(GL_LINES)
+        glVertex3f(-size[0] / 2, -size[1] / 2, 0)
+        glVertex3f(-size[0] / 2, -size[1] / 2, 10)
+        glVertex3f(-size[0] / 2, -size[1] / 2, 0)
+        glVertex3f(-size[0] / 2+10, -size[1] / 2, 0)
+        glVertex3f(-size[0] / 2, -size[1] / 2, 0)
+        glVertex3f(-size[0] / 2, -size[1] / 2+10, 0)
+        glEnd()
 
         glDepthMask(False)
 
-        polys = profile.getMachineSizePolygons()
+        polys = profile.getMachineSizePolygons()[0]
         height = size[2]
 
-        # Draw the build volume mesh
+        # Color bottom
+        glColor4f(0.25, 0.25, 0.25, 0.96)
+        glBegin(GL_QUADS)
+        for n in xrange(0, len(polys)):
+            glVertex3f(polys[n][0], polys[n][1], 0)
+        glEnd()
 
+        glColor4f(0.5, 0.5, 0.5, 0.9)
+        glLineWidth(1.5)
+
+        # Draw grid on the bottom
+        glBegin(GL_LINES)
+        for step in xrange(0, int(size[1]), 10):
+            glVertex3f(polys[0][0], polys[0][1] + step, 0)
+            glVertex3f(polys[1][0], polys[1][1] + step, 0)
+
+            glVertex3f(polys[0][0] + step, polys[0][1], 0)
+            glVertex3f(polys[-1][0] + step, polys[-1][1], 0)
+        glEnd()
+
+        # Draw the build volume mesh
         # TODO: how should it look like for cicrular machine shape?
         # circular = profile.getMachineSetting('machine_shape') == 'Circular'
-        glColor4f(0.6, 0.6, 0.6, 1)
-        glLineWidth(1.3)
         glBegin(GL_LINES)
-        for n in xrange(0, len(polys[0])):
-            glVertex3f(polys[0][n][0], polys[0][n][1], height)
-            glVertex3f(polys[0][n][0], polys[0][n][1], 0)
+        for n in xrange(0, len(polys)):
+            glVertex3f(polys[n][0], polys[n][1], height)
+            glVertex3f(polys[n][0], polys[n][1], 0)
 
-            glVertex3f(polys[0][n][0], polys[0][n][1], height)
-            glVertex3f(polys[0][n-1][0], polys[0][n-1][1], height)
-            glVertex3f(polys[0][n][0], polys[0][n][1], 0)
-            glVertex3f(polys[0][n-1][0], polys[0][n-1][1], 0)
+            glVertex3f(polys[n][0], polys[n][1], height)
+            glVertex3f(polys[n-1][0], polys[n-1][1], height)
+            glVertex3f(polys[n][0], polys[n][1], 0)
+            glVertex3f(polys[n-1][0], polys[n-1][1], 0)
 
-            glVertex3f(polys[0][n-1][0], polys[0][n-1][1], 0)
-            glVertex3f(polys[0][n-1][0], polys[0][n-1][1], height)
+            glVertex3f(polys[n-1][0], polys[n-1][1], 0)
+            glVertex3f(polys[n-1][0], polys[n-1][1], height)
         glEnd()
-
-        # glColor4ub(5, 171, 231, 96)
-        # glBegin(GL_QUADS)
-        # n = 0
-        # glVertex3f(polys[0][n][0], polys[0][n][1], height)
-        # glVertex3f(polys[0][n][0], polys[0][n][1], 0)
-        # glVertex3f(polys[0][n-1][0], polys[0][n-1][1], 0)
-        # glVertex3f(polys[0][n-1][0], polys[0][n-1][1], height)
-        # glEnd()
-        glColor4ub(5, 171, 231, 128)
-        glBegin(GL_TRIANGLE_FAN)
-        for p in polys[0][::-1]:
-            glVertex3f(p[0], p[1], height)
-        glEnd()
-
-        # Draw checkerboard
-        # if self.platformTexture is None:
-        #     self.platformTexture = self.loadGLTexture('checkerboard.png')
-        # glColor4f(1, 1, 1, 0.5)
-        # glBindTexture(GL_TEXTURE_2D, self.platformTexture)
-        # glEnable(GL_TEXTURE_2D)
-        # glBegin(GL_TRIANGLE_FAN)
-        # for p in polys[0]:
-        #     glTexCoord2f(p[0]/20, p[1]/20)
-        #     glVertex3f(p[0], p[1], 0)
-        # glEnd()
 
         # # Draw no-go zones. (clips in case of UM2)
         # glDisable(GL_TEXTURE_2D)
@@ -710,8 +637,8 @@ class SceneView(QtGui.QGraphicsScene):
         glTranslate(-self.viewTarget[0], -self.viewTarget[1],
                     -self.viewTarget[2])
 
-        # if self.objectShader is not None:
-        self.objectShader.unbind()
+        if self.objectShader is not None:
+            self.objectShader.unbind()
         self.engineResultView.onDraw()
 
         self.prepareViewMode()

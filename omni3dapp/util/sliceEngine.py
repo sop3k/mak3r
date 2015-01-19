@@ -361,7 +361,7 @@ class Engine(QtCore.QObject):
         else:
             self.engine_process = None
         finally:
-            self._callback(-1.0)
+            self._callback(0.0)
 
     def getResult(self):
         return self._result
@@ -460,7 +460,7 @@ class Engine(QtCore.QObject):
             self.engine_process = None
 
     def watchProcess(self, command_list):
-        self._callback(-1.0)
+        self._callback(0.0)
 
         self.start_process(command_list)
         if not self.engine_process:
@@ -554,7 +554,7 @@ class Engine(QtCore.QObject):
             log.error("Engine Result log:")
             for line in self._result.getLog():
                 log.error(line)
-            self._callback(-1.0)
+            self._callback(0.0)
 
         self.abortEngine()
 

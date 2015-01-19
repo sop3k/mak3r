@@ -93,6 +93,9 @@ class SceneView(QtGui.QGraphicsScene):
         self.engineResultView = engineResultView.EngineResultView(self)
         self.slicing_finished = False
 
+        self.progressBar = self.mainwindow.qmlobject.findChild(
+            QtCore.QObject, "loader")
+
         self.sceneUpdateTimer = QtCore.QTimer(self)
 
         self.idleTimer = QtCore.QTimer(self)
@@ -762,23 +765,15 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot(float)
     def updateEngineProgress(self, progressValue):
+        self.progressBar.setValue(progressValue)
+        self.queueRefresh()
+
+        if progressValue < 1:
+            return
+
         result = self.engine.getResult()
         self.slicing_finished = result is not None and result.isFinished()
-        if not self.slicing_finished:
-            if self.printButton.getProgressBar() is not None and \
-                    progressValue >= 0.0 and \
-                    abs(self.printButton.getProgressBar() -
-                        progressValue) < 0.01:
-                return
-        printing_enabled = self.isPrintingEnabled()
-        self.printButton.setDisabled(not printing_enabled)
-        if progressValue >= 0.0:
-            self.printButton.setProgressBar(progressValue)
-        else:
-            self.printButton.setProgressBar(None)
-        self.engineResultView.setResult(result)
         if self.slicing_finished:
-            self.printButton.setProgressBar(None)
             text = '%s' % (result.getPrintTime())
             for e in xrange(0, int(profile.getMachineSetting(
                                    'extruder_amount'))):
@@ -789,10 +784,41 @@ class SceneView(QtGui.QGraphicsScene):
                 cost = result.getFilamentCost(e)
                 if cost is not None:
                     text += '\n%s' % (cost)
-            self.printButton.setBottomText(text)
-        else:
-            self.printButton.setBottomText('')
-        self.queueRefresh()
+        # TODO: set text next to print button
+        #     self.printButton.setBottomText(text)
+
+
+        # result = self.engine.getResult()
+        # self.slicing_finished = result is not None and result.isFinished()
+        # if not self.slicing_finished:
+        #     if self.printButton.getProgressBar() is not None and \
+        #             progressValue >= 0.0 and \
+        #             abs(self.printButton.getProgressBar() -
+        #                 progressValue) < 0.01:
+        #         return
+        # printing_enabled = self.isPrintingEnabled()
+        # self.printButton.setDisabled(not printing_enabled)
+        # if progressValue >= 0.0:
+        #     self.printButton.setProgressBar(progressValue)
+        # else:
+        #     self.printButton.setProgressBar(None)
+        # self.engineResultView.setResult(result)
+        # if self.slicing_finished:
+        #     self.printButton.setProgressBar(None)
+        #     text = '%s' % (result.getPrintTime())
+        #     for e in xrange(0, int(profile.getMachineSetting(
+        #                            'extruder_amount'))):
+        #         amount = result.getFilamentAmount(e)
+        #         if amount is None:
+        #             continue
+        #         text += '\n%s' % (amount)
+        #         cost = result.getFilamentCost(e)
+        #         if cost is not None:
+        #             text += '\n%s' % (cost)
+        #     self.printButton.setBottomText(text)
+        # else:
+        #     self.printButton.setBottomText('')
+        # self.queueRefresh()
 
     def onCenter(self):
         if self.focusObj is None:

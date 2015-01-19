@@ -53,9 +53,12 @@ Rectangle {
         anchors.bottomMargin: 25
     }
 
-    Loader {
+    ProgressBar {
         id: loader
+        objectName: "loader"
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 0
+        anchors.left: parent.left
+        anchors.leftMargin: 0
     }
 }

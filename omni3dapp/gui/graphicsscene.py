@@ -591,7 +591,9 @@ class SceneView(QtGui.QGraphicsScene):
         for obj in self.scene.objects():
             fileList.append(obj.getOriginFilename())
         self.onDeleteAll()
-        self.loadScene(fileList)
+
+        self.files_loader = FilesLoader(self, fileList, self.machineSize)
+        self.files_loader.loadScene(fileList)
 
     def onRunEngine(self):
         self.engine.runEngine(self.scene)
@@ -763,62 +765,33 @@ class SceneView(QtGui.QGraphicsScene):
         #     self.mirrorToolButton.setSelected(False)
         #     self.onToolSelect(0)
 
-    @QtCore.Slot(float)
+    # @QtCore.Slot(float)
     def updateEngineProgress(self, progressValue):
         self.progressBar.setValue(progressValue)
+
+        if progressValue >= 1:
+            self.setPrintingInfo()
         self.queueRefresh()
 
-        if progressValue < 1:
-            return
-
+    def setPrintingInfo(self):
         result = self.engine.getResult()
         self.slicing_finished = result is not None and result.isFinished()
-        if self.slicing_finished:
-            text = '%s' % (result.getPrintTime())
-            for e in xrange(0, int(profile.getMachineSetting(
-                                   'extruder_amount'))):
-                amount = result.getFilamentAmount(e)
-                if amount is None:
-                    continue
-                text += '\n%s' % (amount)
-                cost = result.getFilamentCost(e)
-                if cost is not None:
-                    text += '\n%s' % (cost)
-        # TODO: set text next to print button
-        #     self.printButton.setBottomText(text)
+        if not self.slicing_finished:
+            return
 
+        time_info = "{0}".format(result.getPrintTime())
+        params_info = ""
+        for e in xrange(0, int(profile.getMachineSetting(
+                               'extruder_amount'))):
+            amount = result.getFilamentAmount(e)
+            if amount is None:
+                continue
+            params_info += "{0}".format(amount)
+            # cost = result.getFilamentCost(e)
+            # if cost is not None:
+            #     params_info += " {0}".format(cost)
 
-        # result = self.engine.getResult()
-        # self.slicing_finished = result is not None and result.isFinished()
-        # if not self.slicing_finished:
-        #     if self.printButton.getProgressBar() is not None and \
-        #             progressValue >= 0.0 and \
-        #             abs(self.printButton.getProgressBar() -
-        #                 progressValue) < 0.01:
-        #         return
-        # printing_enabled = self.isPrintingEnabled()
-        # self.printButton.setDisabled(not printing_enabled)
-        # if progressValue >= 0.0:
-        #     self.printButton.setProgressBar(progressValue)
-        # else:
-        #     self.printButton.setProgressBar(None)
-        # self.engineResultView.setResult(result)
-        # if self.slicing_finished:
-        #     self.printButton.setProgressBar(None)
-        #     text = '%s' % (result.getPrintTime())
-        #     for e in xrange(0, int(profile.getMachineSetting(
-        #                            'extruder_amount'))):
-        #         amount = result.getFilamentAmount(e)
-        #         if amount is None:
-        #             continue
-        #         text += '\n%s' % (amount)
-        #         cost = result.getFilamentCost(e)
-        #         if cost is not None:
-        #             text += '\n%s' % (cost)
-        #     self.printButton.setBottomText(text)
-        # else:
-        #     self.printButton.setBottomText('')
-        # self.queueRefresh()
+        self.mainwindow.setPrintButton(time_info, params_info)
 
     def onCenter(self):
         if self.focusObj is None:
@@ -911,6 +884,7 @@ class SceneView(QtGui.QGraphicsScene):
 
     def cleanResult(self):
         self.engineResultView.setResult(None)
+        self.mainwindow.setPrintButton("", "")
         self.setViewMode('normal')
         self.hideLayersButton()
         self.mainwindow.qmlobject.hideViewSelect()
@@ -1154,38 +1128,6 @@ class SceneView(QtGui.QGraphicsScene):
             self.pitch = pitch
         self.queueRefresh()
 
-    def loadObjectsOntoScene(self, objList):
-        for obj in objList:
-            self.scene.add(obj)
-            if not self.scene.checkPlatform(obj):
-                self.scene.centerAll()
-            self.selectObject(obj)
-            if obj.getScale()[0] < 1.0:
-                # TODO: show warning
-                # self.notification.message("Warning: Object scaled down.")
-                pass
-
-    def loadFileOntoScene(self, filename):
-        try:
-            ext = os.path.splitext(filename)[1].lower()
-            if ext in imageToMesh.supportedExtensions():
-                # TODO: implement converting images (do we need that?)
-                # imageToMesh.convertImageDialog(self, filename).Show()
-                objList = []
-            else:
-                objList = meshLoader.loadMeshes(filename)
-        except Exception, e:
-            traceback.print_exc()
-            log.error(e)
-        else:
-            self.loadObjectsOntoScene(objList)
-
-    @QtCore.Slot(list)
-    def loadScene(self, filelist):
-        for filename in filelist:
-            self.loadFileOntoScene(filename)
-        self.sceneUpdated()
-
     def loadGCodeFile(self, filename):
         self.onDeleteAll()
         # Cheat the engine results to load a GCode file into it.
@@ -1198,7 +1140,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.engine._result.setFinished(True)
         self.engineResultView.setResult(self.engine._result)
 
-        self.printButton.setBottomText('')
+        # self.printButton.setBottomText('')
         if self.mainwindow.pc.is_online():
             self.printButton.setDisabled(False)
 
@@ -1292,42 +1234,26 @@ class SceneView(QtGui.QGraphicsScene):
                 ' '.join(map(lambda s: '*' + s, img_extentions)),
                 ' '.join(map(lambda s: '*' + s, ['.g', '.gcode'])))
 
+        # filenames, status = QtGui.QFileDialog.getOpenFileNames(
+        #     self.mainwindow,
+        #     _("Open 3D model"),
+        #     os.path.split(profile.getPreference('lastFile'))[0],
+        #     wildcard_filter)
+
         file_dialog = QtGui.QFileDialog(
             self.mainwindow,
             _("Open 3D model"),
             os.path.split(profile.getPreference('lastFile'))[0],
             wildcard_filter)
+        file_dialog.setFileMode(QtGui.QFileDialog.ExistingFiles)
 
-        if (file_dialog.exec_()):
+        if file_dialog.exec_():
             filenames = file_dialog.selectedFiles()
         else:
             return False
 
         if len(filenames) < 1:
             return False
-
-        progress_dialog = QtGui.QDialog(self.mainwindow)
-        # self.progress_bar = QtGui.QProgressBar(progress_dialog)
-        # self.progress_bar.setRange(0, 100)
-        # self.progress_bar.setValue(50)
-        dialog_layout = QtGui.QVBoxLayout(progress_dialog)
-        msg_label = QtGui.QLabel(
-            _("Waiting for files to be loaded on the scene..."),
-            progress_dialog
-            )
-        dialog_layout.addWidget(msg_label)
-
-        # progress_dialog.setLayout(dialog_layout)
-
-        # dialog_layout.addWidget(self.progress_bar)
-
-        if len(filenames) > 1:
-            msg = _("Loading files...")
-        else:
-            msg = _("Loading file...")
-        progress_dialog.setWindowTitle(msg)
-        progress_dialog.show()
-        # QtGui.QApplication.processEvents()
 
         # TODO: uncomment
         # self.viewSelection.setValue(0)
@@ -1338,11 +1264,10 @@ class SceneView(QtGui.QGraphicsScene):
         self.files_loader_thread = QtCore.QThread(self.mainwindow)
         self.files_loader.moveToThread(self.files_loader_thread)
         self.files_loader_thread.started.connect(self.files_loader.loadFiles)
-        # TODO: uncomment
         self.files_loader.load_gcode_file_sig.connect(self.loadGCodeFile)
-        self.files_loader.load_scene_sig.connect(self.loadScene)
+        self.files_loader.update_scene_sig.connect(self.updateProfileToControls)
+        self.files_loader.set_progressbar_sig.connect(self.setProgressBar)
 
-        self.files_loader.finished.connect(progress_dialog.close)
         self.files_loader.finished.connect(
             self.mainwindow.qmlobject.showViewSelect)
         self.files_loader.finished.connect(self.files_loader_thread.quit)
@@ -1352,10 +1277,16 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.files_loader_thread.start()
 
+    @QtCore.Slot(float)
+    def setProgressBar(self, value):
+        self.progressBar.setValue(value)
+        self.queueRefresh()
+
 
 class FilesLoader(QtCore.QObject):
     load_gcode_file_sig = QtCore.Signal(str)
-    load_scene_sig = QtCore.Signal(list)
+    update_scene_sig = QtCore.Signal()
+    set_progressbar_sig = QtCore.Signal(float)
     finished = QtCore.Signal()
 
     def __init__(self, sceneview, filenames, machine_size):
@@ -1411,16 +1342,45 @@ class FilesLoader(QtCore.QObject):
             # TODO: add notofication
             # self.notification.message(
             #     "ignored: " + " ".join("*" + type for type in ignored_types))
-        self.sceneview.updateProfileToControls()
+
         # now process all the scene files
         if scene_filenames:
-            self.loadSceneFiles(scene_filenames)
+            self.loadScene(scene_filenames)
             self.sceneview.selectObject(None)
             newZoom = numpy.max(self.machine_size)
             self.sceneview.animZoom = openglscene.animation(
                 self.sceneview, self.sceneview.zoom, newZoom, 0.5)
 
-    def loadSceneFiles(self, filenames):
-        # self.sceneview.youMagineButton.setDisabled(False)
-        # self.loadScene(filenames)
-        self.load_scene_sig.emit(filenames)
+    def loadScene(self, filelist):
+        self.set_progressbar_sig.emit(0.1)
+        for no, filename in enumerate(filelist):
+            self.loadFileOntoScene(filename)
+            self.set_progressbar_sig.emit(float((no+1))/len(filelist))
+        self.update_scene_sig.emit()
+
+    def loadFileOntoScene(self, filename):
+        try:
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in imageToMesh.supportedExtensions():
+                # TODO: implement converting images (do we need that?)
+                # imageToMesh.convertImageDialog(self, filename).Show()
+                objList = []
+            else:
+                objList = meshLoader.loadMeshes(filename)
+        except Exception, e:
+            traceback.print_exc()
+            log.error(e)
+        else:
+            self.loadObjectsOntoScene(objList)
+
+    def loadObjectsOntoScene(self, objList):
+        scene = self.sceneview.scene
+        for obj in objList:
+            scene.add(obj)
+            if not scene.checkPlatform(obj):
+                scene.centerAll()
+            self.sceneview.selectObject(obj)
+            if obj.getScale()[0] < 1.0:
+                # TODO: show warning
+                # self.notification.message("Warning: Object scaled down.")
+                pass

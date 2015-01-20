@@ -47,6 +47,7 @@ Rectangle {
 
     PrintButton {
         id: print_button
+        objectName: "print_button"
         anchors.right: parent.right
         anchors.rightMargin: 25
         anchors.bottom: parent.bottom

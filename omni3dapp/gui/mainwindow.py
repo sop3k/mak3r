@@ -56,6 +56,9 @@ class MainWindow(QtGui.QGraphicsView):
         self.setup_qmlview()
         self.setup_scene()
 
+        self.print_button = self.qmlobject.findChild(
+            QtCore.QObject, "print_button")
+
         # Class that enables connecting to printer
         self.pc = host.PrinterConnection(self)
 
@@ -94,6 +97,8 @@ class MainWindow(QtGui.QGraphicsView):
     def setup_qmlview(self):
         self.qmlview = QtDeclarative.QDeclarativeView()
         self.qmlview.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
+        self.qmlview.setMinimumWidth(700)
+        self.qmlview.setMinimumHeight(500)
         self.qmlview.setResizeMode(self.qmlview.SizeRootObjectToView)
 
         self.qmlobject = self.qmlview.rootObject()
@@ -522,6 +527,10 @@ class MainWindow(QtGui.QGraphicsView):
         self.ui.connect_btn.clicked.connect(self.connect_printer)
 
         self.set_statusbar(_("Disconnected."))
+
+    def setPrintButton(self, time_info, params_info):
+        self.print_button.setPrintTime(time_info)
+        self.print_button.setPrintParams(params_info)
 
     def eventFilter(self, obj, evt):
         if obj == self.ui.commandbox:

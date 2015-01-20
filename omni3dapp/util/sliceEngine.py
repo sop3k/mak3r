@@ -95,7 +95,7 @@ class EngineResult(object):
     def getFilamentAmount(self, e=0):
         if self._filamentMM[e] == 0.0:
             return None
-        return '%0.2f meter %0.0f gram' % (float(self._filamentMM[e]) / 1000.0, self.getFilamentWeight(e) * 1000.0)
+        return '%0.2f m / %0.0f gram' % (float(self._filamentMM[e]) / 1000.0, self.getFilamentWeight(e) * 1000.0)
 
     def getLog(self):
         return self._engineLog
@@ -325,8 +325,8 @@ class Engine(QtCore.QObject):
         self.stderr_observer.moveToThread(self.log_thread)
 
         self.log_thread.started.connect(self.stderr_observer.watchStdErr)
-        self.stderr_observer.update_progress_sig.connect(self._callback,
-                QtCore.Qt.QueuedConnection)
+        # self.stderr_observer.update_progress_sig.connect(self._callback,
+        #         QtCore.Qt.QueuedConnection)
         self.stderr_observer.finished.connect(self.log_thread.quit)
         self.stderr_observer.finished.connect(self.stderr_observer.deleteLater)
         self.log_thread.finished.connect(self.log_thread.deleteLater)

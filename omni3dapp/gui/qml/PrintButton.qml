@@ -3,7 +3,7 @@ import QtQuick 1.1
 
 Rectangle {
     id: print_button
-    width: 200
+    width: 220
     height: 32
     color: "#00000000"
 
@@ -32,7 +32,10 @@ Rectangle {
         id: print_time
         width: 100
         height: 16
+        color: "#b8b8b8"
         text: qsTr("")
+        verticalAlignment: Text.AlignVCenter
+        horizontalAlignment: Text.AlignRight
         font.pixelSize: 12
     }
 
@@ -40,9 +43,21 @@ Rectangle {
         id: print_params
         width: 100
         height: 16
+        color: "#b8b8b8"
         text: qsTr("")
+        verticalAlignment: Text.AlignVCenter
+        horizontalAlignment: Text.AlignRight
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 0
         font.pixelSize: 12
     }
+
+    function setPrintTime(text) {
+        print_time.text = qsTr(text)
+    }
+
+    function setPrintParams(text) {
+        print_params.text = qsTr(text)
+    }
+
 }

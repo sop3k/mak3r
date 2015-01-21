@@ -1,11 +1,11 @@
 """
 The printableObject module contains a printableObject class,
 which is used to represent a single object that can be printed.
-A single object can have 1 or more meshes which represent different sections for multi-material extrusion.
+A single object can have 1 or more meshes which represent different sections
+for multi-material extrusion.
 """
 __copyright__ = "Copyright (C) 2013 David Braam - Released under terms of the AGPLv3 License"
 
-import time
 import math
 import os
 
@@ -17,11 +17,14 @@ from omni3dapp.util import polygon
 
 class printableObject(object):
     """
-    A printable object is an object that can be printed and is on the build platform.
-    It contains 1 or more Meshes. Where more meshes are used for multi-extrusion.
+    A printable object is an object that can be printed and is on
+    the build platform.
+    It contains 1 or more Meshes. Where more meshes are used for
+    multi-extrusion.
 
     Each object has a 3x3 transformation matrix to rotate/scale the object.
-    This object also keeps track of the 2D boundary polygon used for object collision in the objectScene class.
+    This object also keeps track of the 2D boundary polygon used for object
+    collision in the objectScene class.
     """
     def __init__(self, originFilename):
         self._originFilename = originFilename
@@ -33,15 +36,18 @@ class printableObject(object):
             self._name = os.path.splitext(self._name)[0]
         self._meshList = []
         self._position = numpy.array([0.0, 0.0])
-        self._matrix = numpy.matrix([[1,0,0],[0,1,0],[0,0,1]], numpy.float64)
+        self._matrix = numpy.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+                                    numpy.float64)
         self._transformedMin = None
         self._transformedMax = None
         self._transformedSize = None
         self._boundaryCircleSize = None
         self._drawOffset = None
         self._boundaryHull = None
-        self._printAreaExtend = numpy.array([[-1,-1],[ 1,-1],[ 1, 1],[-1, 1]], numpy.float32)
-        self._headAreaExtend = numpy.array([[-1,-1],[ 1,-1],[ 1, 1],[-1, 1]], numpy.float32)
+        self._printAreaExtend = numpy.array(
+            [[-1, -1], [1, -1], [1, 1], [-1, 1]], numpy.float32)
+        self._headAreaExtend = numpy.array(
+            [[-1, -1], [1, -1], [1, 1], [-1, 1]], numpy.float32)
         self._headMinSize = numpy.array([1, 1], numpy.float32)
         self._printAreaHull = None
         self._headAreaHull = None
@@ -91,92 +97,121 @@ class printableObject(object):
         self.processMatrix()
 
     def processMatrix(self):
-        self._transformedMin = numpy.array([999999999999,999999999999,999999999999], numpy.float64)
-        self._transformedMax = numpy.array([-999999999999,-999999999999,-999999999999], numpy.float64)
+        self._transformedMin = numpy.array(
+            [999999999999, 999999999999, 999999999999], numpy.float64)
+        self._transformedMax = numpy.array(
+            [-999999999999, -999999999999, -999999999999], numpy.float64)
         self._boundaryCircleSize = 0
 
         hull = numpy.zeros((0, 2), numpy.int)
         for m in self._meshList:
             transformedVertexes = m.getTransformedVertexes()
-            hull = polygon.convexHull(numpy.concatenate((numpy.rint(transformedVertexes[:,0:2]).astype(int), hull), 0))
+            hull = polygon.convexHull(numpy.concatenate((numpy.rint(
+                transformedVertexes[:, 0:2]).astype(int), hull), 0))
             transformedMin = transformedVertexes.min(0)
             transformedMax = transformedVertexes.max(0)
             for n in xrange(0, 3):
-                self._transformedMin[n] = min(transformedMin[n], self._transformedMin[n])
-                self._transformedMax[n] = max(transformedMax[n], self._transformedMax[n])
+                self._transformedMin[n] = min(transformedMin[n],
+                                              self._transformedMin[n])
+                self._transformedMax[n] = max(transformedMax[n],
+                                              self._transformedMax[n])
 
-            #Calculate the boundary circle
+            # Calculate the boundary circle
             transformedSize = transformedMax - transformedMin
             center = transformedMin + transformedSize / 2.0
-            boundaryCircleSize = round(math.sqrt(numpy.max(((transformedVertexes[::,0] - center[0]) * (transformedVertexes[::,0] - center[0])) + ((transformedVertexes[::,1] - center[1]) * (transformedVertexes[::,1] - center[1])) + ((transformedVertexes[::,2] - center[2]) * (transformedVertexes[::,2] - center[2])))), 3)
-            self._boundaryCircleSize = max(self._boundaryCircleSize, boundaryCircleSize)
+            boundaryCircleSize = round(math.sqrt(numpy.max(
+                ((transformedVertexes[::, 0] - center[0]) *
+                 (transformedVertexes[::, 0] - center[0])) +
+                ((transformedVertexes[::, 1] - center[1]) *
+                 (transformedVertexes[::, 1] - center[1])) +
+                ((transformedVertexes[::, 2] - center[2]) *
+                 (transformedVertexes[::, 2] - center[2]))
+                )), 3)
+            self._boundaryCircleSize = max(self._boundaryCircleSize,
+                                           boundaryCircleSize)
         self._transformedSize = self._transformedMax - self._transformedMin
         self._drawOffset = (self._transformedMax + self._transformedMin) / 2
         self._drawOffset[2] = self._transformedMin[2]
         self._transformedMax -= self._drawOffset
         self._transformedMin -= self._drawOffset
 
-        self._boundaryHull = polygon.minkowskiHull((hull.astype(numpy.float32) - self._drawOffset[0:2]), numpy.array([[-1,-1],[-1,1],[1,1],[1,-1]],numpy.float32))
-        self._printAreaHull = polygon.minkowskiHull(self._boundaryHull, self._printAreaExtend)
+        self._boundaryHull = polygon.minkowskiHull(
+            (hull.astype(numpy.float32) - self._drawOffset[0:2]),
+            numpy.array([[-1, -1], [-1, 1], [1, 1], [1, -1]], numpy.float32))
+        self._printAreaHull = polygon.minkowskiHull(
+            self._boundaryHull, self._printAreaExtend)
         self.setHeadArea(self._headAreaExtend, self._headMinSize)
 
     def getName(self):
         return self._name
+
     def getOriginFilename(self):
         return self._originFilename
+
     def getPosition(self):
         return self._position
+
     def setPosition(self, newPos):
         self._position = newPos
+
     def getMatrix(self):
         return self._matrix
 
     def getMaximum(self):
         return self._transformedMax
+
     def getMinimum(self):
         return self._transformedMin
+
     def getSize(self):
         return self._transformedSize
+
     def getDrawOffset(self):
         return self._drawOffset
+
     def getBoundaryCircle(self):
         return self._boundaryCircleSize
 
     def setPrintAreaExtends(self, poly):
         self._printAreaExtend = poly
-        self._printAreaHull = polygon.minkowskiHull(self._boundaryHull, self._printAreaExtend)
+        self._printAreaHull = polygon.minkowskiHull(
+            self._boundaryHull, self._printAreaExtend)
 
         self.setHeadArea(self._headAreaExtend, self._headMinSize)
 
     def setHeadArea(self, poly, minSize):
         self._headAreaExtend = poly
         self._headMinSize = minSize
-        self._headAreaHull = polygon.minkowskiHull(self._printAreaHull, self._headAreaExtend)
+        self._headAreaHull = polygon.minkowskiHull(
+            self._printAreaHull, self._headAreaExtend)
         pMin = numpy.min(self._printAreaHull, 0) - self._headMinSize
         pMax = numpy.max(self._printAreaHull, 0) + self._headMinSize
-        square = numpy.array([pMin, [pMin[0], pMax[1]], pMax, [pMax[0], pMin[1]]], numpy.float32)
+        square = numpy.array([pMin, [pMin[0], pMax[1]], pMax,
+                              [pMax[0], pMin[1]]], numpy.float32)
         self._headAreaMinHull = polygon.clipConvex(self._headAreaHull, square)
 
     def mirror(self, axis):
-        matrix = [[1,0,0], [0, 1, 0], [0, 0, 1]]
+        matrix = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         matrix[axis][axis] = -1
         self.applyMatrix(numpy.matrix(matrix, numpy.float64))
 
     def getScale(self):
-        return numpy.array([
-            numpy.linalg.norm(self._matrix[::,0].getA().flatten()),
-            numpy.linalg.norm(self._matrix[::,1].getA().flatten()),
-            numpy.linalg.norm(self._matrix[::,2].getA().flatten())], numpy.float64);
+        return numpy.array(
+            [numpy.linalg.norm(self._matrix[::, 0].getA().flatten()),
+             numpy.linalg.norm(self._matrix[::, 1].getA().flatten()),
+             numpy.linalg.norm(self._matrix[::, 2].getA().flatten())],
+            numpy.float64)
 
     def setScale(self, scale, axis, uniform):
-        currentScale = numpy.linalg.norm(self._matrix[::,axis].getA().flatten())
+        currentScale = numpy.linalg.norm(
+            self._matrix[::, axis].getA().flatten())
         scale /= currentScale
         if scale == 0:
             return
         if uniform:
-            matrix = [[scale,0,0], [0, scale, 0], [0, 0, scale]]
+            matrix = [[scale, 0, 0], [0, scale, 0], [0, 0, scale]]
         else:
-            matrix = [[1.0,0,0], [0, 1.0, 0], [0, 0, 1.0]]
+            matrix = [[1.0, 0, 0], [0, 1.0, 0], [0, 0, 1.0]]
             matrix[axis][axis] = scale
         self.applyMatrix(numpy.matrix(matrix, numpy.float64))
 
@@ -186,23 +221,25 @@ class printableObject(object):
         if scale == 0:
             return
         if uniform:
-            matrix = [[scale,0,0], [0, scale, 0], [0, 0, scale]]
+            matrix = [[scale, 0, 0], [0, scale, 0], [0, 0, scale]]
         else:
-            matrix = [[1,0,0], [0, 1, 0], [0, 0, 1]]
+            matrix = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
             matrix[axis][axis] = scale
         self.applyMatrix(numpy.matrix(matrix, numpy.float64))
 
     def resetScale(self):
-        x = 1/numpy.linalg.norm(self._matrix[::,0].getA().flatten())
-        y = 1/numpy.linalg.norm(self._matrix[::,1].getA().flatten())
-        z = 1/numpy.linalg.norm(self._matrix[::,2].getA().flatten())
-        self.applyMatrix(numpy.matrix([[x,0,0],[0,y,0],[0,0,z]], numpy.float64))
+        x = 1/numpy.linalg.norm(self._matrix[::, 0].getA().flatten())
+        y = 1/numpy.linalg.norm(self._matrix[::, 1].getA().flatten())
+        z = 1/numpy.linalg.norm(self._matrix[::, 2].getA().flatten())
+        self.applyMatrix(numpy.matrix([[x, 0, 0], [0, y, 0], [0, 0, z]],
+                         numpy.float64))
 
     def resetRotation(self):
-        x = numpy.linalg.norm(self._matrix[::,0].getA().flatten())
-        y = numpy.linalg.norm(self._matrix[::,1].getA().flatten())
-        z = numpy.linalg.norm(self._matrix[::,2].getA().flatten())
-        self._matrix = numpy.matrix([[x,0,0],[0,y,0],[0,0,z]], numpy.float64)
+        x = numpy.linalg.norm(self._matrix[::, 0].getA().flatten())
+        y = numpy.linalg.norm(self._matrix[::, 1].getA().flatten())
+        z = numpy.linalg.norm(self._matrix[::, 2].getA().flatten())
+        self._matrix = numpy.matrix([[x, 0, 0], [0, y, 0], [0, 0, z]],
+                                    numpy.float64)
         self.processMatrix()
 
     def layFlat(self):
@@ -212,7 +249,8 @@ class printableObject(object):
         dotV = None
         for v in transformedVertexes:
             diff = v - minZvertex
-            len = math.sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
+            len = math.sqrt(
+                diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
             if len < 5:
                 continue
             dot = (diff[2] / len)
@@ -222,10 +260,14 @@ class printableObject(object):
         if dotV is None:
             return
         rad = -math.atan2(dotV[1], dotV[0])
-        self._matrix *= numpy.matrix([[math.cos(rad), math.sin(rad), 0], [-math.sin(rad), math.cos(rad), 0], [0,0,1]], numpy.float64)
+        self._matrix *= numpy.matrix([[math.cos(rad), math.sin(rad), 0],
+                                      [-math.sin(rad), math.cos(rad), 0],
+                                      [0, 0, 1]],
+                                     numpy.float64)
         rad = -math.asin(dotMin)
-        self._matrix *= numpy.matrix([[math.cos(rad), 0, math.sin(rad)], [0,1,0], [-math.sin(rad), 0, math.cos(rad)]], numpy.float64)
-
+        self._matrix *= numpy.matrix(
+            [[math.cos(rad), 0, math.sin(rad)], [0, 1, 0],
+             [-math.sin(rad), 0, math.cos(rad)]], numpy.float64)
 
         transformedVertexes = self._meshList[0].getTransformedVertexes()
         minZvertex = transformedVertexes[transformedVertexes.argmin(0)[2]]
@@ -246,7 +288,9 @@ class printableObject(object):
             rad = math.asin(dotMin)
         else:
             rad = -math.asin(dotMin)
-        self.applyMatrix(numpy.matrix([[1,0,0], [0, math.cos(rad), math.sin(rad)], [0, -math.sin(rad), math.cos(rad)]], numpy.float64))
+        self.applyMatrix(numpy.matrix(
+            [[1, 0, 0], [0, math.cos(rad), math.sin(rad)],
+             [0, -math.sin(rad), math.cos(rad)]], numpy.float64))
 
     def scaleUpTo(self, size):
         vMin = self._transformedMin
@@ -259,11 +303,16 @@ class printableObject(object):
         scaleZ = size[2] / (vMax[2] - vMin[2])
         scale = min(scaleX1, scaleY1, scaleX2, scaleY2, scaleZ)
         if scale > 0:
-            self.applyMatrix(numpy.matrix([[scale,0,0],[0,scale,0],[0,0,scale]], numpy.float64))
+            self.applyMatrix(numpy.matrix([
+                [scale, 0, 0], [0, scale, 0], [0, 0, scale]
+                ], numpy.float64))
 
-    #Split splits an object with multiple meshes into different objects, where each object is a part of the original mesh that has
-    # connected faces. This is useful to split up plate STL files.
     def split(self, callback):
+        """
+        Split splits an object with multiple meshes into different objects,
+        where each object is a part of the original mesh that has
+        connected faces. This is useful to split up plate STL files.
+        """
         ret = []
         for oriMesh in self._meshList:
             ret += oriMesh.split(callback)
@@ -272,9 +321,13 @@ class printableObject(object):
     def canStoreAsSTL(self):
         return len(self._meshList) < 2
 
-    #getVertexIndexList returns an array of vertexes, and an integer array for each mesh in this object.
-    # the integer arrays are indexes into the vertex array for each triangle in the model.
     def getVertexIndexList(self):
+        """
+        getVertexIndexList returns an array of vertexes, and an integer array
+        for each mesh in this object.
+        the integer arrays are indexes into the vertex array for each triangle
+        in the model.
+        """
         vertexMap = {}
         vertexList = []
         meshList = []
@@ -283,7 +336,8 @@ class printableObject(object):
             meshIdxList = []
             for idx in xrange(0, len(verts)):
                 v = verts[idx]
-                hashNr = int(v[0] * 100) | int(v[1] * 100) << 10 | int(v[2] * 100) << 20
+                hashNr = int(v[0] * 100) | int(v[1] * 100) << 10 | \
+                    int(v[2] * 100) << 20
                 vIdx = None
                 if hashNr in vertexMap:
                     for idx2 in vertexMap[hashNr]:
@@ -297,11 +351,14 @@ class printableObject(object):
             meshList.append(numpy.array(meshIdxList, numpy.int32))
         return numpy.array(vertexList, numpy.float32), meshList
 
+
 class mesh(object):
     """
-    A mesh is a list of 3D triangles build from vertexes. Each triangle has 3 vertexes.
+    A mesh is a list of 3D triangles build from vertexes.
+    Each triangle has 3 vertexes.
 
-    A "VBO" can be associated with this object, which is used for rendering this object.
+    A "VBO" can be associated with this object, which is used
+    for rendering this object.
     """
     def __init__(self, obj):
         self.vertexes = None
@@ -323,26 +380,31 @@ class mesh(object):
         self.vertexes[n][1] = y2
         self.vertexes[n][2] = z2
         self.vertexCount += 3
-    
+
     def _prepareFaceCount(self, faceNumber):
-        #Set the amount of faces before loading data in them. This way we can create the numpy arrays before we fill them.
+        """
+        Set the amount of faces before loading data in them.
+        This way we can create the numpy arrays before we fill them.
+        """
         self.vertexes = numpy.zeros((faceNumber*3, 3), numpy.float32)
         self.normal = numpy.zeros((faceNumber*3, 3), numpy.float32)
         self.vertexCount = 0
 
     def _calculateNormals(self):
-        #Calculate the normals
+        # Calculate the normals
         tris = self.vertexes.reshape(self.vertexCount / 3, 3, 3)
-        normals = numpy.cross( tris[::,1 ] - tris[::,0]  , tris[::,2 ] - tris[::,0] )
-        lens = numpy.sqrt( normals[:,0]**2 + normals[:,1]**2 + normals[:,2]**2 )
-        normals[:,0] /= lens
-        normals[:,1] /= lens
-        normals[:,2] /= lens
-        
+        normals = numpy.cross(tris[::, 1] - tris[::, 0],
+                              tris[::, 2] - tris[::, 0])
+        lens = numpy.sqrt(normals[:, 0]**2 + normals[:, 1]**2 +
+                          normals[:, 2]**2)
+        normals[:, 0] /= lens
+        normals[:, 1] /= lens
+        normals[:, 2] /= lens
+
         n = numpy.zeros((self.vertexCount / 3, 9), numpy.float32)
-        n[:,0:3] = normals
-        n[:,3:6] = normals
-        n[:,6:9] = normals
+        n[:, 0:3] = normals
+        n[:, 3:6] = normals
+        n[:, 6:9] = normals
         self.normal = n.reshape(self.vertexCount, 3)
         self.invNormal = -self.normal
 
@@ -353,18 +415,22 @@ class mesh(object):
     def _idxFromHash(self, map, idx):
         vHash = self._vertexHash(idx)
         for i in map[vHash]:
-            if numpy.linalg.norm(self.vertexes[i] - self.vertexes[idx]) < 0.001:
+            if numpy.linalg.norm(
+                    self.vertexes[i] - self.vertexes[idx]) < 0.001:
                 return i
 
-    def getTransformedVertexes(self, applyOffsets = False):
+    def getTransformedVertexes(self, applyOffsets=False):
         if applyOffsets:
             pos = self._obj._position.copy()
             pos.resize((3))
             pos[2] = self._obj.getSize()[2] / 2
             offset = self._obj._drawOffset.copy()
             offset[2] += self._obj.getSize()[2] / 2
-            return (numpy.matrix(self.vertexes, copy = False) * numpy.matrix(self._obj._matrix, numpy.float32)).getA() - offset + pos
-        return (numpy.matrix(self.vertexes, copy = False) * numpy.matrix(self._obj._matrix, numpy.float32)).getA()
+            return (numpy.matrix(self.vertexes, copy=False) *
+                    numpy.matrix(self._obj._matrix, numpy.float32)).getA() - \
+                offset + pos
+        return (numpy.matrix(self.vertexes, copy=False) *
+                numpy.matrix(self._obj._matrix, numpy.float32)).getA()
 
     def split(self, callback):
         vertexMap = {}
@@ -383,7 +449,9 @@ class mesh(object):
         for idx in xrange(0, self.vertexCount, 3):
             if (idx % 100) == 0:
                 callback(idx * 100 / self.vertexCount)
-            f = [self._idxFromHash(vertexMap, idx), self._idxFromHash(vertexMap, idx+1), self._idxFromHash(vertexMap, idx+2)]
+            f = [self._idxFromHash(vertexMap, idx),
+                 self._idxFromHash(vertexMap, idx+1),
+                 self._idxFromHash(vertexMap, idx+2)]
             vertexToFace[f[0]].append(idx / 3)
             vertexToFace[f[1]].append(idx / 3)
             vertexToFace[f[2]].append(idx / 3)
@@ -402,7 +470,7 @@ class mesh(object):
                 meshFaceList.append(idx)
                 for n in xrange(0, 3):
                     for i in vertexToFace[faceList[idx][n]]:
-                        if not i in doneSet:
+                        if i not in doneSet:
                             doneSet.add(i)
                             todoList.append(i)
 

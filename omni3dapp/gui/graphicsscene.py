@@ -581,6 +581,7 @@ class SceneView(QtGui.QGraphicsScene):
             self.refreshQueued = True
 
     def sceneUpdated(self):
+        self.setProgressBar(0.0)
         self.sceneUpdateTimer.singleShot(500, self.onRunEngine)
         self.engine.abortEngine()
         self.scene.updateSizeOffsets()
@@ -592,8 +593,9 @@ class SceneView(QtGui.QGraphicsScene):
             fileList.append(obj.getOriginFilename())
         self.onDeleteAll()
 
-        self.files_loader = FilesLoader(self, fileList, self.machineSize)
-        self.files_loader.loadScene(fileList)
+        self.startFilesLoader(fileList)
+        # self.files_loader = FilesLoader(self, fileList, self.machineSize)
+        # self.files_loader.loadScene(fileList)
 
     def onRunEngine(self):
         self.engine.runEngine(self.scene)
@@ -915,7 +917,7 @@ class SceneView(QtGui.QGraphicsScene):
                            triggered=self.reloadScene))
 
         if not menu.isEmpty():
-            pos = evt.scenePos()
+            pos = evt.screenPos()
             menu.exec_(QtCore.QPoint(pos.x(), pos.y()))
 
     def wheelEvent(self, evt):
@@ -1075,7 +1077,7 @@ class SceneView(QtGui.QGraphicsScene):
                 (code == QtCore.Qt.Key_Backspace and
                  sys.platform.startswith("darwin")):
             if self.selectedObj is not None:
-                self.deleteObject(self.selectedObj)
+                self.onDeleteObject(self.selectedObj)
                 self.queueRefresh()
         if code == QtCore.Qt.Key_Up:
             if modifiers == SHIFT_KEY:
@@ -1260,6 +1262,9 @@ class SceneView(QtGui.QGraphicsScene):
 
         profile.putPreference('lastFile', filenames[0])
 
+        self.startFilesLoader(filenames)
+
+    def startFilesLoader(self, filenames):
         self.files_loader = FilesLoader(self, filenames, self.machineSize)
         self.files_loader_thread = QtCore.QThread(self.mainwindow)
         self.files_loader.moveToThread(self.files_loader_thread)
@@ -1352,13 +1357,15 @@ class FilesLoader(QtCore.QObject):
                 self.sceneview, self.sceneview.zoom, newZoom, 0.5)
 
     def loadScene(self, filelist):
-        self.set_progressbar_sig.emit(0.1)
+        fraction = 1.0/len(filelist)
         for no, filename in enumerate(filelist):
-            self.loadFileOntoScene(filename)
-            self.set_progressbar_sig.emit(float((no+1))/len(filelist))
+            self.loadFileOntoScene(
+                filename, lambda val: self.set_progressbar_sig.emit(
+                    (no+val)*fraction)
+                )
         self.update_scene_sig.emit()
 
-    def loadFileOntoScene(self, filename):
+    def loadFileOntoScene(self, filename, callback):
         try:
             ext = os.path.splitext(filename)[1].lower()
             if ext in imageToMesh.supportedExtensions():
@@ -1366,7 +1373,7 @@ class FilesLoader(QtCore.QObject):
                 # imageToMesh.convertImageDialog(self, filename).Show()
                 objList = []
             else:
-                objList = meshLoader.loadMeshes(filename)
+                objList = meshLoader.loadMeshes(filename, callback)
         except Exception, e:
             traceback.print_exc()
             log.error(e)

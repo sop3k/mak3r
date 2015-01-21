@@ -452,7 +452,7 @@ class MainWindow(QtGui.QGraphicsView):
 
     def terminate_thread(self, thread_name):
         try:
-            thread = getattr(self.sceneview._engine, thread_name, None)
+            thread = getattr(self.sceneview.engine, thread_name, None)
             if not thread:
                 return None
             thread.terminate()
@@ -547,7 +547,8 @@ class MainWindow(QtGui.QGraphicsView):
 
     def closeEvent(self, evt):
         # terminate all slicer-related threads
-        self.terminate_threads()
+        # TODO: check if needed
+        # self.terminate_threads()
         super(MainWindow, self).closeEvent(evt)
 
 

@@ -6,6 +6,7 @@ Rectangle {
     width: 220
     height: 32
     color: "#00000000"
+    state: "IDLE"
 
     Rectangle {
         id: button
@@ -16,7 +17,7 @@ Rectangle {
         anchors.rightMargin: 0
 
         Text {
-            id: text
+            id: button_text
             color: "#ffffff"
             text: qsTr("Print")
             font.family: "Arial"
@@ -25,6 +26,29 @@ Rectangle {
             verticalAlignment: Text.AlignVCenter
             anchors.fill: parent
             font.pixelSize: 14
+        }
+
+        MouseArea {
+            id: mouse_area_button
+            anchors.fill: parent
+            onClicked: {
+                if (print_button.state == "IDLE") {
+                    graphicsscene.onRunEngine();
+                    print_button.state = "SLICING";
+                } else if (print_button.state == "SLICING") {
+                    graphicsscene.onStopEngine();
+                    print_button.state = "IDLE";
+                } else if (print_button.state == "SLICED") {
+                    // start printing
+                    print_button.state = "PRINTING";
+                } else if (print_button.state == "PRINTING") {
+                    // pause printing
+                    print_button.state = "PAUSED";
+                } else if (print_button.state == "PAUSED") {
+                    // resume printing
+                    print_button.state = "PRINTING";
+                }
+            }
         }
     }
 
@@ -52,12 +76,59 @@ Rectangle {
         font.pixelSize: 12
     }
 
+    states: [
+        State {
+            name: "IDLE"
+
+            PropertyChanges {
+                target: button_text
+                text: qsTr("Slice")
+            }
+        },
+        State {
+            name: "SLICING"
+
+            PropertyChanges {
+                target: button_text
+                text: qsTr("Stop")
+            }
+        },
+        State {
+            name: "SLICED"
+
+            PropertyChanges {
+                target: button_text
+                text: qsTr("Print")
+            }
+        },
+        State {
+            name: "PRINTING"
+
+            PropertyChanges {
+                target: button_text
+                text: qsTr("Pause")
+            }
+        },
+        State {
+            name: "PAUSED"
+
+            PropertyChanges {
+                target: button_text
+                text: qsTr("Resume")
+            }
+        }
+    ]
+
     function setPrintTime(text) {
-        print_time.text = qsTr(text)
+        print_time.text = qsTr(text);
     }
 
     function setPrintParams(text) {
-        print_params.text = qsTr(text)
+        print_params.text = qsTr(text);
+    }
+
+    function setState(state) {
+        print_button.state = state;
     }
 
 }

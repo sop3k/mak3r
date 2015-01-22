@@ -96,7 +96,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.progressBar = self.mainwindow.qmlobject.findChild(
             QtCore.QObject, "loader")
 
-        self.sceneUpdateTimer = QtCore.QTimer(self)
+        # self.sceneUpdateTimer = QtCore.QTimer(self)
 
         self.idleTimer = QtCore.QTimer(self)
         self.idleTimer.timeout.connect(self.onIdle)
@@ -582,7 +582,8 @@ class SceneView(QtGui.QGraphicsScene):
 
     def sceneUpdated(self):
         self.setProgressBar(0.0)
-        self.sceneUpdateTimer.singleShot(500, self.onRunEngine)
+        # self.sceneUpdateTimer.singleShot(500, self.onRunEngine)
+        # TODO: info about aborting engine
         self.engine.abortEngine()
         self.scene.updateSizeOffsets()
         self.queueRefresh()
@@ -597,8 +598,13 @@ class SceneView(QtGui.QGraphicsScene):
         # self.files_loader = FilesLoader(self, fileList, self.machineSize)
         # self.files_loader.loadScene(fileList)
 
+    @QtCore.Slot()
     def onRunEngine(self):
         self.engine.runEngine(self.scene)
+
+    @QtCore.Slot()
+    def onStopEngine(self):
+        self.engine.abortEngine()
 
     def onIdle(self):
         self.idleCalled = True
@@ -773,6 +779,7 @@ class SceneView(QtGui.QGraphicsScene):
 
         if progressValue >= 1:
             self.setPrintingInfo()
+            self.mainwindow.print_button.setState("SLICED")
         self.queueRefresh()
 
     def setPrintingInfo(self):
@@ -1272,15 +1279,20 @@ class SceneView(QtGui.QGraphicsScene):
         self.files_loader.load_gcode_file_sig.connect(self.loadGCodeFile)
         self.files_loader.update_scene_sig.connect(self.updateProfileToControls)
         self.files_loader.set_progressbar_sig.connect(self.setProgressBar)
+        self.files_loader.object_loaded_sig.connect(self.afterObjectLoaded)
 
-        self.files_loader.finished.connect(
-            self.mainwindow.qmlobject.showViewSelect)
         self.files_loader.finished.connect(self.files_loader_thread.quit)
         self.files_loader.finished.connect(self.files_loader.deleteLater)
         self.files_loader_thread.finished.connect(
             self.files_loader_thread.deleteLater)
 
         self.files_loader_thread.start()
+
+    @QtCore.Slot()
+    def afterObjectLoaded(self):
+        self.mainwindow.qmlobject.showViewSelect()
+        self.mainwindow.print_button.setState("IDLE")
+        self.mainwindow.qmlobject.setPrintButtonVisible(1)
 
     @QtCore.Slot(float)
     def setProgressBar(self, value):
@@ -1292,6 +1304,7 @@ class FilesLoader(QtCore.QObject):
     load_gcode_file_sig = QtCore.Signal(str)
     update_scene_sig = QtCore.Signal()
     set_progressbar_sig = QtCore.Signal(float)
+    object_loaded_sig = QtCore.Signal()
     finished = QtCore.Signal()
 
     def __init__(self, sceneview, filenames, machine_size):
@@ -1379,6 +1392,9 @@ class FilesLoader(QtCore.QObject):
             log.error(e)
         else:
             self.loadObjectsOntoScene(objList)
+            self.set_progressbar_sig.emit(1.0)
+            time.sleep(0.1)
+            self.object_loaded_sig.emit()
 
     def loadObjectsOntoScene(self, objList):
         scene = self.sceneview.scene

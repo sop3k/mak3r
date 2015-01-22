@@ -52,7 +52,7 @@ def _loadAscii(m, f, callback=None):
                            float(data[2][2]))
                 cnt = 0
 
-                if callback:
+                if callback and currline % 100 == 0:
                     callback(currline*0.97/linesno)
 
 
@@ -84,7 +84,6 @@ def loadScene(filename, callback=None):
         _loadBinary(m, f, callback)
     f.close()
     obj._postProcessAfterLoad()
-    callback(1.0)
     return [obj]
 
 

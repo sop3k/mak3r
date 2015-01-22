@@ -40,6 +40,8 @@ def loadScene(filename, callback=None):
 
     flen = len(faceList)
     m._prepareFaceCount(flen)
+    if callback:
+        callback(0.02)
     for no, f in enumerate(faceList):
         i = f[0] - 1
         j = f[1] - 1
@@ -54,10 +56,8 @@ def loadScene(filename, callback=None):
                    vertexList[j][0], vertexList[j][1], vertexList[j][2],
                    vertexList[k][0], vertexList[k][1], vertexList[k][2])
 
-        if callback and no % 300 == 0:
+        if callback and no % 100 == 0:
             callback((no+1)*0.97/flen)
 
     obj._postProcessAfterLoad()
-    if callback:
-        callback(1.0)
     return [obj]

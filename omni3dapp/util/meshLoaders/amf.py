@@ -1,24 +1,25 @@
 """
 AMF file reader.
-AMF files are the proposed replacement for STL. AMF is an open standard to share 3D manufacturing files.
-Many of the features found in AMF are currently not yet support in Cura. Most important the curved surfaces.
+AMF files are the proposed replacement for STL. AMF is an open standard
+to share 3D manufacturing files.
+Many of the features found in AMF are currently not yet support in Cura.
+Most important the curved surfaces.
 
 http://en.wikipedia.org/wiki/Additive_Manufacturing_File_Format
 """
 __copyright__ = "Copyright (C) 2013 David Braam - Released under terms of the AGPLv3 License"
 
-import cStringIO as StringIO
-import zipfile
 import os
-try:
-    from xml.etree import cElementTree as ElementTree
-except:
-    from xml.etree import ElementTree
+import zipfile
+import cStringIO as StringIO
+
+from lxml import etree
 
 from omni3dapp.util import printableObject
 from omni3dapp.util import profile
 
-def loadScene(filename):
+
+def loadScene(filename, callback=None):
     try:
         zfile = zipfile.ZipFile(filename)
         xml = zfile.read(zfile.namelist()[0])
@@ -27,26 +28,13 @@ def loadScene(filename):
         f = open(filename, "r")
         xml = f.read()
         f.close()
-    amf = ElementTree.fromstring(xml)
-    if 'unit' in amf.attrib:
-        unit = amf.attrib['unit'].lower()
-    else:
-        unit = 'millimeter'
-    if unit == 'millimeter':
-        scale = 1.0
-    elif unit == 'meter':
-        scale = 1000.0
-    elif unit == 'inch':
-        scale = 25.4
-    elif unit == 'feet':
-        scale = 304.8
-    elif unit == 'micron':
-        scale = 0.001
-    else:
-        print "Unknown unit in amf: %s" % (unit)
-        scale = 1.0
+    amf = etree.fromstring(xml)
+    if callback:
+        callback(0.01)
 
     ret = []
+    triangles = 0
+    alltriangles = float(len(amf.xpath('//volume')))
     for amfObj in amf.iter('object'):
         obj = printableObject.printableObject(filename)
         for amfMesh in amfObj.iter('mesh'):
@@ -54,7 +42,7 @@ def loadScene(filename):
             for vertices in amfMesh.iter('vertices'):
                 for vertex in vertices.iter('vertex'):
                     for coordinates in vertex.iter('coordinates'):
-                        v = [0.0,0.0,0.0]
+                        v = [0.0, 0.0, 0.0]
                         for t in coordinates:
                             if t.tag == 'x':
                                 v[0] = float(t.text)
@@ -66,12 +54,10 @@ def loadScene(filename):
 
             for volume in amfMesh.iter('volume'):
                 m = obj._addMesh()
-                count = 0
-                for triangle in volume.iter('triangle'):
-                    count += 1
-                m._prepareFaceCount(count)
+                m._prepareFaceCount(len(volume.xpath('triangle')))
 
                 for triangle in volume.iter('triangle'):
+                    triangles += 1
                     for t in triangle:
                         if t.tag == 'v1':
                             v1 = vertexList[int(t.text)]
@@ -79,16 +65,22 @@ def loadScene(filename):
                             v2 = vertexList[int(t.text)]
                         elif t.tag == 'v3':
                             v3 = vertexList[int(t.text)]
-                            m._addFace(v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], v3[0], v3[1], v3[2])
+                            m._addFace(v1[0], v1[1], v1[2],
+                                       v2[0], v2[1], v2[2],
+                                       v3[0], v3[1], v3[2])
+                    if callback and triangles % 10 == 0:
+                        callback(0.97*triangles/alltriangles)
         obj._postProcessAfterLoad()
         ret.append(obj)
 
     return ret
 
+
 def saveScene(filename, objects):
     f = open(filename, 'wb')
     saveSceneStream(f, filename, objects)
     f.close()
+
 
 def saveSceneStream(s, filename, objects):
     xml = StringIO.StringIO()
@@ -139,12 +131,14 @@ def saveSceneStream(s, filename, objects):
     xml.write('  </constellation>\n')
     for n in xrange(0, 4):
         xml.write('  <material id="%i">\n' % (n + 1))
-        xml.write('    <metadata type="Name">Material %i</metadata>\n' % (n + 1))
+        xml.write('    <metadata type="Name">Material %i</metadata>\n' %
+                  (n + 1))
         if n == 0:
             col = profile.getPreferenceColour('model_colour')
         else:
             col = profile.getPreferenceColour('model_colour%i' % (n + 1))
-        xml.write('    <color><r>%.2f</r><g>%.2f</g><b>%.2f</b></color>\n' % (col[0], col[1], col[2]))
+        xml.write('    <color><r>%.2f</r><g>%.2f</g><b>%.2f</b></color>\n' %
+                  (col[0], col[1], col[2]))
         xml.write('  </material>\n')
     xml.write('</amf>\n')
 

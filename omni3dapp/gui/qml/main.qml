@@ -48,10 +48,15 @@ Rectangle {
     PrintButton {
         id: print_button
         objectName: "print_button"
+        opacity: 0
         anchors.right: parent.right
         anchors.rightMargin: 25
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 25
+    }
+
+    function setPrintButtonVisible(val) {
+        print_button.opacity = val;
     }
 
     ProgressBar {

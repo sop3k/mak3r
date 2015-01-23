@@ -366,10 +366,20 @@ class Engine(QtCore.QObject):
     def getResult(self):
         return self._result
 
+    def isSlicingEnabled(self, scene):
+        objects = scene.objects()
+        if len(objects) < 1:
+            return False
+        for obj in objects:
+            if not scene.checkPlatform(obj):
+                return False
+        return True
+
     def runEngine(self, scene):
-        if len(scene.objects()) < 1:
+        if not self.isSlicingEnabled(scene):
             return
-        extruder_count = self.get_extruder_count(scene)
+        objects = scene.objects()
+        extruder_count = self.get_extruder_count(objects)
         command_list = ['-v', '-p']
         for k, v in self._engineSettings(extruder_count).iteritems():
             command_list += ['-s', '%s=%s' % (k, str(v))]
@@ -383,18 +393,17 @@ class Engine(QtCore.QObject):
             pos = numpy.array(profile.getMachineCenterCoords()) * 1000
             objMin = None
             objMax = None
-            for obj in scene.objects():
-                if scene.checkPlatform(obj):
-                    oMin = obj.getMinimum()[0:2] + obj.getPosition()
-                    oMax = obj.getMaximum()[0:2] + obj.getPosition()
-                    if objMin is None:
-                        objMin = oMin
-                        objMax = oMax
-                    else:
-                        objMin[0] = min(oMin[0], objMin[0])
-                        objMin[1] = min(oMin[1], objMin[1])
-                        objMax[0] = max(oMax[0], objMax[0])
-                        objMax[1] = max(oMax[1], objMax[1])
+            for obj in objects:
+                oMin = obj.getMinimum()[0:2] + obj.getPosition()
+                oMax = obj.getMaximum()[0:2] + obj.getPosition()
+                if objMin is None:
+                    objMin = oMin
+                    objMax = oMax
+                else:
+                    objMin[0] = min(oMin[0], objMin[0])
+                    objMin[1] = min(oMin[1], objMin[1])
+                    objMax[0] = max(oMax[0], objMax[0])
+                    objMax[1] = max(oMax[1], objMax[1])
             if objMin is None:
                 return
             pos += (objMin + objMax) / 2.0 * 1000
@@ -402,29 +411,27 @@ class Engine(QtCore.QObject):
 
             vertexTotal = [0] * 4
             meshMax = 1
-            for obj in scene.objects():
-                if scene.checkPlatform(obj):
-                    meshMax = max(meshMax, len(obj._meshList))
-                    for n in xrange(0, len(obj._meshList)):
-                        vertexTotal[n] += obj._meshList[n].vertexCount
+            for obj in objects:
+                meshMax = max(meshMax, len(obj._meshList))
+                for n in xrange(0, len(obj._meshList)):
+                    vertexTotal[n] += obj._meshList[n].vertexCount
 
             for n in xrange(0, meshMax):
                 verts = numpy.zeros((0, 3), numpy.float32)
-                for obj in scene.objects():
-                    if scene.checkPlatform(obj):
-                        if n < len(obj._meshList):
-                            vertexes = (numpy.matrix(obj._meshList[n].vertexes, copy = False) * numpy.matrix(obj._matrix, numpy.float32)).getA()
-                            vertexes -= obj._drawOffset
-                            vertexes += numpy.array([obj.getPosition()[0], obj.getPosition()[1], 0.0])
-                            verts = numpy.concatenate((verts, vertexes))
-                            hash.update(obj._meshList[n].vertexes.tostring())
+                for obj in objects:
+                    if n < len(obj._meshList):
+                        vertexes = (numpy.matrix(obj._meshList[n].vertexes, copy = False) * numpy.matrix(obj._matrix, numpy.float32)).getA()
+                        vertexes -= obj._drawOffset
+                        vertexes += numpy.array([obj.getPosition()[0], obj.getPosition()[1], 0.0])
+                        verts = numpy.concatenate((verts, vertexes))
+                        hash.update(obj._meshList[n].vertexes.tostring())
                 engine_model_data.append((vertexTotal[n], verts))
 
             command_list += ['$' * meshMax]
             self._objCount = 1
         else:
             for n in order:
-                obj = scene.objects()[n]
+                obj = objects[n]
                 for mesh in obj._meshList:
                     engine_model_data.append((mesh.vertexCount, mesh.vertexes))
                     hash.update(mesh.vertexes.tostring())
@@ -439,11 +446,10 @@ class Engine(QtCore.QObject):
             self.setModelData(engine_model_data)
             self.watchProcess(command_list)
 
-    def get_extruder_count(self, scene):
+    def get_extruder_count(self, objects):
         extruderCount = 1
-        for obj in scene.objects():
-            if scene.checkPlatform(obj):
-                extruderCount = max(extruderCount, len(obj._meshList))
+        for obj in objects:
+            extruderCount = max(extruderCount, len(obj._meshList))
 
         return max(extruderCount, profile.minimalExtruderCount())
 

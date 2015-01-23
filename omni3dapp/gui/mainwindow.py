@@ -54,10 +54,11 @@ class MainWindow(QtGui.QGraphicsView):
 
         # Create a scene to present and modify 3d objects
         self.setup_qmlview()
-        self.setup_scene()
 
         self.print_button = self.qmlobject.findChild(
             QtCore.QObject, "print_button")
+
+        self.setup_scene()
 
         # Class that enables connecting to printer
         self.pc = host.PrinterConnection(self)

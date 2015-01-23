@@ -582,9 +582,15 @@ class SceneView(QtGui.QGraphicsScene):
 
     def sceneUpdated(self):
         self.setProgressBar(0.0)
-        # self.sceneUpdateTimer.singleShot(500, self.onRunEngine)
         # TODO: info about aborting engine
-        self.engine.abortEngine()
+        self.onStopEngine()
+
+        if self.engine.isSlicingEnabled(self.scene):
+            # self.mainwindow.print_button.setEnabled(True)
+            self.mainwindow.print_button.enable()
+        else:
+            # self.mainwindow.print_button.setEnabled(False)
+            self.mainwindow.print_button.disable()
         self.scene.updateSizeOffsets()
         self.queueRefresh()
 
@@ -605,6 +611,7 @@ class SceneView(QtGui.QGraphicsScene):
     @QtCore.Slot()
     def onStopEngine(self):
         self.engine.abortEngine()
+        self.mainwindow.print_button.setState("IDLE")
 
     def onIdle(self):
         self.idleCalled = True
@@ -773,7 +780,6 @@ class SceneView(QtGui.QGraphicsScene):
         #     self.mirrorToolButton.setSelected(False)
         #     self.onToolSelect(0)
 
-    # @QtCore.Slot(float)
     def updateEngineProgress(self, progressValue):
         self.progressBar.setValue(progressValue)
 
@@ -1149,7 +1155,6 @@ class SceneView(QtGui.QGraphicsScene):
         self.engine._result.setFinished(True)
         self.engineResultView.setResult(self.engine._result)
 
-        # self.printButton.setBottomText('')
         if self.mainwindow.pc.is_online():
             self.printButton.setDisabled(False)
 

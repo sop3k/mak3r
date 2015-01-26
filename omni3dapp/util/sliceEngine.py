@@ -141,11 +141,11 @@ class EngineResult(object):
         if not self._finished:
             return None
 
-        self._gcodeInterpreter.progressCallback =\
-            self._gcodeInterpreterCallback
+        self._gcodeInterpreter.setProgressCallback(
+                self._gcodeInterpreterCallback)
         self._gcodeLoadCallback = engine_results_view._gcodeLoadCallback
 
-        # self._gcodeInterpreter.load(self._gcodeData)
+        self._gcodeInterpreter.load(self._gcodeData)
 
     # def submitInfoOnline(self):
     #     if profile.getPreference('submit_slice_information') != 'True':
@@ -282,11 +282,12 @@ class Engine(QtCore.QObject):
 
     _progress_steps = ['inset', 'skin', 'export']
 
-    def __init__(self, sceneview, progressCallback):
+    def __init__(self, sceneview, progressCallback, resultsView):
         super(Engine, self).__init__(sceneview)
         self._sceneview = sceneview
         self._parent = sceneview.mainwindow
         self._callback = progressCallback
+        self._resultsView = resultsView
         self._objCount = 0
         self._result = None
         self._modelData = None
@@ -375,6 +376,10 @@ class Engine(QtCore.QObject):
         self.abortEngine()
         self._serversocket.close()
 
+    def callback(self, value):
+        self._callback(value)
+        self._resultsView.setResult(self._result)
+
     def abortEngine(self):
         if self.engine_process is None:
             return
@@ -385,7 +390,7 @@ class Engine(QtCore.QObject):
         else:
             self.engine_process = None
         finally:
-            self._callback(0.0)
+            self.callback(0.0)
 
     def getResult(self):
         return self._result
@@ -501,7 +506,7 @@ class Engine(QtCore.QObject):
             self.engine_process = None
 
     def watchProcess(self, command_list):
-        self._callback(0.0)
+        self.callback(0.0)
 
         self.start_process(command_list)
         if not self.engine_process:
@@ -517,7 +522,7 @@ class Engine(QtCore.QObject):
         self._result = EngineResult(self._sceneview)
         self._result.addLog('Running: %s' % (''.join(command_list)))
         self._result.setHash(self.model_hash)
-        self._callback(0.0)
+        self.callback(0.0)
 
     def read_data(self):
         if not self.engine_process:
@@ -556,7 +561,7 @@ class Engine(QtCore.QObject):
                             self._progress_steps.index(line[1])
                         progress_value /= obj_count
                         progress_value += 1.0 / obj_count * object_nr
-                        self._callback(progress_value)
+                        self.callback(progress_value)
                     except Exception, e:
                         log.error(e)
             elif line.startswith('Print time:'):
@@ -588,7 +593,7 @@ class Engine(QtCore.QObject):
         if self._result:
             self._result.setFinished(True)
             self._sceneview.showLayersButton()
-            self._callback(1.0)
+            self.callback(1.0)
 
         return_code = self.engine_process.exitCode()
         if return_code == 0:
@@ -600,7 +605,7 @@ class Engine(QtCore.QObject):
             log.error("Engine Result log:")
             for line in self._result.getLog():
                 log.error(line)
-            self._callback(0.0)
+            self.callback(0.0)
 
         self.abortEngine()
 

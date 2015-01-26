@@ -89,8 +89,9 @@ class SceneView(QtGui.QGraphicsScene):
         self.bedtemp_gauge = openglscene.glTempGauge(
             parent=self, size=(400, 10), pos=(0, -1), title="Bed:")
 
-        self.engine = sliceEngine.Engine(self, self.updateEngineProgress)
         self.engineResultView = engineResultView.EngineResultView(self)
+        self.engine = sliceEngine.Engine(self, self.updateEngineProgress,
+                                         self.engineResultView)
         self.slicing_finished = False
 
         self.progressBar = self.mainwindow.qmlobject.findChild(
@@ -794,6 +795,7 @@ class SceneView(QtGui.QGraphicsScene):
         if progressValue >= 1:
             self.setPrintingInfo()
             self.mainwindow.print_button.setState("SLICED")
+
         self.queueRefresh()
 
     def setPrintingInfo(self):

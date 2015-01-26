@@ -108,6 +108,14 @@ class SceneView(QtGui.QGraphicsScene):
         if hasattr(self, 'container'):
             self.container.add(ctrl)
 
+    @property
+    def viewSelect(self):
+        if not hasattr(self, 'view_select'):
+            self.view_select = self.mainwindow.qmlobject.findChild(
+                QtCore.QObject, "view_select")
+        return self.view_select
+
+
     def getObjectCenterPos(self):
         if self.selectedObj is None:
             return [0.0, 0.0, 0.0]
@@ -893,9 +901,11 @@ class SceneView(QtGui.QGraphicsScene):
 
     def hideLayersButton(self):
         print "hiding layers button"
+        self.viewSelect.hideLayersButton()
 
     def showLayersButton(self):
         print "showing layers button"
+        self.viewSelect.showLayersButton()
 
     def cleanResult(self):
         self.engineResultView.setResult(None)

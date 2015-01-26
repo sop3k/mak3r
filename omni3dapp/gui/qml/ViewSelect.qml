@@ -40,6 +40,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: 0
         source: "resources/icons/collapse-up-4x.png"
+        opacity: 0;
     }
 
     Rectangle {
@@ -121,6 +122,7 @@ Rectangle {
             y: 0
             width: 32
             height: 32
+            enabled: false
             onClicked: {
                 graphicsscene.setViewMode('gcode');
             }
@@ -154,5 +156,15 @@ Rectangle {
                 graphicsscene.setViewMode('transparent');
             }
         }
+    }
+
+    function showLayersButton() {
+        image_layers.opacity = 1;
+        mouse_area_layers.enabled = true;
+    }
+
+    function hideLayersButton() {
+        image_layers.opacity = 0;
+        mouse_area_layers.enabled = false;
     }
 }

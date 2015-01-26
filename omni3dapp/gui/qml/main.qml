@@ -16,6 +16,7 @@ Rectangle {
 
     ViewSelect {
         id: view_select
+        objectName: "view_select"
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         anchors.topMargin: 25

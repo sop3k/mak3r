@@ -74,8 +74,6 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.platformMesh = {}
 
-        # self.container = openglscene.glGuiContainer(self, (0, 0))
-        # self.container = openglscene.Container(self)
         self.tool = previewTools.toolNone(self)
 
         self.loadObjectShader()
@@ -92,12 +90,11 @@ class SceneView(QtGui.QGraphicsScene):
         self.engineResultView = engineResultView.EngineResultView(self)
         self.engine = sliceEngine.Engine(self, self.updateEngineProgress,
                                          self.engineResultView)
+
         self.slicing_finished = False
 
         self.progressBar = self.mainwindow.qmlobject.findChild(
             QtCore.QObject, "loader")
-
-        # self.sceneUpdateTimer = QtCore.QTimer(self)
 
         self.idleTimer = QtCore.QTimer(self)
         self.idleTimer.timeout.connect(self.onIdle)
@@ -595,10 +592,8 @@ class SceneView(QtGui.QGraphicsScene):
         self.onStopEngine()
 
         if self.engine.isSlicingEnabled(self.scene):
-            # self.mainwindow.print_button.setEnabled(True)
             self.mainwindow.print_button.enable()
         else:
-            # self.mainwindow.print_button.setEnabled(False)
             self.mainwindow.print_button.disable()
         self.scene.updateSizeOffsets()
         self.queueRefresh()
@@ -610,8 +605,6 @@ class SceneView(QtGui.QGraphicsScene):
         self.onDeleteAll()
 
         self.startFilesLoader(fileList)
-        # self.files_loader = FilesLoader(self, fileList, self.machineSize)
-        # self.files_loader.loadScene(fileList)
 
     @QtCore.Slot()
     def onRunEngine(self):
@@ -902,11 +895,9 @@ class SceneView(QtGui.QGraphicsScene):
         self.sceneUpdated()
 
     def hideLayersButton(self):
-        print "hiding layers button"
         self.viewSelect.hideLayersButton()
 
     def showLayersButton(self):
-        print "showing layers button"
         self.viewSelect.showLayersButton()
 
     def cleanResult(self):
@@ -1183,7 +1174,7 @@ class SceneView(QtGui.QGraphicsScene):
         if viewmode == 'gcode':
             self.tool = previewTools.toolNone(self)
             self.loadLayers()
-        self.engineResultView.setEnabled(self.viewMode == 'gcode')
+        self.engineResultView.setEnabled(self.viewMode=='gcode')
         self.queueRefresh()
 
     def setPrintingGcode(self, gcode):
@@ -1228,14 +1219,6 @@ class SceneView(QtGui.QGraphicsScene):
         self.printButton.setImageID(6)
         self.printButton.setTooltip(_("Print"))
 
-    # def on_pauseprint(self):
-    #     self.printButton.setImageID(6)
-    #     self.printButton.setTooltip(_("Resume"))
-
-    # def on_resumeprint(self):
-    #     self.printButton.setImageID(30)
-    #     self.printButton.setTooltip(_("Pause"))
-
     def onPrintButton(self, button=LEFT_BUTTON):
         self.on_startprint()
         self.mainwindow.pc.printfile(self.engine._result.getGCode())
@@ -1259,12 +1242,6 @@ class SceneView(QtGui.QGraphicsScene):
                 ' '.join(map(lambda s: '*' + s, mesh_extentions)),
                 ' '.join(map(lambda s: '*' + s, img_extentions)),
                 ' '.join(map(lambda s: '*' + s, ['.g', '.gcode'])))
-
-        # filenames, status = QtGui.QFileDialog.getOpenFileNames(
-        #     self.mainwindow,
-        #     _("Open 3D model"),
-        #     os.path.split(profile.getPreference('lastFile'))[0],
-        #     wildcard_filter)
 
         file_dialog = QtGui.QFileDialog(
             self.mainwindow,

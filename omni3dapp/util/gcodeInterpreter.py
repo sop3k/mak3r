@@ -1,13 +1,12 @@
 """
 The GCodeInterpreter module generates layer information from GCode.
-It does this by parsing the whole GCode file. On large files this can take a while and should be used from a thread.
+It does this by parsing the whole GCode file.
+On large files this can take a while and should be used from a thread.
 """
 __copyright__ = "Copyright (C) 2013 David Braam - Released under terms of the AGPLv3 License"
 
-import sys
 import math
 import os
-import time
 import numpy
 import types
 import cStringIO as StringIO
@@ -16,11 +15,13 @@ from PySide import QtCore
 
 from omni3dapp.util import profile
 from omni3dapp.util.printing import gcoder
+from omni3dapp.logger import log
 
 
 def gcodePath(newType, pathType, layerThickness, startPoint):
     """
-    Build a gcodePath object. This used to be objects, however, this code is timing sensitive and dictionaries proved to be faster.
+    Build a gcodePath object. This used to be objects, however,
+    this code is timing sensitive and dictionaries proved to be faster.
     """
     if layerThickness <= 0.0:
         layerThickness = 0.01
@@ -33,30 +34,43 @@ def gcodePath(newType, pathType, layerThickness, startPoint):
             'extrusion': [0.0]}
 
 
-class GCode(object):
+class GCode(QtCore.QObject):
     """
-    The heavy lifting GCode parser. This is most likely the hardest working python code in Cura.
-    It parses a GCode file and stores the result in layers where each layer as paths that describe the GCode.
+    The heavy lifting GCode parser.
+    It parses a GCode file and stores the result in layers where each layer
+    as paths that describe the GCode.
     """
-    def __init__(self, sceneview):
+
+    set_progress_sig = QtCore.Signal(dict)
+    update_scene_sig = QtCore.Signal()
+    finished = QtCore.Signal()
+
+    def __init__(self, sceneview, result):
+        super(GCode, self).__init__()
         self._sceneview = sceneview
         self.regMatch = {}
         self.layerList = []
         self.extrusionAmount = 0
         self.filename = None
-        self.progressCallback = None
         self.printing_gcode = None
-    
+        self.result = result
+
+    def progressCallback(self, progress):
+        self.set_progress_sig.emit({
+            'result': self.result,
+            'progress': progress,
+            'layers': self.layerList
+            })
+
     def load(self, data):
         self.filename = None
         self.printing_gcode = gcoder.GCode(home_pos=profile.get_home_pos(),
-                deferred=False)
+                                           deferred=False)
         if type(data) in types.StringTypes and os.path.isfile(data):
             self.filename = data
             self._fileSize = os.stat(data).st_size
-            gcodeFile = open(data, 'r')
-            self._load(gcodeFile)
-            gcodeFile.close()
+            with open(data, 'r') as gcodeFile:
+                self._load(gcodeFile)
         elif type(data) is list:
             self._load(data)
         else:
@@ -65,25 +79,28 @@ class GCode(object):
             self._load(StringIO.StringIO(data))
 
     def calculateWeight(self):
-        #Calculates the weight of the filament in kg
+        """Calculates the weight of the filament in kg"""
         radius = float(profile.getProfileSetting('filament_diameter')) / 2
-        volumeM3 = (self.extrusionAmount * (math.pi * radius * radius)) / (1000*1000*1000)
-        return volumeM3 * profile.getPreferenceFloat('filament_physical_density')
-    
+        volumeM3 = (self.extrusionAmount * (math.pi * radius * radius)) / \
+            (1000*1000*1000)
+        return volumeM3 * \
+            profile.getPreferenceFloat('filament_physical_density')
+
     def calculateCost(self):
         cost_kg = profile.getPreferenceFloat('filament_cost_kg')
         cost_meter = profile.getPreferenceFloat('filament_cost_meter')
         if cost_kg > 0.0 and cost_meter > 0.0:
-            return "%.2f / %.2f" % (self.calculateWeight() * cost_kg, self.extrusionAmount / 1000 * cost_meter)
+            return "%.2f / %.2f" % (self.calculateWeight() * cost_kg,
+                                    self.extrusionAmount / 1000 * cost_meter)
         elif cost_kg > 0.0:
             return "%.2f" % (self.calculateWeight() * cost_kg)
         elif cost_meter > 0.0:
             return "%.2f" % (self.extrusionAmount / 1000 * cost_meter)
         return None
-    
+
     def _load(self, gcodeFile):
         self.layerList = []
-        self.pos = [0.0,0.0,0.0]
+        self.pos = [0.0, 0.0, 0.0]
         self.posOffset = [0.0, 0.0, 0.0]
         self.currentE = 0.0
         self.currentExtruder = 0
@@ -96,75 +113,82 @@ class GCode(object):
         self.pathType = 'CUSTOM'
         self.gcodeFile = gcodeFile
         self.currentLayer = []
-        self.currentPath = gcodePath('move', self.pathType, self.layerThickness,
-                self.pos)
+        self.currentPath = gcodePath('move', self.pathType,
+                                     self.layerThickness, self.pos)
         self.currentPath['extruder'] = self.currentExtruder
 
         self.currentLayer.append(self.currentPath)
-        self.parse_line_timer = QtCore.QTimer(self._sceneview.mainwindow)
+        self.parse_lines()
 
-        self.parse_line_timer.singleShot(0, self._parse_line)
+        self.finished.emit()
 
-    def _parse_line(self):
-        line = self.gcodeFile.readline()
-        if not line:
-            return self._after_line_parsing()
+    def parse_lines(self):
+        for ix, line in enumerate(self.gcodeFile):
+            self._parse_line(ix, line)
+        self._after_line_parsing()
 
+    def _parse_line(self, ix, line):
         if type(line) is tuple:
             line = line[0]
 
-        #Parse Cura_SF comments
+        # Parse Cura_SF comments
         if line.startswith(';TYPE:'):
             self.pathType = line[6:].strip()
 
         if ';' in line:
             comment = line[line.find(';')+1:].strip()
-            #Slic3r GCode comment parser
+            # Slic3r GCode comment parser
             if comment == 'fill':
                 self.pathType = 'FILL'
             elif comment == 'perimeter':
                 self.pathType = 'WALL-INNER'
             elif comment == 'skirt':
                 self.pathType = 'SKIRT'
-            #Cura layer comments.
+            # Cura layer comments
             if comment.startswith('LAYER:'):
                 self.currentPath = gcodePath(self.moveType, self.pathType,
-                        self.layerThickness, self.currentPath['points'][-1])
+                                             self.layerThickness,
+                                             self.currentPath['points'][-1])
                 self.layerThickness = 0.0
                 self.currentPath['extruder'] = self.currentExtruder
                 for path in self.currentLayer:
                     path['points'] = numpy.array(path['points'], numpy.float32)
-                    path['extrusion'] = numpy.array(path['extrusion'], numpy.float32)
+                    path['extrusion'] = numpy.array(path['extrusion'],
+                                                    numpy.float32)
                 self.layerList.append(self.currentLayer)
                 if self.progressCallback is not None:
-                    if self.progressCallback(float(self.gcodeFile.tell()) / float(self._fileSize)):
-                        #Abort the loading, we can safely return as the results here will be discarded
-                        self.gcodeFile.close()
-                        return
+                    if ix % 10 == 0:
+                        if self.progressCallback(
+                                float(self.gcodeFile.tell()) /
+                                float(self._fileSize)):
+                            # Abort the loading, we can safely return
+                            # as the results here will be discarded
+                            self.gcodeFile.close()
+                            return
                 self.currentLayer = [self.currentPath]
             line = line[0:line.find(';')]
         T = getCodeInt(line, 'T')
         if T is not None:
             if self.currentExtruder > 0:
                 self.posOffset[0] -= profile.getMachineSettingFloat(
-                        'extruder_offset_x%d' % (self.currentExtruder))
+                    'extruder_offset_x%d' % (self.currentExtruder))
                 self.posOffset[1] -= profile.getMachineSettingFloat(
-                        'extruder_offset_y%d' % (self.currentExtruder))
+                    'extruder_offset_y%d' % (self.currentExtruder))
             self.currentExtruder = T
             if self.currentExtruder > 0:
                 self.posOffset[0] += profile.getMachineSettingFloat(
-                        'extruder_offset_x%d' % (self.currentExtruder))
+                    'extruder_offset_x%d' % (self.currentExtruder))
                 self.posOffset[1] += profile.getMachineSettingFloat(
-                        'extruder_offset_y%d' % (self.currentExtruder))
-        
+                    'extruder_offset_y%d' % (self.currentExtruder))
+
         G = getCodeInt(line, 'G')
         if G is not None:
-            if G == 0 or G == 1:    #Move
+            if G == 0 or G == 1:    # Move
                 x = getCodeFloat(line, 'X')
                 y = getCodeFloat(line, 'Y')
                 z = getCodeFloat(line, 'Z')
                 e = getCodeFloat(line, 'E')
-                #f = getCodeFloat(line, 'F')
+                # f = getCodeFloat(line, 'F')
                 oldPos = self.pos
                 self.pos = self.pos[:]
                 if self.posAbs:
@@ -195,39 +219,44 @@ class GCode(object):
                 if self.moveType == 'move' and oldPos[2] != self.pos[2]:
                     if oldPos[2] > self.pos[2] and \
                             abs(oldPos[2] - self.pos[2]) > 5.0 \
-                                and self.pos[2] < 1.0:
+                            and self.pos[2] < 1.0:
                         oldPos[2] = 0.0
                     if self.layerThickness == 0.0:
                         self.layerThickness = abs(oldPos[2] - self.pos[2])
                 if self.currentPath['type'] != self.moveType or \
                         self.currentPath['pathType'] != self.pathType:
                     self.currentPath = gcodePath(self.moveType, self.pathType,
-                            self.layerThickness, self.currentPath['points'][-1])
+                                                 self.layerThickness,
+                                                 self.currentPath['points'][-1]
+                                                 )
                     self.currentPath['extruder'] = self.currentExtruder
                     self.currentLayer.append(self.currentPath)
 
                 self.currentPath['points'].append(self.pos)
-                self.currentPath['extrusion'].append(e * self.extrudeAmountMultiply)
-            elif G == 4:    #Delay
+                self.currentPath['extrusion'].append(
+                    e * self.extrudeAmountMultiply)
+            elif G == 4:    # Delay
                 S = getCodeFloat(line, 'S')
                 P = getCodeFloat(line, 'P')
-            elif G == 10:   #Retract
+            elif G == 10:   # Retract
                 self.currentPath = gcodePath('retract', self.pathType,
-                        self.layerThickness, self.currentPath['points'][-1])
+                                             self.layerThickness,
+                                             self.currentPath['points'][-1])
                 self.currentPath['extruder'] = self.currentExtruder
                 self.currentLayer.append(self.currentPath)
-                self.currentPath['points'].append(self.currentPath['points'][0])
-            elif G == 11:   #Push back after retract
+                self.currentPath['points'].append(
+                    self.currentPath['points'][0])
+            elif G == 11:   # Push back after retract
                 pass
-            elif G == 20:   #Units are inches
+            elif G == 20:   # u Units are inches
                 self.scale = 25.4
-            elif G == 21:   #Units are mm
+            elif G == 21:   # Units are mm
                 self.scale = 1.0
-            elif G == 28:   #Home
+            elif G == 28:   # Home
                 x = getCodeFloat(line, 'X')
                 y = getCodeFloat(line, 'Y')
                 z = getCodeFloat(line, 'Z')
-                center = [0.0,0.0,0.0]
+                center = [0.0, 0.0, 0.0]
                 if x is None and y is None and z is None:
                     self.pos = center
                 else:
@@ -238,9 +267,9 @@ class GCode(object):
                         self.pos[1] = center[1]
                     if z is not None:
                         self.pos[2] = center[2]
-            elif G == 90:   #Absolute position
+            elif G == 90:   # Absolute position
                 self.posAbs = True
-            elif G == 91:   #Relative position
+            elif G == 91:   # Relative position
                 self.posAbs = False
             elif G == 92:
                 x = getCodeFloat(line, 'X')
@@ -249,14 +278,14 @@ class GCode(object):
                 e = getCodeFloat(line, 'E')
                 if e is not None:
                     self.currentE = e
-                #if x is not None:
+                # if x is not None:
                 #   self.posOffset[0] = self.pos[0] - x
-                #if y is not None:
+                # if y is not None:
                 #   self.posOffset[1] = self.pos[1] - y
-                #if z is not None:
+                # if z is not None:
                 #   self.posOffset[2] = self.pos[2] - z
             else:
-                print "Unknown G code:" + str(G)
+                log.error("Unknown G code:" + str(G))
         else:
             M = getCodeInt(line, 'M')
             if M is not None:
@@ -270,58 +299,60 @@ class GCode(object):
                 #     pass
                 # elif M == 81:   #Suicide/disable power supply
                 #     pass
-                if M == 82:   #Absolute E
+                if M == 82:   # Absolute E
                     self.absoluteE = True
-                elif M == 83:   #Relative E
+                elif M == 83:   # Relative E
                     self.absoluteE = False
-                # elif M == 84:   #Disable step drivers
+                # elif M == 84:   # Disable step drivers
                 #     pass
-                # elif M == 92:   #Set steps per unit
+                # elif M == 92:   # Set steps per unit
                 #     pass
-                # elif M == 101:  #Enable extruder
+                # elif M == 101:  # Enable extruder
                 #     pass
-                # elif M == 103:  #Disable extruder
+                # elif M == 103:  # Disable extruder
                 #     pass
-                # elif M == 104:  #Set temperature, no wait
+                # elif M == 104:  # Set temperature, no wait
                 #     pass
-                # elif M == 105:  #Get temperature
+                # elif M == 105:  # Get temperature
                 #     pass
-                # elif M == 106:  #Enable fan
+                # elif M == 106:  # Enable fan
                 #     pass
-                # elif M == 107:  #Disable fan
+                # elif M == 107:  # Disable fan
                 #     pass
-                # elif M == 108:  #Extruder RPM (these should not be in the final GCode, but they are)
+                # elif M == 108:  # Extruder RPM(these should not be
+                #                 # in the final GCode, but they are)
                 #     pass
-                # elif M == 109:  #Set temperature, wait
+                # elif M == 109:  # Set temperature, wait
                 #     pass
-                # elif M == 110:  #Reset N counter
+                # elif M == 110:  # Reset N counter
                 #     pass
-                # elif M == 113:  #Extruder PWM (these should not be in the final GCode, but they are)
+                # elif M == 113:  # Extruder PWM (these should not be
+                #                 # in the final GCode, but they are)
                 #     pass
-                # elif M == 117:  #LCD message
+                # elif M == 117:  # LCD message
                 #     pass
-                # elif M == 140:  #Set bed temperature
+                # elif M == 140:  # Set bed temperature
                 #     pass
-                # elif M == 190:  #Set bed temperature & wait
+                # elif M == 190:  # Set bed temperature & wait
                 #     pass
-                elif M == 221:  #Extrude amount multiplier
+                elif M == 221:  # Extrude amount multiplier
                     s = getCodeFloat(line, 'S')
                     if s is not None:
                         self.extrudeAmountMultiply = s / 100.0
                 # else:
                 #     print "Unknown M code:" + str(M)
         self.printing_gcode.append(line.strip())
-        self.parse_line_timer.singleShot(0, self._parse_line)
 
     def _after_line_parsing(self):
         for path in self.currentLayer:
             path['points'] = numpy.array(path['points'], numpy.float32)
             path['extrusion'] = numpy.array(path['extrusion'], numpy.float32)
         self.layerList.append(self.currentLayer)
+        # TODO: mozna zrobic to sygnalem
         self._sceneview.setPrintingGcode(self.printing_gcode)
         if self.progressCallback is not None and self._fileSize > 0:
-            self.progressCallback(float(self.gcodeFile.tell()) / float(self._fileSize))
-            self._sceneview.update()
+            self.progressCallback(
+                float(self.gcodeFile.tell()) / float(self._fileSize))
 
 
 def getCodeInt(line, code):
@@ -348,9 +379,3 @@ def getCodeFloat(line, code):
         return float(line[n:m])
     except:
         return None
-
-
-if __name__ == '__main__':
-    for filename in sys.argv[1:]:
-        g = gcode()
-        g.load(filename)

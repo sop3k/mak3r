@@ -62,7 +62,7 @@ class EngineResult(object):
         self._modelHash = None
         self._profileString = profile.getProfileString()
         self._preferencesString = profile.getPreferencesString()
-        self._gcodeInterpreter = gcodeInterpreter.GCode(self._parent)
+        self._gcodeInterpreter = gcodeInterpreter.GCode(self._parent, self)
         self._finished = False
 
     def getFilamentWeight(self, e=0):
@@ -133,41 +133,24 @@ class EngineResult(object):
     def isFinished(self):
         return self._finished
 
-    def _gcodeInterpreterCallback(self, progress):
-        return self._gcodeLoadCallback(self, progress,
-                                       self._gcodeInterpreter.layerList)
-
     def getGCodeLayers(self, engine_results_view):
         if not self._finished:
             return None
 
-        self._gcodeInterpreter.setProgressCallback(
-                self._gcodeInterpreterCallback)
-        self._gcodeLoadCallback = engine_results_view._gcodeLoadCallback
+        self.layers_loader_thread = QtCore.QThread(self._parent)
+        self._gcodeInterpreter.moveToThread(self.layers_loader_thread)
 
-        self._gcodeInterpreter.load(self._gcodeData)
+        self.layers_loader_thread.started.connect(lambda: self._gcodeInterpreter.load(self._gcodeData))
+        self._gcodeInterpreter.update_scene_sig.connect(self._parent.queueRefresh)
+        self._gcodeInterpreter.set_progress_sig.connect(engine_results_view._gcodeLoadCallback)
 
-    # def submitInfoOnline(self):
-    #     if profile.getPreference('submit_slice_information') != 'True':
-    #         return
-    #     if version.isDevVersion():
-    #         return
-    #     data = {
-    #         'processor': platform.processor(),
-    #         'machine': platform.machine(),
-    #         'platform': platform.platform(),
-    #         'profile': self._profileString,
-    #         'preferences': self._preferencesString,
-    #         'modelhash': self._modelHash,
-    #         'version': version.getVersion(),
-    #     }
-    #     try:
-    #         f = urllib2.urlopen("https://www.youmagine.com/curastats/",
-    #                             data = urllib.urlencode(data), timeout = 1)
-    #         f.read()
-    #         f.close()
-    #     except:
-    #         traceback.print_exc()
+        self._gcodeInterpreter.finished.connect(lambda: self._parent.setProgressBar(1.0))
+
+        self._gcodeInterpreter.finished.connect(self.layers_loader_thread.quit)
+        self._gcodeInterpreter.finished.connect(self._gcodeInterpreter.deleteLater)
+        self.layers_loader_thread.finished.connect(self.layers_loader_thread.deleteLater)
+
+        self.layers_loader_thread.start()
 
 
 class SocketListener(QtCore.QObject):

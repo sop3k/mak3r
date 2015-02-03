@@ -4,27 +4,49 @@ import QtQuick 1.1
 Rectangle {
     id: loader
     width: parent.width
-    height: 5
-    color: "#000000"
-    property real value: 0
+    height: 30
+    color: "#00000000"
 
     Rectangle {
-        id: orange_bar
+        id: black_bar
+        width: parent.width
+        height: 5
+        color: "#000000"
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 0
+        property real value: 0
+
+            Rectangle {
+                id: orange_bar
+                x: 0
+                y: 0
+                width: black_bar.value * parent.width
+                height: 5
+                color: "#ff5724"
+            }
+    }
+
+    Text {
+        id: info
         x: 0
         y: 0
-        width: value * parent.width
-        height: 5
+        width: parent.width
+        height: loader.height - black_bar.height
+        text: qsTr("")
         color: "#ff5724"
-
-         //Behavior on width {
-         //    SmoothedAnimation {
-         //        velocity: 1000;
-         //        reversingMode: SmoothedAnimation.Sync
-         //    }
-         //}
+        font.pixelSize: 12
+        //verticalAlignment: Text.AlignVTop
+        horizontalAlignment: Text.AlignLeft
+        anchors.left: parent.left
+        anchors.leftMargin: 15
     }
 
     function setValue(val) {
-        value = val;
+        black_bar.value = val;
     }
+
+    function setInfoText(text) {
+        info.text = qsTr(text);
+    }
+
 }

@@ -5,6 +5,7 @@ import math
 import time
 import numpy
 import traceback
+import cStringIO as StringIO
 
 from PySide import QtCore, QtGui
 
@@ -588,7 +589,6 @@ class SceneView(QtGui.QGraphicsScene):
 
     def sceneUpdated(self):
         self.setProgressBar(0.0)
-        # TODO: info about aborting engine
         self.onStopEngine()
 
         if self.engine.isSlicingEnabled(self.scene):
@@ -598,6 +598,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.scene.updateSizeOffsets()
         self.queueRefresh()
 
+    @QtCore.Slot()
     def reloadScene(self):
         fileList = []
         for obj in self.scene.objects():
@@ -608,11 +609,13 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot()
     def onRunEngine(self):
+        self.setInfoText(_("Slicing scene..."))
         self.engine.runEngine(self.scene)
 
     @QtCore.Slot()
     def onStopEngine(self):
         self.engine.abortEngine()
+        # self.setInfoText(_("Slicing aborted"))
         self.mainwindow.print_button.setState("IDLE")
 
     def onIdle(self):
@@ -788,6 +791,7 @@ class SceneView(QtGui.QGraphicsScene):
         if progressValue >= 1:
             self.setPrintingInfo()
             self.mainwindow.print_button.setState("SLICED")
+            self.setInfoText("")
 
         self.queueRefresh()
 
@@ -872,6 +876,7 @@ class SceneView(QtGui.QGraphicsScene):
         # self.scene.merge(self.selectedObj, self.focusObj)
         # self.sceneUpdated()
 
+    @QtCore.Slot()
     def onDeleteAll(self):
         while len(self.scene.objects()) > 0:
             self.onDeleteObject(self.scene.objects()[0])
@@ -1274,6 +1279,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.files_loader.update_scene_sig.connect(self.updateProfileToControls)
         self.files_loader.set_progressbar_sig.connect(self.setProgressBar)
         self.files_loader.object_loaded_sig.connect(self.afterObjectLoaded)
+        self.files_loader.set_info_text_sig.connect(self.setInfoText)
 
         self.files_loader.finished.connect(self.files_loader_thread.quit)
         self.files_loader.finished.connect(self.files_loader.deleteLater)
@@ -1291,13 +1297,82 @@ class SceneView(QtGui.QGraphicsScene):
     @QtCore.Slot(float)
     def setProgressBar(self, value):
         self.progressBar.setValue(value)
+        if value == 1:
+            self.setInfoText("")
         self.queueRefresh()
+
+    @QtCore.Slot(str)
+    def setInfoText(self, text):
+        self.progressBar.setInfoText(text)
+        self.queueRefresh()
+
+    @QtCore.Slot()
+    def showSaveModel(self):
+        if len(self.scene.objects()) < 1:
+            self.setInfoText(
+                _("There are no objects on the scene to be saved."))
+            return
+
+        file_extentions = meshLoader.saveSupportedExtensions()
+
+        wildcard_filter = "Mesh files ({0})".format(
+            ' '.join(map(lambda s: '*' + s, file_extentions)))
+
+        chosen = QtGui.QFileDialog.getSaveFileName(
+                self.mainwindow,
+                _("Save 3D model"),
+                os.path.split(profile.getPreference('lastFile'))[0],
+                wildcard_filter)
+
+        filename, used_filter = chosen
+        if filename:
+            meshLoader.saveMeshes(filename, self.scene.objects())
+            self.setInfoText(_("Saved scene as {0}".format(filename)))
+            
+    @QtCore.Slot()
+    def showSaveGCode(self):
+        if len(self.scene._objectList) < 1:
+            self.setInfoText(
+                _("There are no objects on the scene to be saved."))
+            return
+
+        result = self.engine.getResult()
+        if not result or not result.isFinished():
+            self.setInfoText(_("GCode is not generated yet, "
+                "you cannot save it"))
+            return
+        
+        wildcard_filter = "Toolpath ({0})".format(
+                '*' + profile.getGCodeExtension())
+
+        chosen = QtGui.QFileDialog.getSaveFileName(
+                self.mainwindow,
+                _("Save toolpath"),
+                os.path.dirname(profile.getPreference('lastFile')),
+                wildcard_filter)
+
+        filename, used_filter = chosen
+        if filename:
+            self.save_gcode_worker = SaveGCodeWorker(self.engine, filename)
+            self.save_gcode_thread = QtCore.QThread(self.mainwindow)
+            self.save_gcode_worker.moveToThread(self.save_gcode_thread)
+
+            self.save_gcode_thread.started.connect(self.save_gcode_worker.saveGCode)
+            self.save_gcode_worker.set_progress_bar_sig.connect(self.setProgressBar)
+            self.save_gcode_worker.notification_sig.connect(self.setInfoText)
+
+            self.save_gcode_worker.finished.connect(self.save_gcode_thread.quit)
+            self.save_gcode_worker.finished.connect(self.save_gcode_worker.deleteLater)
+            self.save_gcode_thread.finished.connect(self.save_gcode_thread.deleteLater)
+
+            self.save_gcode_thread.start()
 
 
 class FilesLoader(QtCore.QObject):
     load_gcode_file_sig = QtCore.Signal(str)
     update_scene_sig = QtCore.Signal()
     set_progressbar_sig = QtCore.Signal(float)
+    set_info_text_sig = QtCore.Signal(str)
     object_loaded_sig = QtCore.Signal()
     finished = QtCore.Signal()
 
@@ -1364,8 +1439,13 @@ class FilesLoader(QtCore.QObject):
                 self.sceneview, self.sceneview.zoom, newZoom, 0.5)
 
     def loadScene(self, filelist):
-        fraction = 1.0/len(filelist)
+        flen = len(filelist)
+        fraction = 1.0 / flen
         for no, filename in enumerate(filelist):
+            # Set info text about loading a file
+            self.set_info_text_sig.emit(
+                _("Loading file {0} out of {1}: {2}".format(
+                    no+1, flen, filename)))
             self.loadFileOntoScene(
                 filename, lambda val: self.set_progressbar_sig.emit(
                     (no+val)*fraction)
@@ -1398,6 +1478,46 @@ class FilesLoader(QtCore.QObject):
                 scene.centerAll()
             self.sceneview.selectObject(obj)
             if obj.getScale()[0] < 1.0:
-                # TODO: show warning
-                # self.notification.message("Warning: Object scaled down.")
-                pass
+                self.setInfoText(_("Warning: Object scaled down"))
+
+
+class SaveGCodeWorker(QtCore.QObject):
+    set_progress_bar_sig = QtCore.Signal(float)
+    notification_sig = QtCore.Signal(str)
+    finished = QtCore.Signal()
+
+    def __init__(self, engine, target, eject_drive=False):
+        super(SaveGCodeWorker, self).__init__()
+        self.engine = engine
+        self.target = target
+        self.eject_drive = eject_drive
+
+    def saveGCode(self):
+        data = self.engine.getResult().getGCode()
+        try:
+            size = float(len(data))
+            fsrc = StringIO.StringIO(data)
+            with open(self.target, 'wb') as fdst:
+                while 1:
+                    buf = fsrc.read(16*1024)
+                    if not buf:
+                        break
+                    fdst.write(buf)
+                    self.set_progress_bar_sig.emit(float(fsrc.tell()) / size)
+        except Exception, e:
+            log.error(e)
+            self.notification_sig.emit("Failed to save file")
+            self.finished.emit()
+        else:
+            self.notification_sig.emit(_("Saved as {0}".format(self.target)))
+            # if eject_drive:
+            #     # self.notification.message("Saved as %s" % (targetFilename), lambda : self._doEjectSD(ejectDrive), 31, 'Eject')
+            #     print "Saved as %s" % (self.target)
+            # elif explorer.hasExplorer():
+            #     # self.notification.message("Saved as %s" % (targetFilename), lambda : explorer.openExplorer(targetFilename), 4, 'Open folder')
+            #     print "Saved as %s" % (self.target)
+            # else:
+            #     # self.notification.message("Saved as %s" % (targetFilename))
+            #     print "Saved as %s" % (self.target)
+        self.set_progress_bar_sig.emit(0.0)
+        self.finished.emit()

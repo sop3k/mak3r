@@ -58,6 +58,9 @@ class MainWindow(QtGui.QGraphicsView):
         self.print_button = self.qmlobject.findChild(
             QtCore.QObject, "print_button")
 
+        self.top_bar = self.qmlobject.findChild(
+            QtCore.QObject, "bars")
+
         self.setup_scene()
 
         # Class that enables connecting to printer

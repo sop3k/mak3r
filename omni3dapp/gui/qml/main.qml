@@ -8,6 +8,7 @@ Rectangle {
 
     Bars {
         id: bars
+        objectName: "bars"
         anchors.left: parent.left
         anchors.leftMargin: 0
         anchors.top: parent.top

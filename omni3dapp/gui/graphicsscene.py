@@ -155,6 +155,21 @@ class SceneView(QtGui.QGraphicsScene):
             self.animZoom = openglscene.animation(
                 self, self.zoom, newZoom, 0.5)
 
+    @QtCore.Slot()
+    def selectRotateTool(self):
+        print "selected rotate tool"
+        self.tool = previewTools.toolRotate(self)
+
+    @QtCore.Slot()
+    def selectScaleTool(self):
+        print "selected scale tool"
+        self.tool = previewTools.toolScale(self)
+
+    @QtCore.Slot()
+    def selectMirrorTool(self):
+        print "selected mirror tool"
+        self.tool = previewTools.toolNone(self)
+
     def loadObjectShader(self):
         if self.objectShader is not None:
             return
@@ -772,9 +787,11 @@ class SceneView(QtGui.QGraphicsScene):
 
     def updateToolButtons(self):
         if self.selectedObj is None:
-            hidden = True
+            enabled = False
         else:
-            hidden = False
+            enabled = True
+
+        self.mainwindow.top_bar.enableObjectTools(enabled)
         # self.rotateToolButton.setHidden(hidden)
         # self.scaleToolButton.setHidden(hidden)
         # self.mirrorToolButton.setHidden(hidden)
@@ -982,6 +999,7 @@ class SceneView(QtGui.QGraphicsScene):
         super(SceneView, self).mouseReleaseEvent(evt)
 
     def onMouseDown(self, evt):
+        print "on mouse down"
         pos = evt.scenePos()
         self.mouseX = pos.x()
         self.mouseY = pos.y()
@@ -1230,6 +1248,7 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot()
     def showLoadModel(self, button=LEFT_BUTTON):
+        print "show load model"
         if button is not LEFT_BUTTON:
             return
 

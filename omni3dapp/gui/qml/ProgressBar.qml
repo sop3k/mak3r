@@ -39,6 +39,7 @@ Rectangle {
         horizontalAlignment: Text.AlignLeft
         anchors.left: parent.left
         anchors.leftMargin: 15
+        font.family: lato_font.name
     }
 
     function setValue(val) {

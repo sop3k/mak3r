@@ -20,12 +20,12 @@ Rectangle {
             id: button_text
             color: "#ffffff"
             text: qsTr("Print")
-            font.family: "Arial"
             font.bold: true
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             anchors.fill: parent
             font.pixelSize: 14
+            font.family: lato_font.name
         }
 
         MouseArea {
@@ -61,6 +61,7 @@ Rectangle {
         verticalAlignment: Text.AlignVCenter
         horizontalAlignment: Text.AlignRight
         font.pixelSize: 12
+        font.family: lato_font.name
     }
 
     Text {
@@ -74,6 +75,7 @@ Rectangle {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 0
         font.pixelSize: 12
+        font.family: lato_font.name
     }
 
     states: [

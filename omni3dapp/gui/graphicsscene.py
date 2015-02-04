@@ -20,11 +20,15 @@ from omni3dapp.util import profile
 from omni3dapp.util import meshLoader
 from omni3dapp.util import resources
 from omni3dapp.util import sliceEngine
+from omni3dapp.util.shortcuts import *
+
 from omni3dapp.gui.util import previewTools
-from omni3dapp.gui.tools import imageToMesh
 from omni3dapp.gui.util import engineResultView
 from omni3dapp.gui.util import openglscene, openglHelpers
-from omni3dapp.util.shortcuts import *
+from omni3dapp.gui.util import containers
+
+from omni3dapp.gui.tools import imageToMesh
+
 from omni3dapp.logger import log
 
 
@@ -114,6 +118,20 @@ class SceneView(QtGui.QGraphicsScene):
                 QtCore.QObject, "view_select")
         return self.view_select
 
+    @property
+    def topContainer(self):
+        if not hasattr(self, '_topContainer'):
+            dims = self.mainwindow.top_bar.getDimensions()
+            self._topContainer = containers.Container(
+                self, 0, 0, dims.get('width') or 0, dims.get('height') or 0)
+        return self._topContainer
+
+    def hasFocusTopBar(self):
+        inputs = self.mainwindow.top_bar.findChildren(
+            QtCore.QObject, QtCore.QRegExp(r'^text_input_\S+'))
+        if any((inp.hasFocus() for inp in inputs)):
+            return True
+        return False
 
     def getObjectCenterPos(self):
         if self.selectedObj is None:
@@ -122,6 +140,21 @@ class SceneView(QtGui.QGraphicsScene):
         size = self.selectedObj.getSize()
         return [pos[0], pos[1],
                 size[2]/2 - profile.getProfileSettingFloat('object_sink')]
+
+    def getObjectBoundaryCircle(self):
+        if self.selectedObj is None:
+            return 0.0
+        return self.selectedObj.getBoundaryCircle()
+
+    def getObjectSize(self):
+        if self.selectedObj is None:
+            return [0.0, 0.0, 0.0]
+        return self.selectedObj.getSize()
+
+    def getObjectMatrix(self):
+        if self.selectedObj is None:
+            return numpy.matrix(numpy.identity(3))
+        return self.selectedObj.getMatrix()
 
     def getMouseRay(self, x, y):
         if self.viewport is None:
@@ -157,18 +190,37 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot()
     def selectRotateTool(self):
-        print "selected rotate tool"
         self.tool = previewTools.toolRotate(self)
 
     @QtCore.Slot()
     def selectScaleTool(self):
-        print "selected scale tool"
         self.tool = previewTools.toolScale(self)
 
     @QtCore.Slot()
     def selectMirrorTool(self):
-        print "selected mirror tool"
         self.tool = previewTools.toolNone(self)
+
+    @QtCore.Slot()
+    def onRotateReset(self):
+        if self.selectedObj is None:
+            return
+        self.selectedObj.resetRotation()
+        self.scene.pushFree(self.selectedObj)
+        self.selectObject(self.selectedObj)
+        self.sceneUpdated()
+
+    @QtCore.Slot()
+    def onLayFlat(self):
+        if self.selectedObj is None:
+            return
+        self.selectedObj.layFlat()
+        self.scene.pushFree(self.selectedObj)
+        self.selectObject(self.selectedObj)
+        self.sceneUpdated()
+
+    @QtCore.Slot()
+    def getDimensionZ(self):
+        return 123.0
 
     def loadObjectShader(self):
         if self.objectShader is not None:
@@ -268,9 +320,6 @@ class SceneView(QtGui.QGraphicsScene):
         glEnable(GL_BLEND)
 
     def init3DView(self):
-        # set viewing projection
-        # glViewport(0, 0, self.width(), self.height())
-        # glViewport((self.width() - side) / 2, (self.height() - side) / 2, side, side)
         glLoadIdentity()
 
         glLightfv(GL_LIGHT0, GL_POSITION, [0.2, 0.2, 1.0, 0.0])
@@ -457,9 +506,6 @@ class SceneView(QtGui.QGraphicsScene):
         glOrtho(0, self.width()-1, self.height()-1, 0, -1000.0, 1000.0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-
-        if hasattr(self, 'container'):
-            self.container.draw(painter)
 
     def drawMachine(self):
         glEnable(GL_CULL_FACE)
@@ -977,11 +1023,9 @@ class SceneView(QtGui.QGraphicsScene):
     def mousePressEvent(self, evt):
         self.setFocus()
         pos = evt.scenePos()
-        if hasattr(self, 'container'):
-            if self.container.onMousePressEvent(pos.x(), pos.y(), evt.button()):
-                self.update()
-                return
-        self.onMouseDown(evt)
+
+        if not self.topContainer.mousePressEvent(pos.x(), pos.y()):
+            self.onMouseDown(evt)
 
         super(SceneView, self).mousePressEvent(evt)
 
@@ -990,16 +1034,12 @@ class SceneView(QtGui.QGraphicsScene):
 
     def mouseReleaseEvent(self, evt):
         pos = evt.scenePos()
-        if hasattr(self, 'container'):
-            if self.container.onMouseReleaseEvent(pos.x(), pos.y()):
-                self.update()
-                return
-        self.onMouseUp(evt)
+        if not self.topContainer.mouseReleaseEvent(pos.x(), pos.y()):
+            self.onMouseUp(evt)
 
         super(SceneView, self).mouseReleaseEvent(evt)
 
     def onMouseDown(self, evt):
-        print "on mouse down"
         pos = evt.scenePos()
         self.mouseX = pos.x()
         self.mouseY = pos.y()
@@ -1047,6 +1087,10 @@ class SceneView(QtGui.QGraphicsScene):
     def mouseMoveEvent(self, evt):
         pos = evt.scenePos()
         x, y = pos.x(), pos.y()
+        if self.topContainer.mouseMoveEvent(x, y):
+            super(SceneView, self).mouseMoveEvent(evt)
+            return
+
         p0, p1 = self.getMouseRay(x, y)
         p0 -= self.getObjectCenterPos() - self.viewTarget
         p1 -= self.getObjectCenterPos() - self.viewTarget
@@ -1105,6 +1149,10 @@ class SceneView(QtGui.QGraphicsScene):
         super(SceneView, self).mouseMoveEvent(evt)
 
     def keyPressEvent(self, evt):
+        if self.topContainer.keyPressEvent():
+            super(SceneView, self).keyPressEvent(evt)
+            return
+
         code = evt.key()
         modifiers = evt.modifiers()
         if self.engineResultView.onKeyChar(code, modifiers) or \
@@ -1197,7 +1245,7 @@ class SceneView(QtGui.QGraphicsScene):
         if viewmode == 'gcode':
             self.tool = previewTools.toolNone(self)
             self.loadLayers()
-        self.engineResultView.setEnabled(self.viewMode=='gcode')
+        self.engineResultView.setEnabled(self.viewMode == 'gcode')
         self.queueRefresh()
 
     def setPrintingGcode(self, gcode):
@@ -1248,7 +1296,6 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot()
     def showLoadModel(self, button=LEFT_BUTTON):
-        print "show load model"
         if button is not LEFT_BUTTON:
             return
 
@@ -1295,7 +1342,8 @@ class SceneView(QtGui.QGraphicsScene):
         self.files_loader.moveToThread(self.files_loader_thread)
         self.files_loader_thread.started.connect(self.files_loader.loadFiles)
         self.files_loader.load_gcode_file_sig.connect(self.loadGCodeFile)
-        self.files_loader.update_scene_sig.connect(self.updateProfileToControls)
+        self.files_loader.update_scene_sig.connect(
+            self.updateProfileToControls)
         self.files_loader.set_progressbar_sig.connect(self.setProgressBar)
         self.files_loader.object_loaded_sig.connect(self.afterObjectLoaded)
         self.files_loader.set_info_text_sig.connect(self.setInfoText)
@@ -1338,16 +1386,16 @@ class SceneView(QtGui.QGraphicsScene):
             ' '.join(map(lambda s: '*' + s, file_extentions)))
 
         chosen = QtGui.QFileDialog.getSaveFileName(
-                self.mainwindow,
-                _("Save 3D model"),
-                os.path.split(profile.getPreference('lastFile'))[0],
-                wildcard_filter)
+            self.mainwindow,
+            _("Save 3D model"),
+            os.path.split(profile.getPreference('lastFile'))[0],
+            wildcard_filter)
 
         filename, used_filter = chosen
         if filename:
             meshLoader.saveMeshes(filename, self.scene.objects())
             self.setInfoText(_("Saved scene as {0}".format(filename)))
-            
+
     @QtCore.Slot()
     def showSaveGCode(self):
         if len(self.scene._objectList) < 1:
@@ -1358,17 +1406,17 @@ class SceneView(QtGui.QGraphicsScene):
         result = self.engine.getResult()
         if not result or not result.isFinished():
             self.setInfoText(_("GCode is not generated yet, "
-                "you cannot save it"))
+                               "you cannot save it"))
             return
-        
+
         wildcard_filter = "Toolpath ({0})".format(
-                '*' + profile.getGCodeExtension())
+            '*' + profile.getGCodeExtension())
 
         chosen = QtGui.QFileDialog.getSaveFileName(
-                self.mainwindow,
-                _("Save toolpath"),
-                os.path.dirname(profile.getPreference('lastFile')),
-                wildcard_filter)
+            self.mainwindow,
+            _("Save toolpath"),
+            os.path.dirname(profile.getPreference('lastFile')),
+            wildcard_filter)
 
         filename, used_filter = chosen
         if filename:
@@ -1376,13 +1424,18 @@ class SceneView(QtGui.QGraphicsScene):
             self.save_gcode_thread = QtCore.QThread(self.mainwindow)
             self.save_gcode_worker.moveToThread(self.save_gcode_thread)
 
-            self.save_gcode_thread.started.connect(self.save_gcode_worker.saveGCode)
-            self.save_gcode_worker.set_progress_bar_sig.connect(self.setProgressBar)
+            self.save_gcode_thread.started.connect(
+                self.save_gcode_worker.saveGCode)
+            self.save_gcode_worker.set_progress_bar_sig.connect(
+                self.setProgressBar)
             self.save_gcode_worker.notification_sig.connect(self.setInfoText)
 
-            self.save_gcode_worker.finished.connect(self.save_gcode_thread.quit)
-            self.save_gcode_worker.finished.connect(self.save_gcode_worker.deleteLater)
-            self.save_gcode_thread.finished.connect(self.save_gcode_thread.deleteLater)
+            self.save_gcode_worker.finished.connect(
+                self.save_gcode_thread.quit)
+            self.save_gcode_worker.finished.connect(
+                self.save_gcode_worker.deleteLater)
+            self.save_gcode_thread.finished.connect(
+                self.save_gcode_thread.deleteLater)
 
             self.save_gcode_thread.start()
 
@@ -1530,10 +1583,12 @@ class SaveGCodeWorker(QtCore.QObject):
         else:
             self.notification_sig.emit(_("Saved as {0}".format(self.target)))
             # if eject_drive:
-            #     # self.notification.message("Saved as %s" % (targetFilename), lambda : self._doEjectSD(ejectDrive), 31, 'Eject')
+            #     # self.notification.message("Saved as %s" % (targetFilename),
+            # lambda : self._doEjectSD(ejectDrive), 31, 'Eject')
             #     print "Saved as %s" % (self.target)
             # elif explorer.hasExplorer():
-            #     # self.notification.message("Saved as %s" % (targetFilename), lambda : explorer.openExplorer(targetFilename), 4, 'Open folder')
+            #     # self.notification.message("Saved as %s" % (targetFilename),
+            # lambda : explorer.openExplorer(targetFilename), 4, 'Open folder')
             #     print "Saved as %s" % (self.target)
             # else:
             #     # self.notification.message("Saved as %s" % (targetFilename))

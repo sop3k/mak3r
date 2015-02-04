@@ -6,6 +6,11 @@ Rectangle {
     id: page
     color: "transparent"
 
+    FontLoader {
+        id: lato_font
+        source: "resources/fonts/Lato-Bold.ttf"
+    }
+
     Bars {
         id: bars
         objectName: "bars"

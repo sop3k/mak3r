@@ -33,8 +33,9 @@ Rectangle {
             anchors.fill: parent
             onClicked: {
                 if (print_button.state == "IDLE") {
-                    graphicsscene.onRunEngine();
-                    print_button.state = "SLICING";
+                    options_layer.showLayer();
+                    // graphicsscene.onRunEngine();
+                    // print_button.state = "SLICING";
                 } else if (print_button.state == "SLICING") {
                     graphicsscene.onStopEngine();
                     print_button.state = "IDLE";

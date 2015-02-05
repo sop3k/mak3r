@@ -101,8 +101,8 @@ class MainWindow(QtGui.QGraphicsView):
     def setup_qmlview(self):
         self.qmlview = QtDeclarative.QDeclarativeView()
         self.qmlview.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
-        self.qmlview.setMinimumWidth(700)
-        self.qmlview.setMinimumHeight(500)
+        self.qmlview.setMinimumWidth(900)
+        self.qmlview.setMinimumHeight(600)
         self.qmlview.setResizeMode(self.qmlview.SizeRootObjectToView)
 
         self.qmlobject = self.qmlview.rootObject()

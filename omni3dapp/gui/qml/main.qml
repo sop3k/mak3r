@@ -20,23 +20,6 @@ Rectangle {
         anchors.topMargin: 0
     }
 
-    ViewSelect {
-        id: view_select
-        objectName: "view_select"
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        anchors.topMargin: 25
-        opacity: 0
-    }
-
-    function showViewSelect() {
-        view_select.opacity = 1
-    }
-
-    function hideViewSelect() {
-        view_select.opacity = 0
-    }
-
     LayersSlider {
         id: layers_slider
         objectName: "layers_slider"
@@ -73,5 +56,12 @@ Rectangle {
         anchors.bottomMargin: 0
         anchors.left: parent.left
         anchors.leftMargin: 0
+    }
+
+    OptionsLayer {
+        id: options_layer
+        objectName: "options_layer"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
     }
 }

@@ -4,7 +4,7 @@ import QtQuick 1.0
 
 Item {
     id: bars
-    property int custom_height: 40
+    property int custom_height: 55
     property Rectangle last_active_tool: null
     property Rectangle last_active_bar: null
     width: parent.width
@@ -18,18 +18,13 @@ Item {
         height: custom_height
         color: "#51545b"
 
-        Text {
+        Image {
             id: logo
-            x: 0
-            y: 0
-            width: 100
-            height: parent.height
-            color: "#b8b8b8"
-            text: qsTr("Mak3r Logo")
-            font.bold: true
-            verticalAlignment: Text.AlignVCenter
-            horizontalAlignment: Text.AlignHCenter
-            font.pixelSize: 13
+            source: "resources/logo_grey_small.png"
+            // anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.left: parent.left
+            anchors.leftMargin: 20
         }
 
         Rectangle {
@@ -47,7 +42,7 @@ Item {
                 y: 0
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
-                source: "resources/icons/plus-2x.png"
+                source: "resources/icons/new.png"
             }
 
             MouseArea {
@@ -74,7 +69,7 @@ Item {
                 x: 0
                 y: 0
                 anchors.horizontalCenter: parent.horizontalCenter
-                source: "resources/icons/browser-2x.png"
+                source: "resources/icons/save.png"
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -84,8 +79,8 @@ Item {
                 height: custom_height
                 hoverEnabled: true
                 onClicked: {
-                    // graphicsscene.showSaveModel();
-                    graphicsscene.showSaveGCode();
+                    graphicsscene.showSaveModel();
+                    // graphicsscene.showSaveGCode();
                 }
             }
         }
@@ -104,7 +99,7 @@ Item {
                 x: 0
                 y: 0
                 anchors.horizontalCenter: parent.horizontalCenter
-                source: "resources/icons/reload-2x.png"
+                source: "resources/icons/restore.png"
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -130,7 +125,7 @@ Item {
                 x: 0
                 y: 0
                 anchors.horizontalCenter: parent.horizontalCenter
-                source: "resources/icons/trash-2x.png"
+                source: "resources/icons/erase.png"
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -172,7 +167,7 @@ Item {
                 y: 0
                 opacity: 0.2
                 anchors.horizontalCenter: parent.horizontalCenter
-                source: "resources/icons/action-redo-2x.png"
+                source: "resources/icons/rotate.png"
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -183,21 +178,64 @@ Item {
                 hoverEnabled: true
                 enabled: false
                 onClicked: {
-                    graphicsscene.selectRotateTool();
                     rotate.isCurrentItem = !rotate.isCurrentItem;
                     set_active(rotate, rotate_bar);
+                    graphicsscene.selectRotateTool();
                 }
             }
-            anchors.leftMargin: separator1.anchors.leftMargin + separator1.width
+            anchors.leftMargin: separator1.anchors.leftMargin + separator1.width + 5 
             anchors.left: parent.left
 
-            function setEnabled(enabled) {
+            function setOptionEnabled(enabled) {
                 if (enabled == true) {
                     image_rotate.opacity = 1; 
                     mouse_area_rotate.enabled = true;
                 } else {
                     image_rotate.opacity = 0.2;
                     mouse_area_rotate.enabled = false;
+                }
+            }
+        }
+
+        Rectangle {
+            id: lay_flat
+            y: 0
+            width: custom_height
+            height: custom_height
+            property bool isCurrentItem: false
+            color: isCurrentItem ? orange_bar.color : (mouse_area_lay_flat.containsMouse ? "#5f646c" : "#00000000")
+            Image {
+                id: image_lay_flat
+                x: 0
+                y: 0
+                opacity: 0.2
+                anchors.horizontalCenter: parent.horizontalCenter
+                source: "resources/icons/laydown.png"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            MouseArea {
+                id: mouse_area_lay_flat
+                width: custom_height
+                height: custom_height
+                hoverEnabled: true
+                enabled: false
+                onClicked: {
+                    graphicsscene.onLayFlat();
+                    lay_flat.isCurrentItem = !lay_flat.isCurrentItem;
+                    set_active(lay_flat, null);
+                }
+            }
+            anchors.leftMargin: rotate.anchors.leftMargin + custom_height
+            anchors.left: parent.left
+
+            function setOptionEnabled(enabled) {
+                if (enabled == true) {
+                    image_lay_flat.opacity = 1; 
+                    mouse_area_lay_flat.enabled = true;
+                } else {
+                    image_lay_flat.opacity = 0.2;
+                    mouse_area_lay_flat.enabled = false;
                 }
             }
         }
@@ -215,7 +253,7 @@ Item {
                 y: 0
                 opacity: 0.2
                 anchors.horizontalCenter: parent.horizontalCenter
-                source: "resources/icons/resize-both-2x.png"
+                source: "resources/icons/scale.png"
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -226,15 +264,15 @@ Item {
                 hoverEnabled: true
                 enabled: false
                 onClicked: {
-                    graphicsscene.selectScaleTool();
                     scale.isCurrentItem = !scale.isCurrentItem;
                     set_active(scale, scale_bar);
+                    graphicsscene.selectScaleTool();
                 }
             }
-            anchors.leftMargin: rotate.anchors.leftMargin + custom_height
+            anchors.leftMargin: lay_flat.anchors.leftMargin + custom_height
             anchors.left: parent.left
 
-            function setEnabled(enabled) {
+            function setOptionEnabled(enabled) {
                 if (enabled == true) {
                     image_scale.opacity = 1; 
                     mouse_area_scale.enabled = true;
@@ -246,47 +284,255 @@ Item {
         }
 
         Rectangle {
-            id: mirror
+            id: to_max
             y: 0
             width: custom_height
             height: custom_height
             property bool isCurrentItem: false
-            color: isCurrentItem ? orange_bar.color : (mouse_area_mirror.containsMouse ? "#5f646c" : "#00000000")
+            color: isCurrentItem ? orange_bar.color : (mouse_area_to_max.containsMouse ? "#5f646c" : "#00000000")
             Image {
-                id: image_mirror
+                id: image_to_max
                 x: 0
                 y: 0
                 opacity: 0.2
                 anchors.horizontalCenter: parent.horizontalCenter
-                source: "resources/icons/resize-width-2x.png"
+                source: "resources/icons/max.png"
                 anchors.verticalCenter: parent.verticalCenter
             }
 
             MouseArea {
-                id: mouse_area_mirror
+                id: mouse_area_to_max
                 width: custom_height
                 height: custom_height
                 hoverEnabled: true
                 enabled: false
                 onClicked: {
-                    graphicsscene.selectMirrorTool();
-                    mirror.isCurrentItem = !mirror.isCurrentItem;
-                    set_active(mirror, mirror_bar);
+                    graphicsscene.onScaleMax();
+                    to_max.isCurrentItem = !to_max.isCurrentItem;
+                    set_active(to_max, null);
                 }
             }
             anchors.leftMargin: scale.anchors.leftMargin + custom_height
             anchors.left: parent.left
 
-            function setEnabled(enabled) {
+            function setOptionEnabled(enabled) {
                 if (enabled == true) {
-                    image_mirror.opacity = 1; 
-                    mouse_area_mirror.enabled = true;
+                    image_to_max.opacity = 1; 
+                    mouse_area_to_max.enabled = true;
                 } else {
-                    image_mirror.opacity = 0.2;
-                    mouse_area_mirror.enabled = false;
+                    image_to_max.opacity = 0.2;
+                    mouse_area_to_max.enabled = false;
                 }
             }
         }
+
+        Rectangle {
+            id: separator2
+            y: 0
+            width: 1.0
+            height: custom_height
+            color: options_bar.color
+            anchors.leftMargin: to_max.anchors.leftMargin + custom_height
+            anchors.left: parent.left
+        }
+
+        // Mirror on axes
+
+        Rectangle {
+            id: mirror_x
+            y: 0
+            width: custom_height
+            height: custom_height
+            property bool isCurrentItem: false
+            color: mouse_area_mirror_x.containsMouse ? "#5f646c" : "#00000000"
+            Image {
+                id: image_mirror_x
+                x: 0
+                y: 0
+                opacity: 0.2
+                anchors.horizontalCenter: parent.horizontalCenter
+                source: "resources/icons/flip_x.png"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            MouseArea {
+                id: mouse_area_mirror_x
+                width: custom_height
+                height: custom_height
+                hoverEnabled: true
+                enabled: false
+                onClicked: {
+                    graphicsscene.onMirror(0);
+                    mirror_x.isCurrentItem = !mirror_x.isCurrentItem;
+                    set_active(mirror_x, null);
+                }
+            }
+            anchors.leftMargin: separator2.anchors.leftMargin + separator2.width + 5 
+            anchors.left: parent.left
+
+            function setOptionEnabled(enabled) {
+                if (enabled == true) {
+                    image_mirror_x.opacity = 1; 
+                    mouse_area_mirror_x.enabled = true;
+                } else {
+                    image_mirror_x.opacity = 0.2;
+                    mouse_area_mirror_x.enabled = false;
+                }
+            }
+        }
+
+        Rectangle {
+            id: mirror_y
+            y: 0
+            width: custom_height
+            height: custom_height
+            property bool isCurrentItem: false
+            color: mouse_area_mirror_y.containsMouse ? "#5f646c" : "#00000000"
+            Image {
+                id: image_mirror_y
+                x: 0
+                y: 0
+                opacity: 0.2
+                anchors.horizontalCenter: parent.horizontalCenter
+                source: "resources/icons/flip_y.png"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            MouseArea {
+                id: mouse_area_mirror_y
+                width: custom_height
+                height: custom_height
+                hoverEnabled: true
+                enabled: false
+                onClicked: {
+                    graphicsscene.onMirror(1);
+                    mirror_y.isCurrentItem = !mirror_y.isCurrentItem;
+                    set_active(mirror_y, null);
+                }
+            }
+            anchors.leftMargin: mirror_x.anchors.leftMargin + custom_height
+            anchors.left: parent.left
+
+            function setOptionEnabled(enabled) {
+                if (enabled == true) {
+                    image_mirror_y.opacity = 1; 
+                    mouse_area_mirror_y.enabled = true;
+                } else {
+                    image_mirror_y.opacity = 0.2;
+                    mouse_area_mirror_y.enabled = false;
+                }
+            }
+        }
+
+        Rectangle {
+            id: mirror_z
+            y: 0
+            width: custom_height
+            height: custom_height
+            property bool isCurrentItem: false
+            color: mouse_area_mirror_z.containsMouse ? "#5f646c" : "#00000000"
+            Image {
+                id: image_mirror_z
+                x: 0
+                y: 0
+                opacity: 0.2
+                anchors.horizontalCenter: parent.horizontalCenter
+                source: "resources/icons/flip_z.png"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            MouseArea {
+                id: mouse_area_mirror_z
+                width: custom_height
+                height: custom_height
+                hoverEnabled: true
+                enabled: false
+                onClicked: {
+                    graphicsscene.onMirror(2);
+                    mirror_z.isCurrentItem = !mirror_z.isCurrentItem;
+                    set_active(mirror_z, null);
+                }
+            }
+            anchors.leftMargin: mirror_y.anchors.leftMargin + custom_height
+            anchors.left: parent.left
+
+            function setOptionEnabled(enabled) {
+                if (enabled == true) {
+                    image_mirror_z.opacity = 1; 
+                    mouse_area_mirror_z.enabled = true;
+                } else {
+                    image_mirror_z.opacity = 0.2;
+                    mouse_area_mirror_z.enabled = false;
+                }
+            }
+        }
+
+        Rectangle {
+            id: separator3
+            y: 0
+            width: 1.0
+            height: custom_height
+            color: options_bar.color
+            anchors.leftMargin: mirror_z.anchors.leftMargin + custom_height
+            anchors.left: parent.left
+        }
+
+        // View modes
+
+        Rectangle {
+            id: view_modes
+            objectName: "view_modes"
+            y: 0
+            width: custom_height
+            height: custom_height
+            property bool isCurrentItem: false
+            color: isCurrentItem ? orange_bar.color : (mouse_area_view_modes.containsMouse ? "#5f646c" : "#00000000")
+            Image {
+                id: image_view_modes
+                x: 0
+                y: 0
+                opacity: 0.2
+                anchors.horizontalCenter: parent.horizontalCenter
+                source: "resources/icons/view.png"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            MouseArea {
+                id: mouse_area_view_modes
+                width: custom_height
+                height: custom_height
+                hoverEnabled: true
+                enabled: false
+                onClicked: {
+                    view_modes.isCurrentItem = !view_modes.isCurrentItem;
+                    set_active(view_modes, view_modes_bar);
+                }
+            }
+            anchors.leftMargin: separator3.anchors.leftMargin + separator3.width + 5 
+            anchors.left: parent.left
+
+            function setOptionEnabled(enabled) {
+                if (enabled == true) {
+                    image_view_modes.opacity = 1; 
+                    mouse_area_view_modes.enabled = true;
+                } else {
+                    image_view_modes.opacity = 0.2;
+                    mouse_area_view_modes.enabled = false;
+                }
+            }
+
+            function showLayersButton() {
+                layers_view.opacity = 1;
+                mouse_area_layers_view.enabled = true;
+            }
+
+            function hideLayersButton() {
+                layers_view.opacity = 0;
+                mouse_area_layers_view.enabled = false;
+            }
+        }
+
+
     }
 
     Rectangle {
@@ -311,7 +557,7 @@ Item {
                 id: option_name_rotate
                 x: 0
                 y: 0
-                width: 65
+                width: 85
                 height: options_bar.height
                 color: "#51545b"
 
@@ -356,36 +602,6 @@ Item {
                     }
                 }
             }
-
-            Rectangle {
-                id: lay_flat
-                width: 55
-                height: 20
-                color: "#333333"
-                anchors.verticalCenterOffset: 0
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.left: parent.left
-                anchors.leftMargin: reset.anchors.leftMargin + reset.width + 30
-
-                Text {
-                    id: text_lay_flat
-                    color: "#d1d1d2"
-                    text: qsTr("Lay Flat")
-                    font.pixelSize: 11
-                    anchors.fill: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.family: lato_font.name
-                }
-
-                MouseArea {
-                    id: mouse_area_lay_flat
-                    anchors.fill: parent
-                    onClicked: {
-                        graphicsscene.onLayFlat();
-                    }
-                }
-            }
         }
 
         Rectangle {
@@ -398,7 +614,7 @@ Item {
                 id: option_name_scale
                 x: 0
                 y: 0
-                width: 65
+                width: 85
                 height: options_bar.height
                 color: "#51545b"
 
@@ -439,6 +655,7 @@ Item {
                     id: text_input_scaleX
                     objectName: "text_input_scaleX"
                     text: qsTr("1.0")
+                    color: "#d1d1d2"
                     font.family: "Lato"
                     font.pixelSize: 11
                     anchors.fill: parent
@@ -474,6 +691,7 @@ Item {
                     id: text_input_scaleY
                     objectName: "text_input_scaleY"
                     text: qsTr("1.0")
+                    color: "#d1d1d2"
                     font.family: "Lato"
                     font.pixelSize: 11
                     anchors.fill: parent
@@ -509,6 +727,7 @@ Item {
                     id: text_input_scaleZ
                     objectName: "text_input_scaleZ"
                     text: qsTr("1.0")
+                    color: "#d1d1d2"
                     font.family: "Lato"
                     font.pixelSize: 11
                     anchors.fill: parent
@@ -544,6 +763,7 @@ Item {
                     id: text_input_sizeX
                     objectName: "text_input_sizeX"
                     text: qsTr("123")
+                    color: "#d1d1d2"
                     font.family: "Lato"
                     font.pixelSize: 11
                     height: parent.height
@@ -562,6 +782,7 @@ Item {
                     height: parent.height
                     width: 25 
                     text: qsTr("mm")
+                    color: "#d1d1d2"
                     anchors.right: parent.right
                     anchors.rightMargin: 0
                     anchors.top: parent.top
@@ -596,6 +817,7 @@ Item {
                     id: text_input_sizeY
                     objectName: "text_input_sizeY"
                     text: qsTr("123")
+                    color: "#d1d1d2"
                     font.family: "Lato"
                     font.pixelSize: 11
                     height: parent.height
@@ -614,6 +836,7 @@ Item {
                     height: parent.height
                     width: 25 
                     text: qsTr("mm")
+                    color: "#d1d1d2"
                     anchors.right: parent.right
                     anchors.rightMargin: 0
                     anchors.top: parent.top
@@ -648,6 +871,7 @@ Item {
                     id: text_input_sizeZ
                     objectName: "text_input_sizeZ"
                     text: qsTr("123")
+                    color: "#d1d1d2"
                     font.family: "Lato"
                     font.pixelSize: 11
                     height: parent.height
@@ -666,6 +890,7 @@ Item {
                     height: parent.height
                     width: 25 
                     text: qsTr("mm")
+                    color: "#d1d1d2"
                     anchors.right: parent.right
                     anchors.rightMargin: 0
                     anchors.top: parent.top
@@ -716,29 +941,176 @@ Item {
         }
 
         Rectangle {
-            id: mirror_bar
+            id: view_modes_bar
             anchors.fill: parent
             color: "#00000000"
             opacity: 0
 
             Rectangle {
-                id: option_name_mirror
+                id: option_name_view_modes
                 x: 0
                 y: 0
-                width: 65
+                width: 85
                 height: options_bar.height
                 color: "#51545b"
 
                 Text {
-                    id: option_text_mirror
+                    id: option_text_view_modes
                     color: "#d1d1d2"
-                    text: qsTr("Mirror")
+                    text: qsTr("View mode")
                     font.bold: true
                     verticalAlignment: Text.AlignVCenter
                     horizontalAlignment: Text.AlignHCenter
                     anchors.fill: parent
                     font.pixelSize: 11
                     font.family: lato_font.name
+                }
+            }
+
+            Rectangle {
+                id: normal_view
+                width: 75
+                height: 20
+                color: "#333333"
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: option_name_view_modes.width + options_bar.left_margin
+
+                Text {
+                    id: text_normal_view
+                    color: "#d1d1d2"
+                    text: qsTr("Normal")
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    anchors.fill: parent
+                    font.pixelSize: 11
+                    font.family: lato_font.name
+                }
+
+                MouseArea {
+                    id: mouse_area_normal_view
+                    anchors.fill: parent
+                    onClicked: {
+                        graphicsscene.setViewMode('normal');
+                    }
+                }
+            }
+
+            Rectangle {
+                id: overhang_view
+                width: 75
+                height: 20
+                color: "#333333"
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: normal_view.anchors.leftMargin + normal_view.width + 30
+
+                Text {
+                    id: text_overhang_view
+                    color: "#d1d1d2"
+                    text: qsTr("Overhang")
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    anchors.fill: parent
+                    font.pixelSize: 11
+                    font.family: lato_font.name
+                }
+
+                MouseArea {
+                    id: mouse_area_overhang_view
+                    anchors.fill: parent
+                    onClicked: {
+                        graphicsscene.setViewMode('overhang');
+                    }
+                }
+            }
+
+            Rectangle {
+                id: xray_view
+                width: 75
+                height: 20
+                color: "#333333"
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: overhang_view.anchors.leftMargin + overhang_view.width + 30
+
+                Text {
+                    id: text_xray_view
+                    color: "#d1d1d2"
+                    text: qsTr("Xray")
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    anchors.fill: parent
+                    font.pixelSize: 11
+                    font.family: lato_font.name
+                }
+
+                MouseArea {
+                    id: mouse_area_xray_view
+                    anchors.fill: parent
+                    onClicked: {
+                        graphicsscene.setViewMode('xray');
+                    }
+                }
+            }
+
+            Rectangle {
+                id: transparent_view
+                width: 75
+                height: 20
+                color: "#333333"
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: xray_view.anchors.leftMargin + xray_view.width + 30
+
+                Text {
+                    id: text_transparent_view
+                    color: "#d1d1d2"
+                    text: qsTr("Transparent")
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    anchors.fill: parent
+                    font.pixelSize: 11
+                    font.family: lato_font.name
+                }
+
+                MouseArea {
+                    id: mouse_area_transparent_view
+                    anchors.fill: parent
+                    onClicked: {
+                        graphicsscene.setViewMode('transparent');
+                    }
+                }
+            }
+
+            Rectangle {
+                id: layers_view
+                width: 75
+                height: 20
+                color: "#333333"
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: transparent_view.anchors.leftMargin + transparent_view.width + 30
+                opacity: 0
+
+                Text {
+                    id: text_layers_view
+                    color: "#d1d1d2"
+                    text: qsTr("Layers")
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    anchors.fill: parent
+                    font.pixelSize: 11
+                    font.family: lato_font.name
+                }
+
+                MouseArea {
+                    id: mouse_area_layers_view
+                    anchors.fill: parent
+                    enabled: false
+                    onClicked: {
+                        graphicsscene.setViewMode('gcode');
+                    }
                 }
             }
         }
@@ -756,12 +1128,15 @@ Item {
     }
 
     function enableObjectTools(enabled) {
-        rotate.setEnabled(enabled)
-        scale.setEnabled(enabled)
-        mirror.setEnabled(enabled)
-        if (!enabled) {
-            options_bar.opacity = 0;
-        }
+        rotate.setOptionEnabled(enabled)
+        lay_flat.setOptionEnabled(enabled)
+        scale.setOptionEnabled(enabled)
+        to_max.setOptionEnabled(enabled)
+        mirror_x.setOptionEnabled(enabled)
+        mirror_y.setOptionEnabled(enabled)
+        mirror_z.setOptionEnabled(enabled)
+
+        options_bar.opacity = 0;
         if (bars.last_active_tool) {
             bars.last_active_tool.isCurrentItem = false;
         }
@@ -780,22 +1155,33 @@ Item {
     }
 
     function set_active(rect_tool, rect_bar) {
+        graphicsscene.selectMirrorTool();
         if (rect_tool == bars.last_active_tool) {
+            if (bars.last_active_bar) {
+                bars.last_active_bar.opacity = 0
+            }
+            if (rect_bar) {
+                rect_bar.opacity = 0;
+            }
+            options_bar.opacity = 0;
             bars.last_active_tool = null;
             bars.last_active_bar = null;
-            rect_bar.opacity = 0;
-            options_bar.opacity = 0;
         } else if (bars.last_active_tool) {
             bars.last_active_tool.isCurrentItem = !bars.last_active_tool.isCurrentItem;
-            bars.last_active_bar.opacity = 0;
-            bars.last_active_bar.opacity = 0
+            if (bars.last_active_bar) {
+                bars.last_active_bar.opacity = 0;
+            }
+            options_bar.opacity = 0
         }
         if (rect_tool.isCurrentItem) {
             bars.last_active_tool = rect_tool;
             bars.last_active_bar = rect_bar;
-            options_bar.opacity = 1;
-            rect_bar.opacity = 1;
+            if (rect_bar) {
+                rect_bar.opacity = 1;
+                options_bar.opacity = 1;
+            }
         }
 
     }
+
 }

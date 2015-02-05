@@ -114,8 +114,8 @@ class SceneView(QtGui.QGraphicsScene):
     @property
     def viewSelect(self):
         if not hasattr(self, 'view_select'):
-            self.view_select = self.mainwindow.qmlobject.findChild(
-                QtCore.QObject, "view_select")
+            self.view_select = self.mainwindow.top_bar.findChild(
+                QtCore.QObject, "view_modes")
         return self.view_select
 
     @property
@@ -216,6 +216,39 @@ class SceneView(QtGui.QGraphicsScene):
         self.selectedObj.layFlat()
         self.scene.pushFree(self.selectedObj)
         self.selectObject(self.selectedObj)
+        self.sceneUpdated()
+
+    @QtCore.Slot()
+    def onScaleMax(self):
+        if self.selectedObj is None:
+            return
+        machine = profile.getMachineSetting('machine_type')
+        self.selectedObj.setPosition(numpy.array([0.0, 0.0]))
+        self.scene.pushFree(self.selectedObj)
+        if machine == "ultimaker2":
+            #This is bad and Jaime should feel bad!
+            self.selectedObj.setPosition(numpy.array([0.0, -10.0]))
+            self.selectedObj.scaleUpTo(self.machineSize - numpy.array(
+                profile.calculateObjectSizeOffsets() + [0.0],
+                numpy.float32) * 2 - numpy.array([3,3,3], numpy.float32))
+            self.selectedObj.setPosition(numpy.array([0.0,0.0]))
+            self.scene.pushFree(self.selectedObj)
+        else:
+            self.selectedObj.setPosition(numpy.array([0.0, 0.0]))
+            self.scene.pushFree(self.selectedObj)
+            self.selectedObj.scaleUpTo(self.machineSize - numpy.array(
+                profile.calculateObjectSizeOffsets() + [0.0],
+                numpy.float32) * 2 - numpy.array([3,3,3], numpy.float32))
+        self.scene.pushFree(self.selectedObj)
+        self.selectObject(self.selectedObj)
+        self.updateProfileToControls()
+        self.sceneUpdated()
+
+    @QtCore.Slot(int)
+    def onMirror(self, axis):
+        if self.selectedObj is None:
+            return
+        self.selectedObj.mirror(axis)
         self.sceneUpdated()
 
     @QtCore.Slot()
@@ -650,7 +683,7 @@ class SceneView(QtGui.QGraphicsScene):
 
     def sceneUpdated(self):
         self.setProgressBar(0.0)
-        self.onStopEngine()
+        self.cleanEngine()
 
         if self.engine.isSlicingEnabled(self.scene):
             self.mainwindow.print_button.enable()
@@ -968,12 +1001,17 @@ class SceneView(QtGui.QGraphicsScene):
     def showLayersButton(self):
         self.viewSelect.showLayersButton()
 
-    def cleanResult(self):
+    def cleanEngine(self):
+        self.onStopEngine()
         self.engineResultView.setResult(None)
+        self.engineResultView.setLayers(None)
         self.mainwindow.setPrintButton("", "")
-        self.setViewMode('normal')
         self.hideLayersButton()
-        self.mainwindow.qmlobject.hideViewSelect()
+
+    def cleanResult(self):
+        self.cleanEngine()
+        self.setViewMode('normal')
+        self.viewSelect.setEnabled(False)
 
     def createContextMenu(self, evt):
         menu = QtGui.QMenu()
@@ -1357,7 +1395,7 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot()
     def afterObjectLoaded(self):
-        self.mainwindow.qmlobject.showViewSelect()
+        self.viewSelect.setOptionEnabled(True)
         self.mainwindow.print_button.setState("IDLE")
         self.mainwindow.qmlobject.setPrintButtonVisible(1)
 

@@ -40,6 +40,9 @@ class EngineResultView(object):
         self.layerSelect = self._parent.mainwindow.qmlobject.findChild(
             QtCore.QObject, "layers_slider")
 
+    def setLayers(self, layers):
+        self._gcodeLayers = layers
+
     def setResult(self, result):
         if self._result == result:
             return

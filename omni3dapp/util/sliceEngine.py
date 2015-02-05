@@ -144,7 +144,7 @@ class EngineResult(object):
         self._gcodeInterpreter.update_scene_sig.connect(self._parent.queueRefresh)
         self._gcodeInterpreter.set_progress_sig.connect(engine_results_view._gcodeLoadCallback)
 
-        self._gcodeInterpreter.finished.connect(lambda: self._parent.setProgressBar(1.0))
+        self._gcodeInterpreter.finished.connect(lambda: self._parent.setProgressBar(0.0))
 
         self._gcodeInterpreter.finished.connect(self.layers_loader_thread.quit)
         self._gcodeInterpreter.finished.connect(self._gcodeInterpreter.deleteLater)

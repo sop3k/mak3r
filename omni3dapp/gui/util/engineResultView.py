@@ -75,8 +75,10 @@ class EngineResultView(object):
             return True
 
         self._gcodeLayers = layers
-        self.setLayerSelectRange(len(layers))
-        if len(layers) % 2 == 0:
+        layers_no = len(layers)
+        self.setLayerSelectRange(layers_no)
+        self.layerSelect.setValue(layers_no)
+        if len(layers) % 5 == 0:
             self._parent.setProgressBar(progress)
         return False
 
@@ -202,8 +204,7 @@ class EngineResultView(object):
 
         glPopMatrix()
         if self.generatedVBO:
-            pass
-            # self._parent.queueRefresh()
+            self._parent.queueRefresh()
 
     def _polygonsToVBO_lines(self, polygons):
         verts = numpy.zeros((0, 3), numpy.float32)

@@ -46,23 +46,16 @@ Item {
 
     Rectangle {
         anchors.fill: parent;
-        border.color: "white";
-        border.width: 0;
-        radius: 8;
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "#66343434" }
-            GradientStop { position: 1.0; color: "#66000000" }
-        }
+        color: "#333333"
+        border.color: "#333333";
+        border.width: 1;
+        radius: 1;
     }
 
     Rectangle {
         id: handle;
         smooth: true;
-        y: 2; width: 30; height: slider.height-4; radius: 6
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "lightgray" }
-            GradientStop { position: 1.0; color: "gray" }
-        }
+        y: 2; width: 30; height: slider.height-4; color: "#94948f"; radius: 2
 
         MouseArea {
             id: mouse

@@ -77,6 +77,8 @@ class SceneView(QtGui.QGraphicsScene):
         self.refreshQueued = False
         self.idleCalled = False
 
+        self._layerOn = False
+
         self.platformMesh = {}
 
         self.tool = previewTools.toolNone(self)
@@ -1062,7 +1064,8 @@ class SceneView(QtGui.QGraphicsScene):
         self.setFocus()
         pos = evt.scenePos()
 
-        if not self.topContainer.mousePressEvent(pos.x(), pos.y()):
+        if not self.topContainer.mousePressEvent(pos.x(), pos.y()) and not \
+                self._layerOn:
             self.onMouseDown(evt)
 
         super(SceneView, self).mousePressEvent(evt)
@@ -1072,7 +1075,8 @@ class SceneView(QtGui.QGraphicsScene):
 
     def mouseReleaseEvent(self, evt):
         pos = evt.scenePos()
-        if not self.topContainer.mouseReleaseEvent(pos.x(), pos.y()):
+        if not self.topContainer.mouseReleaseEvent(pos.x(), pos.y()) and not \
+                self._layerOn:
             self.onMouseUp(evt)
 
         super(SceneView, self).mouseReleaseEvent(evt)
@@ -1125,7 +1129,7 @@ class SceneView(QtGui.QGraphicsScene):
     def mouseMoveEvent(self, evt):
         pos = evt.scenePos()
         x, y = pos.x(), pos.y()
-        if self.topContainer.mouseMoveEvent(x, y):
+        if self.topContainer.mouseMoveEvent(x, y) or self._layerOn:
             super(SceneView, self).mouseMoveEvent(evt)
             return
 
@@ -1187,7 +1191,7 @@ class SceneView(QtGui.QGraphicsScene):
         super(SceneView, self).mouseMoveEvent(evt)
 
     def keyPressEvent(self, evt):
-        if self.topContainer.keyPressEvent():
+        if self.topContainer.keyPressEvent() or self._layerOn:
             super(SceneView, self).keyPressEvent(evt)
             return
 
@@ -1476,6 +1480,14 @@ class SceneView(QtGui.QGraphicsScene):
                 self.save_gcode_thread.deleteLater)
 
             self.save_gcode_thread.start()
+
+    @QtCore.Slot()
+    def setLayerOn(self):
+        self._layerOn = True
+
+    @QtCore.Slot()
+    def setLayerOff(self):
+        self._layerOn = False
 
 
 class FilesLoader(QtCore.QObject):

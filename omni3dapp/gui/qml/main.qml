@@ -26,8 +26,8 @@ Rectangle {
         width: 200
         height: 12
         opacity: 0
-        anchors.top: parent.top
-        anchors.topMargin: 64
+        anchors.top: bars.bottom
+        anchors.topMargin: bars.height / 2 - 5
         anchors.horizontalCenter: parent.horizontalCenter
     }
 

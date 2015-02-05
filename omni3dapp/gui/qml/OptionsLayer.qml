@@ -5,7 +5,7 @@ import QtQuick 1.0
 Rectangle {
     id: options_layer
     width: 700
-    height: 850
+    height: 880
     color: "#51545b"
     enabled: false
     opacity: 0
@@ -2028,9 +2028,9 @@ Rectangle {
                 }
 
                 Text {
-                    id: title_support
+                    id: title_adhesion
                     color: "#ffffff"
-                    text: qsTr("Support")
+                    text: qsTr("Adhesion")
                     anchors.left: parent.left
                     anchors.leftMargin: 0
                     anchors.top: rect_solid_top.bottom
@@ -2040,64 +2040,64 @@ Rectangle {
                     font.family: lato_font.name
                 }
 
-                Rectangle {
-                    id: rect_platform_adhesion
-                    width: options_layer.line_width
-                    height: options_layer.line_height
-                    color: "#00000000"
-                    anchors.top: title_support.bottom
-                    anchors.topMargin: row_spacing
+                // Rectangle {
+                //     id: rect_platform_adhesion
+                //     width: options_layer.line_width
+                //     height: options_layer.line_height
+                //     color: "#00000000"
+                //     anchors.top: title_adhesion.bottom
+                //     anchors.topMargin: row_spacing
 
-                    Text {
-                        id: text_platform_adhesion
-                        color: "#a8a8a8"
-                        text: qsTr("Platform adhesion type")
-                        anchors.left: parent.left
-                        anchors.leftMargin: 0
-                        anchors.verticalCenter: parent.verticalCenter
-                        verticalAlignment: Text.AlignVCenter
-                        font.pixelSize: 11
-                        font.family: lato_font.name
-                    }
+                //     Text {
+                //         id: text_platform_adhesion
+                //         color: "#a8a8a8"
+                //         text: qsTr("Platform adhesion type")
+                //         anchors.left: parent.left
+                //         anchors.leftMargin: 0
+                //         anchors.verticalCenter: parent.verticalCenter
+                //         verticalAlignment: Text.AlignVCenter
+                //         font.pixelSize: 11
+                //         font.family: lato_font.name
+                //     }
 
-                    Rectangle {
-                        id: platform_adhesion
-                        objectName: "platform_adhesion"
-                        width: options_layer.line_width
-                        height: 20
-                        color: "#333333"
-                        radius: 1
-                        border.color: "#333333"
-                        anchors.right: parent.right
-                        anchors.rightMargin: 0
-                        anchors.verticalCenter: parent.verticalCenter
-                        property bool isActive: false
+                //     Rectangle {
+                //         id: platform_adhesion
+                //         objectName: "platform_adhesion"
+                //         width: options_layer.line_width
+                //         height: 20
+                //         color: "#333333"
+                //         radius: 1
+                //         border.color: "#333333"
+                //         anchors.right: parent.right
+                //         anchors.rightMargin: 0
+                //         anchors.verticalCenter: parent.verticalCenter
+                //         property bool isActive: false
 
-                        MouseArea {
-                            id: mouse_area_platform_adhesion
-                            anchors.fill: parent
-                            onClicked: {
-                                platform_adhesion.isActive = !platform_adhesion.isActive
-                            }
+                //         MouseArea {
+                //             id: mouse_area_platform_adhesion
+                //             anchors.fill: parent
+                //             onClicked: {
+                //                 platform_adhesion.isActive = !platform_adhesion.isActive
+                //             }
 
-                            Image {
-                                id: image_platform_adhesion
-                                opacity: platform_adhesion.isActive ? 1 : 0
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.verticalCenter: parent.verticalCenter
-                                source: "resources/icons/checked.png"
-                            }
-                        }
+                //             Image {
+                //                 id: image_platform_adhesion
+                //                 opacity: platform_adhesion.isActive ? 1 : 0
+                //                 anchors.horizontalCenter: parent.horizontalCenter
+                //                 anchors.verticalCenter: parent.verticalCenter
+                //                 source: "resources/icons/checked.png"
+                //             }
+                //         }
 
-                    }
-                }
+                //     }
+                // }
 
                 Rectangle {
                     id: rect_raft_margin
                     width: options_layer.line_width
                     height: options_layer.line_height
                     color: "#00000000"
-                    anchors.top: rect_platform_adhesion.bottom
+                    anchors.top: title_adhesion.bottom
                     anchors.topMargin: row_spacing
 
                     Text {
@@ -2685,6 +2685,317 @@ Rectangle {
                         }
                     }
                 }
+
+                Text {
+                    id: title_support
+                    color: "#ffffff"
+                    text: qsTr("Support")
+                    anchors.left: parent.left
+                    anchors.leftMargin: 0
+                    anchors.top: rect_skirt_minimal_length.bottom
+                    anchors.topMargin: row_spacing
+                    font.pixelSize: 13
+                    font.bold: true
+                    font.family: lato_font.name
+                }
+
+                Rectangle {
+                    id: rect_support_angle
+                    width: options_layer.line_width
+                    height: options_layer.line_height
+                    color: "#00000000"
+                    anchors.top: title_support.bottom
+                    anchors.topMargin: row_spacing
+
+                    Text {
+                        id: text_support_angle
+                        color: "#a8a8a8"
+                        text: qsTr("Overhang angle for support")
+                        anchors.left: parent.left
+                        anchors.leftMargin: 0
+                        anchors.verticalCenter: parent.verticalCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: 11
+                        font.family: lato_font.name
+                    }
+
+                    Rectangle {
+                        id: support_angle
+                        width: options_layer.input_width
+                        height: 20
+                        color: "#333333"
+                        radius: 1
+                        border.color: "#333333"
+                        anchors.right: parent.right
+                        anchors.rightMargin: 0
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        TextInput {
+                            id: text_input_support_angle
+                            objectName: "support_angle"
+                            width: parent.width - text_mm_support_angle.width
+                            height: parent.height
+                            text: qsTr("60.0")
+                            anchors.top: parent.top
+                            anchors.topMargin: 3
+                            anchors.right: text_mm_support_angle.left
+                            anchors.rightMargin: 3
+                            color: "#d1d1d2"
+                            font.family: "Lato"
+                            font.pixelSize: 11
+                            horizontalAlignment: TextInput.AlignRight
+                            validator: DoubleValidator{bottom: 0; top: 360;}
+                            readOnly: false
+                        }
+
+                        Text {
+                            id: text_mm_support_angle
+                            height: parent.height
+                            width: 25
+                            text: qsTr("deg")
+                            color: "#d1d1d2"
+                            anchors.right: parent.right
+                            anchors.rightMargin: 3
+                            anchors.top: parent.top
+                            anchors.topMargin: 3
+                            horizontalAlignment: Text.AlignHCenter
+                            font.pixelSize: 11
+                            font.family: "Lato"
+                        }
+                    }
+                }
+
+                Rectangle {
+                    id: rect_support_fill_rate
+                    width: options_layer.line_width
+                    height: options_layer.line_height
+                    color: "#00000000"
+                    anchors.top: rect_support_angle.bottom
+                    anchors.topMargin: row_spacing
+
+                    Text {
+                        id: text_support_fill_rate
+                        color: "#a8a8a8"
+                        text: qsTr("Overhang angle for support")
+                        anchors.left: parent.left
+                        anchors.leftMargin: 0
+                        anchors.verticalCenter: parent.verticalCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: 11
+                        font.family: lato_font.name
+                    }
+
+                    Rectangle {
+                        id: support_fill_rate
+                        width: options_layer.input_width
+                        height: 20
+                        color: "#333333"
+                        radius: 1
+                        border.color: "#333333"
+                        anchors.right: parent.right
+                        anchors.rightMargin: 0
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        TextInput {
+                            id: text_input_support_fill_rate
+                            objectName: "support_fill_rate"
+                            width: parent.width - text_mm_support_fill_rate.width
+                            height: parent.height
+                            text: qsTr("15")
+                            anchors.top: parent.top
+                            anchors.topMargin: 3
+                            anchors.right: text_mm_support_fill_rate.left
+                            anchors.rightMargin: 3
+                            color: "#d1d1d2"
+                            font.family: "Lato"
+                            font.pixelSize: 11
+                            horizontalAlignment: TextInput.AlignRight
+                            validator: IntValidator{bottom: 0; top: 100;}
+                            readOnly: false
+                        }
+
+                        Text {
+                            id: text_mm_support_fill_rate
+                            height: parent.height
+                            width: 25
+                            text: qsTr("%")
+                            color: "#d1d1d2"
+                            anchors.right: parent.right
+                            anchors.rightMargin: 3
+                            anchors.top: parent.top
+                            anchors.topMargin: 3
+                            horizontalAlignment: Text.AlignHCenter
+                            font.pixelSize: 11
+                            font.family: "Lato"
+                        }
+                    }
+                }
+
+                Rectangle {
+                    id: rect_support_xy_distance
+                    width: options_layer.line_width
+                    height: options_layer.line_height
+                    color: "#00000000"
+                    anchors.top: rect_support_fill_rate.bottom
+                    anchors.topMargin: row_spacing
+
+                    Text {
+                        id: text_support_xy_distance
+                        color: "#a8a8a8"
+                        text: qsTr("Distance X/Y")
+                        anchors.left: parent.left
+                        anchors.leftMargin: 0
+                        anchors.verticalCenter: parent.verticalCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: 11
+                        font.family: lato_font.name
+                    }
+
+                    Rectangle {
+                        id: support_xy_distance
+                        width: options_layer.input_width
+                        height: 20
+                        color: "#333333"
+                        radius: 1
+                        border.color: "#333333"
+                        anchors.right: parent.right
+                        anchors.rightMargin: 0
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        TextInput {
+                            id: text_input_support_xy_distance
+                            objectName: "support_xy_distance"
+                            width: parent.width - text_mm_support_xy_distance.width
+                            height: parent.height
+                            text: qsTr("0.7")
+                            anchors.top: parent.top
+                            anchors.topMargin: 3
+                            anchors.right: text_mm_support_xy_distance.left
+                            anchors.rightMargin: 3
+                            color: "#d1d1d2"
+                            font.family: "Lato"
+                            font.pixelSize: 11
+                            horizontalAlignment: TextInput.AlignRight
+                            validator: DoubleValidator{bottom: 0; top: 360;}
+                            readOnly: false
+                        }
+
+                        Text {
+                            id: text_mm_support_xy_distance
+                            height: parent.height
+                            width: 25
+                            text: qsTr("mm")
+                            color: "#d1d1d2"
+                            anchors.right: parent.right
+                            anchors.rightMargin: 3
+                            anchors.top: parent.top
+                            anchors.topMargin: 3
+                            horizontalAlignment: Text.AlignHCenter
+                            font.pixelSize: 11
+                            font.family: "Lato"
+                        }
+                    }
+                }
+
+                Rectangle {
+                    id: rect_support_z_distance
+                    width: options_layer.line_width
+                    height: options_layer.line_height
+                    color: "#00000000"
+                    anchors.top: rect_support_xy_distance.bottom
+                    anchors.topMargin: row_spacing
+
+                    Text {
+                        id: text_support_z_distance
+                        color: "#a8a8a8"
+                        text: qsTr("Distance Z")
+                        anchors.left: parent.left
+                        anchors.leftMargin: 0
+                        anchors.verticalCenter: parent.verticalCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: 11
+                        font.family: lato_font.name
+                    }
+
+                    Rectangle {
+                        id: support_z_distance
+                        width: options_layer.input_width
+                        height: 20
+                        color: "#333333"
+                        radius: 1
+                        border.color: "#333333"
+                        anchors.right: parent.right
+                        anchors.rightMargin: 0
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        TextInput {
+                            id: text_input_support_z_distance
+                            objectName: "support_z_distance"
+                            width: parent.width - text_mm_support_z_distance.width
+                            height: parent.height
+                            text: qsTr("0.15")
+                            anchors.top: parent.top
+                            anchors.topMargin: 3
+                            anchors.right: text_mm_support_z_distance.left
+                            anchors.rightMargin: 3
+                            color: "#d1d1d2"
+                            font.family: "Lato"
+                            font.pixelSize: 11
+                            horizontalAlignment: TextInput.AlignRight
+                            validator: DoubleValidator{bottom: 0; top: 10;}
+                            readOnly: false
+                        }
+
+                        Text {
+                            id: text_mm_support_z_distance
+                            height: parent.height
+                            width: 25
+                            text: qsTr("mm")
+                            color: "#d1d1d2"
+                            anchors.right: parent.right
+                            anchors.rightMargin: 3
+                            anchors.top: parent.top
+                            anchors.topMargin: 3
+                            horizontalAlignment: Text.AlignHCenter
+                            font.pixelSize: 11
+                            font.family: "Lato"
+                        }
+                    }
+                }
+
+                Rectangle {
+                    id: button
+                    width: 100
+                    height: 32
+                    color: "#ff5724"
+                    anchors.right: parent.right
+                    anchors.rightMargin: row_options.padding
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: row_options.padding
+
+                    Text {
+                        id: button_text
+                        color: "#ffffff"
+                        text: qsTr("Start")
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        anchors.fill: parent
+                        font.pixelSize: 14
+                        font.family: lato_font.name
+                    }
+
+                    MouseArea {
+                        id: mouse_area_button
+                        anchors.fill: parent
+                        onClicked: {
+                            options_layer.hideLayer();
+                            graphicsscene.onRunEngine();
+                            print_button.state = "SLICING";
+                        }
+                    }
+                }
+
             }
         }
     }
@@ -2692,5 +3003,12 @@ Rectangle {
     function showLayer() {
         options_layer.enabled = true;
         options_layer.opacity = 1;
+        graphicsscene.setLayerOn();
+    }
+
+    function hideLayer() {
+        options_layer.enabled = false;
+        options_layer.opacity = 0;
+        graphicsscene.setLayerOff();
     }
 }

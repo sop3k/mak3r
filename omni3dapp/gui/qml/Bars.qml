@@ -10,6 +10,8 @@ Item {
     width: parent.width
     height: custom_height
 
+    signal scaled(string value, int axis, bool unified, bool is_mm)
+
     Rectangle {
         id: top_bar
         x: 0
@@ -546,6 +548,7 @@ Item {
         anchors.topMargin: custom_height 
         opacity: 0
         property int left_margin: 50
+        property TextInput current_input: null
 
         Rectangle {
             id: rotate_bar
@@ -610,6 +613,8 @@ Item {
             color: "#00000000"
             opacity: 0
 
+            property bool uniform: locked.isCurrentLock
+
             Rectangle {
                 id: option_name_scale
                 x: 0
@@ -663,7 +668,20 @@ Item {
                     anchors.topMargin: 3
                     horizontalAlignment: TextInput.AlignHCenter
                     validator: DoubleValidator{bottom: 0;}
-                    readOnly: false;
+                    readOnly: false
+                    cursorVisible: options_bar.current_input == text_input_scaleX
+                    Keys.onPressed: {
+                        if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                            bars.scaled(text, 0, scale_bar.uniform, false)
+                        }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            text_input_scaleX.forceActiveFocus();
+                            options_bar.current_input = text_input_scaleX;
+                        }
+                    }
                 }
             }
 
@@ -700,6 +718,19 @@ Item {
                     horizontalAlignment: TextInput.AlignHCenter
                     validator: DoubleValidator{bottom: 0;}
                     readOnly: false;
+                    cursorVisible: options_bar.current_input == text_input_scaleY
+                    Keys.onPressed: {
+                        if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                            bars.scaled(text, 1, scale_bar.uniform, false)
+                        }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            text_input_scaleY.forceActiveFocus();
+                            options_bar.current_input = text_input_scaleY;
+                        }
+                    }
                 }
             }
 
@@ -736,6 +767,19 @@ Item {
                     horizontalAlignment: TextInput.AlignHCenter
                     validator: DoubleValidator{bottom: 0;}
                     readOnly: false;
+                    cursorVisible: options_bar.current_input == text_input_scaleZ
+                    Keys.onPressed: {
+                        if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                            bars.scaled(text, 2, scale_bar.uniform, false)
+                        }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            text_input_scaleZ.forceActiveFocus();
+                            options_bar.current_input = text_input_scaleZ;
+                        }
+                    }
                 }
             }
 
@@ -752,7 +796,7 @@ Item {
 
             Rectangle {
                 id: sizeX
-                width: 55
+                width: 60
                 height: 20
                 color: "#333333"
                 anchors.verticalCenter: parent.verticalCenter
@@ -762,34 +806,50 @@ Item {
                 TextInput {
                     id: text_input_sizeX
                     objectName: "text_input_sizeX"
-                    text: qsTr("123")
+                    text: qsTr("1.0")
                     color: "#d1d1d2"
                     font.family: "Lato"
                     font.pixelSize: 11
                     height: parent.height
-                    width: parent.width - text_mm_sizeX.width
+                    width: 33
                     anchors.top: parent.top
                     anchors.topMargin: 3
                     anchors.left: parent.left
-                    anchors.leftMargin: 0
-                    horizontalAlignment: TextInput.AlignRight
+                    anchors.leftMargin: 3
+                    horizontalAlignment: TextInput.AlignHCenter
                     validator: IntValidator{bottom: 0;}
                     readOnly: false;
+                    cursorVisible: options_bar.current_input == text_input_sizeX
+                    Keys.onPressed: {
+                        if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                            bars.scaled(text, 0, scale_bar.uniform, true)
+                        }
+                    }
                 }
 
                 Text {
                     id: text_mm_sizeX
                     height: parent.height
-                    width: 25 
+                    width: 22
                     text: qsTr("mm")
                     color: "#d1d1d2"
+                    anchors.left: text_input_sizeX.right
+                    anchors.leftMargin: 3
                     anchors.right: parent.right
-                    anchors.rightMargin: 0
+                    anchors.rightMargin: 3
                     anchors.top: parent.top
                     anchors.topMargin: 3
                     horizontalAlignment: Text.AlignHCenter
                     font.pixelSize: 11
                     font.family: "Lato"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        text_input_sizeX.forceActiveFocus();
+                        options_bar.current_input = text_input_sizeX;
+                    }
                 }
             }
 
@@ -806,7 +866,7 @@ Item {
 
             Rectangle {
                 id: sizeY
-                width: 55
+                width: 60
                 height: 20
                 color: "#333333"
                 anchors.verticalCenter: parent.verticalCenter
@@ -816,34 +876,50 @@ Item {
                 TextInput {
                     id: text_input_sizeY
                     objectName: "text_input_sizeY"
-                    text: qsTr("123")
+                    text: qsTr("1.0")
                     color: "#d1d1d2"
                     font.family: "Lato"
                     font.pixelSize: 11
                     height: parent.height
-                    width: parent.width - text_mm_sizeY.width
+                    width: 33
                     anchors.top: parent.top
                     anchors.topMargin: 3
                     anchors.left: parent.left
-                    anchors.leftMargin: 0
-                    horizontalAlignment: TextInput.AlignRight
+                    anchors.leftMargin: 3
+                    horizontalAlignment: TextInput.AlignHCenter
                     validator: IntValidator{bottom: 0;}
                     readOnly: false;
+                    cursorVisible: options_bar.current_input == text_input_sizeY
+                    Keys.onPressed: {
+                        if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                            bars.scaled(text, 1, scale_bar.uniform, true)
+                        }
+                    }
                 }
 
                 Text {
                     id: text_mm_sizeY
                     height: parent.height
-                    width: 25 
+                    width: 22 
                     text: qsTr("mm")
                     color: "#d1d1d2"
+                    anchors.left: text_input_sizeY.right
+                    anchors.leftMargin: 3
                     anchors.right: parent.right
-                    anchors.rightMargin: 0
+                    anchors.rightMargin: 3
                     anchors.top: parent.top
                     anchors.topMargin: 3
                     horizontalAlignment: Text.AlignHCenter
                     font.pixelSize: 11
                     font.family: "Lato"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        text_input_sizeY.forceActiveFocus();
+                        options_bar.current_input = text_input_sizeY;
+                    }
                 }
             }
 
@@ -860,7 +936,7 @@ Item {
 
             Rectangle {
                 id: sizeZ
-                width: 55
+                width: 60
                 height: 20
                 color: "#333333"
                 anchors.verticalCenter: parent.verticalCenter
@@ -870,34 +946,50 @@ Item {
                 TextInput {
                     id: text_input_sizeZ
                     objectName: "text_input_sizeZ"
-                    text: qsTr("123")
+                    text: qsTr("1.0")
                     color: "#d1d1d2"
                     font.family: "Lato"
                     font.pixelSize: 11
                     height: parent.height
-                    width: parent.width - text_mm_sizeZ.width
+                    width: 33
                     anchors.top: parent.top
                     anchors.topMargin: 3
                     anchors.left: parent.left
-                    anchors.leftMargin: 0
-                    horizontalAlignment: TextInput.AlignRight
+                    anchors.leftMargin: 3
+                    horizontalAlignment: TextInput.AlignHCenter
                     validator: IntValidator{bottom: 0;}
                     readOnly: false;
+                    cursorVisible: options_bar.current_input == text_input_sizeZ
+                    Keys.onPressed: {
+                        if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                            bars.scaled(text, 2, scale_bar.uniform, true)
+                        }
+                    }
                 }
 
                 Text {
                     id: text_mm_sizeZ
                     height: parent.height
-                    width: 25 
+                    width: 22
                     text: qsTr("mm")
                     color: "#d1d1d2"
+                    anchors.left: text_input_sizeZ.right
+                    anchors.leftMargin: 3
                     anchors.right: parent.right
-                    anchors.rightMargin: 0
+                    anchors.rightMargin: 3
                     anchors.top: parent.top
                     anchors.topMargin: 3
                     horizontalAlignment: Text.AlignHCenter
                     font.pixelSize: 11
                     font.family: "Lato"
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        text_input_sizeZ.forceActiveFocus();
+                        options_bar.current_input = text_input_sizeZ;
+                    }
                 }
             }
 
@@ -1182,6 +1274,16 @@ Item {
             }
         }
 
+    }
+
+    function setScales(scaleX, scaleY, scaleZ, sizeX, sizeY, sizeZ) {
+        text_input_scaleX.text = scaleX;
+        text_input_scaleY.text = scaleY;
+        text_input_scaleZ.text = scaleZ;
+
+        text_input_sizeX.text = sizeX;
+        text_input_sizeY.text = sizeY;
+        text_input_sizeZ.text = sizeZ;
     }
 
 }

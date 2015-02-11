@@ -102,6 +102,9 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.progressBar = self.mainwindow.qmlobject.findChild(
             QtCore.QObject, "loader")
+        self.bars = self.mainwindow.qmlobject.findChild(
+            QtCore.QObject, "bars")
+        self.bars.scaled.connect(self.onScaleEntry)
 
         self.idleTimer = QtCore.QTimer(self)
         self.idleTimer.timeout.connect(self.onIdle)
@@ -123,7 +126,7 @@ class SceneView(QtGui.QGraphicsScene):
     @property
     def topContainer(self):
         if not hasattr(self, '_topContainer'):
-            dims = self.mainwindow.top_bar.getDimensions()
+            dims = self.bars.getDimensions()
             self._topContainer = containers.Container(
                 self, 0, 0, dims.get('width') or 0, dims.get('height') or 0)
         return self._topContainer
@@ -251,6 +254,24 @@ class SceneView(QtGui.QGraphicsScene):
         if self.selectedObj is None:
             return
         self.selectedObj.mirror(axis)
+        self.sceneUpdated()
+
+    @QtCore.Slot(str, int, bool, bool)
+    def onScaleEntry(self, value, axis, scale_uniform, is_mm=False):
+        if self.selectedObj is None:
+            return
+        try:
+            value = float(value)
+        except (ValueError, TypeError), e:
+            log.error("Error: {0}; could not scale.".format(e))
+            return
+        if is_mm:
+            self.selectedObj.setSize(value, axis, scale_uniform)
+        else:
+            self.selectedObj.setScale(value, axis, scale_uniform)
+        self.updateProfileToControls()
+        self.scene.pushFree(self.selectedObj)
+        self.selectObject(self.selectedObj)
         self.sceneUpdated()
 
     @QtCore.Slot()
@@ -855,16 +876,13 @@ class SceneView(QtGui.QGraphicsScene):
     def updateModelSettingsToControls(self):
         if self.selectedObj is None:
             return
-        # scale = self.selectedObj.getScale()
-        # size = self.selectedObj.getSize()
+        scale = self.selectedObj.getScale()
+        size = self.selectedObj.getSize()
 
-        # self.scaleXctrl.setValue(round(scale[0], 2))
-        # self.scaleYctrl.setValue(round(scale[1], 2))
-        # self.scaleZctrl.setValue(round(scale[2], 2))
-
-        # self.scaleXmmctrl.setValue(round(size[0], 2))
-        # self.scaleYmmctrl.setValue(round(size[1], 2))
-        # self.scaleZmmctrl.setValue(round(size[2], 2))
+        # Sets scales for scaleX, scaleY, scaleZ, sizeY, sizewY, sizeZ
+        self.bars.setScales(round(scale[0], 2), round(scale[1], 2),
+            round(scale[2], 2), round(size[0], 2), round(size[1], 2),
+            round(size[2], 2))
 
     def updateToolButtons(self):
         if self.selectedObj is None:

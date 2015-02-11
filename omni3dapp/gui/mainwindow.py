@@ -110,7 +110,6 @@ class MainWindow(QtGui.QGraphicsView):
     def setup_scene(self):
         self.sceneview = SceneView(self)
 
-        # self.qmlview.rootContext().setContextProperty("mainwindow", self)
         self.qmlview.rootContext().setContextProperty(
             "graphicsscene", self.sceneview)
 

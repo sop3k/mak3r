@@ -23,7 +23,6 @@ Item {
         Image {
             id: logo
             source: "resources/logo_grey_small.png"
-            // anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
             anchors.leftMargin: 20

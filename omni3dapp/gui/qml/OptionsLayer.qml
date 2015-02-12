@@ -47,8 +47,7 @@ Rectangle {
             id: mouse_area_close
             anchors.fill: parent
             onClicked: {
-                options_layer.enabled = false;
-                options_layer.opacity = 0;
+                options_layer.hideLayer();
             }
 
             Image {
@@ -154,30 +153,23 @@ Rectangle {
                             TextInput {
                                 id: text_input_layer_height
                                 objectName: "layer_height"
-                                width: parent.width - text_mm_layer_height.width
                                 height: parent.height
-                                text: qsTr("1.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_layer_height.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
                                 cursorVisible: row_options.current_input == text_input_layer_height
                                 Keys.onPressed: {
                                     if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
-                                        mainwindow.onSettingChange(text_input_layer_height.objectName, text)
-                                    }
-                                }
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: {
-                                        text_input_layer_height.forceActiveFocus();
-                                        row_options.current_input = text_input_layer_height;
+                                        mainwindow.onFloatSettingChange(text_input_layer_height.objectName, text)
                                     }
                                 }
                             }
@@ -185,7 +177,7 @@ Rectangle {
                             Text {
                                 id: text_mm_layer_height
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -195,6 +187,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_layer_height.forceActiveFocus();
+                                    row_options.current_input = text_input_layer_height;
+                                }
                             }
                         }
                     }
@@ -246,25 +246,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_wall_thickness
                                 objectName: "wall_thickness"
-                                width: parent.width - text_mm_wall_thickness.width
                                 height: parent.height
-                                text: qsTr("1.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_wall_thickness.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_wall_thickness
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_wall_thickness.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_wall_thickness
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -274,6 +280,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_wall_thickness.forceActiveFocus();
+                                    row_options.current_input = text_input_wall_thickness;
+                                }
                             }
                         }
                     }
@@ -312,25 +326,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_solid_layer_thickness
                                 objectName: "solid_layer_thickness"
-                                width: parent.width - text_mm_solid_layer_thickness.width
                                 height: parent.height
-                                text: qsTr("0.6")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_solid_layer_thickness.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_solid_layer_thickness
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_solid_layer_thickness.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_solid_layer_thickness
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -340,6 +360,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_solid_layer_thickness.forceActiveFocus();
+                                    row_options.current_input = text_input_solid_layer_thickness;
+                                }
                             }
                         }
                     }
@@ -378,25 +406,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_bottom_thickness
                                 objectName: "bottom_thickness"
-                                width: parent.width - text_mm_bottom_thickness.width
                                 height: parent.height
-                                text: qsTr("0.3")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_bottom_thickness.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_bottom_thickness
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_bottom_thickness.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_bottom_thickness
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -406,6 +440,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_bottom_thickness.forceActiveFocus();
+                                    row_options.current_input = text_input_bottom_thickness;
+                                }
                             }
                         }
                     }
@@ -444,25 +486,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_layer0_width_factor
                                 objectName: "layer0_width_factor"
-                                width: parent.width - text_mm_layer0_width_factor.width
                                 height: parent.height
-                                text: qsTr("100.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_layer0_width_factor.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_layer0_width_factor
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_layer0_width_factor.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_layer0_width_factor
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("%")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -472,6 +520,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_layer0_width_factor.forceActiveFocus();
+                                    row_options.current_input = text_input_layer0_width_factor;
+                                }
                             }
                         }
                     }
@@ -514,6 +570,7 @@ Rectangle {
                                 anchors.fill: parent
                                 onClicked: {
                                     simple_mode.isActive = !simple_mode.isActive
+                                    mainwindow.onBoolSettingChange(simple_mode.objectName, simple_mode.isActive)
                                 }
 
                                 Image {
@@ -566,6 +623,7 @@ Rectangle {
                                 anchors.fill: parent
                                 onClicked: {
                                     spiralize.isActive = !spiralize.isActive
+                                    mainwindow.onBoolSettingChange(spiralize.objectName, spiralize.isActive)
                                 }
 
                                 Image {
@@ -627,25 +685,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_print_temperature
                                 objectName: "print_temperature"
-                                width: parent.width - text_mm_print_temperature.width
                                 height: parent.height
-                                text: qsTr("220")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_print_temperature.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: IntValidator{bottom: 0; top: 340;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_print_temperature
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_print_temperature.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_print_temperature
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("C")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -655,6 +719,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_print_temperature.forceActiveFocus();
+                                    row_options.current_input = text_input_print_temperature;
+                                }
                             }
                         }
                     }
@@ -692,26 +764,32 @@ Rectangle {
 
                             TextInput {
                                 id: text_input_print_temperature_2
-                                objectName: "print_temperature_2"
-                                width: parent.width - text_mm_print_temperature_2.width
+                                objectName: "print_temperature2"
                                 height: parent.height
-                                text: qsTr("220")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_print_temperature_2.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: IntValidator{bottom: 0; top: 340;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_print_temperature_2
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_print_temperature_2.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_print_temperature_2
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("C")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -721,6 +799,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_print_temperature_2.forceActiveFocus();
+                                    row_options.current_input = text_input_print_temperature_2;
+                                }
                             }
                         }
                     }
@@ -759,25 +845,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_print_bed_temperature
                                 objectName: "print_bed_temperature"
-                                width: parent.width - text_mm_print_bed_temperature.width
                                 height: parent.height
-                                text: qsTr("70")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_print_bed_temperature.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: IntValidator{bottom: 0; top: 340;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_print_bed_temperature
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_print_bed_temperature.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_print_bed_temperature
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("C")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -787,6 +879,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_print_bed_temperature.forceActiveFocus();
+                                    row_options.current_input = text_input_print_bed_temperature;
+                                }
                             }
                         }
                     }
@@ -842,6 +942,7 @@ Rectangle {
                                 anchors.fill: parent
                                 onClicked: {
                                     fan_enabled.isActive = !fan_enabled.isActive
+                                    mainwindow.onBoolSettingChange(fan_enabled.objectName, fan_enabled.isActive)
                                 }
 
                                 Image {
@@ -890,25 +991,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_cool_min_layer_time
                                 objectName: "cool_min_layer_time"
-                                width: parent.width - text_mm_cool_min_layer_time.width
                                 height: parent.height
-                                text: qsTr("5.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_cool_min_layer_time.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_cool_min_layer_time
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_cool_min_layer_time.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_cool_min_layer_time
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("sec")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -918,6 +1025,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_cool_min_layer_time.forceActiveFocus();
+                                    row_options.current_input = text_input_cool_min_layer_time;
+                                }
                             }
                         }
                     }
@@ -956,25 +1071,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_fan_full_height
                                 objectName: "fan_full_height"
-                                width: parent.width - text_mm_fan_full_height.width
                                 height: parent.height
-                                text: qsTr("0.5")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_fan_full_height.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_fan_full_height
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_fan_full_height.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_fan_full_height
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -984,6 +1105,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_fan_full_height.forceActiveFocus();
+                                    row_options.current_input = text_input_fan_full_height;
+                                }
                             }
                         }
                     }
@@ -1022,25 +1151,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_fan_speed
                                 objectName: "fan_speed"
-                                width: parent.width - text_mm_fan_speed.width
                                 height: parent.height
-                                text: qsTr("100")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_fan_speed.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: IntValidator{bottom: 0; top: 100;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_fan_speed
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_fan_speed.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_fan_speed
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("%")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -1050,6 +1185,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_fan_speed.forceActiveFocus();
+                                    row_options.current_input = text_input_fan_speed;
+                                }
                             }
                         }
                     }
@@ -1088,25 +1231,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_fan_speed_max
                                 objectName: "fan_speed_max"
-                                width: parent.width - text_mm_fan_speed_max.width
                                 height: parent.height
-                                text: qsTr("100")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_fan_speed_max.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: IntValidator{bottom: 0; top: 100;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_fan_speed_max
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_fan_speed_max.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_fan_speed_max
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("%")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -1116,6 +1265,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_fan_speed_max.forceActiveFocus();
+                                    row_options.current_input = text_input_fan_speed_max;
+                                }
                             }
                         }
                     }
@@ -1154,25 +1311,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_cool_min_feedrate
                                 objectName: "cool_min_feedrate"
-                                width: parent.width - text_mm_cool_min_feedrate.width
                                 height: parent.height
-                                text: qsTr("10")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_cool_min_feedrate.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_cool_min_feedrate
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_cool_min_feedrate.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_cool_min_feedrate
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm/s")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -1182,6 +1345,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_cool_min_feedrate.forceActiveFocus();
+                                    row_options.current_input = text_input_cool_min_feedrate;
+                                }
                             }
                         }
                     }
@@ -1224,6 +1395,7 @@ Rectangle {
                                 anchors.fill: parent
                                 onClicked: {
                                     cool_head_lift.isActive = !cool_head_lift.isActive
+                                    mainwindow.onBoolSettingChange(cool_head_lift.objectName, cool_head_lift.isActive)
                                 }
 
                                 Image {
@@ -1285,25 +1457,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_object_sink
                                 objectName: "object_sink"
-                                width: parent.width - text_mm_object_sink.width
                                 height: parent.height
-                                text: qsTr("0.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_object_sink.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_object_sink
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_object_sink.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_object_sink
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -1313,6 +1491,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_object_sink.forceActiveFocus();
+                                    row_options.current_input = text_input_object_sink;
+                                }
                             }
                         }
                     }
@@ -1351,25 +1537,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_filament_flow
                                 objectName: "filament_flow"
-                                width: parent.width - text_mm_filament_flow.width
                                 height: parent.height
-                                text: qsTr("100.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_filament_flow.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 5; top: 300;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_filament_flow
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_filament_flow.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_filament_flow
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("%")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -1379,6 +1571,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_filament_flow.forceActiveFocus();
+                                    row_options.current_input = text_input_filament_flow;
+                                }
                             }
                         }
                     }
@@ -1421,6 +1621,7 @@ Rectangle {
                                 anchors.fill: parent
                                 onClicked: {
                                     fix_horrible_union_all_type_a.isActive = !fix_horrible_union_all_type_a.isActive
+                                    mainwindow.onBoolSettingChange(fix_horrible_union_all_type_a.objectName, fix_horrible_union_all_type_a.isActive)
                                 }
 
                                 Image {
@@ -1473,6 +1674,7 @@ Rectangle {
                                 anchors.fill: parent
                                 onClicked: {
                                     fix_horrible_union_all_type_b.isActive = !fix_horrible_union_all_type_b.isActive
+                                    mainwindow.onBoolSettingChange(fix_horrible_union_all_type_b.objectName, fix_horrible_union_all_type_b.isActive)
                                 }
 
                                 Image {
@@ -1524,7 +1726,8 @@ Rectangle {
                                 id: mouse_area_fix_horrible_use_open_bits
                                 anchors.fill: parent
                                 onClicked: {
-                                    fix_horrible_use_open_bits.isActive = !fix_horrible_extensive_stitching.isActive
+                                    fix_horrible_use_open_bits.isActive = !fix_horrible_use_open_bits.isActive
+                                    mainwindow.onBoolSettingChange(fix_horrible_use_open_bits.objectName, fix_horrible_use_open_bits.isActive)
                                 }
 
                                 Image {
@@ -1577,6 +1780,7 @@ Rectangle {
                                 anchors.fill: parent
                                 onClicked: {
                                     fix_horrible_extensive_stitching.isActive = !fix_horrible_extensive_stitching.isActive
+                                    mainwindow.onBoolSettingChange(fix_horrible_extensive_stitching.objectName, fix_horrible_extensive_stitching.isActive)
                                 }
 
                                 Image {
@@ -1654,6 +1858,7 @@ Rectangle {
                                 anchors.fill: parent
                                 onClicked: {
                                     retraction_enable.isActive = !retraction_enable.isActive
+                                    mainwindow.onBoolSettingChange(retraction_enable.objectName, retraction_enable.isActive)
                                 }
 
                                 Image {
@@ -1702,25 +1907,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_retraction_speed
                                 objectName: "retraction_speed"
-                                width: parent.width - text_mm_retraction_speed.width
                                 height: parent.height
-                                text: qsTr("40.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_retraction_speed.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0.1;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_retraction_speed
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_retraction_speed.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_retraction_speed
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm/s")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -1730,6 +1941,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_retraction_speed.forceActiveFocus();
+                                    row_options.current_input = text_input_retraction_speed;
+                                }
                             }
                         }
                     }
@@ -1768,25 +1987,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_retraction_min_travel
                                 objectName: "retraction_min_travel"
-                                width: parent.width - text_mm_retraction_min_travel.width
                                 height: parent.height
-                                text: qsTr("1.5")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_retraction_min_travel.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_retraction_min_travel
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_retraction_min_travel.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_retraction_min_travel
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -1796,6 +2021,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_retraction_min_travel.forceActiveFocus();
+                                    row_options.current_input = text_input_retraction_min_travel;
+                                }
                             }
                         }
                     }
@@ -1834,25 +2067,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_retraction_dual_amount
                                 objectName: "retraction_dual_amount"
-                                width: parent.width - text_mm_retraction_dual_amount.width
                                 height: parent.height
-                                text: qsTr("16.5")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_retraction_dual_amount.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_retraction_dual_amount
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_retraction_dual_amount.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_retraction_dual_amount
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -1862,6 +2101,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_retraction_dual_amount.forceActiveFocus();
+                                    row_options.current_input = text_input_retraction_dual_amount;
+                                }
                             }
                         }
                     }
@@ -1913,25 +2160,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_fill_density
                                 objectName: "fill_density"
-                                width: parent.width - text_mm_fill_density.width
                                 height: parent.height
-                                text: qsTr("20.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_fill_density.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0; top: 100;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_fill_density
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_fill_density.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_fill_density
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("%")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -1941,6 +2194,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_fill_density.forceActiveFocus();
+                                    row_options.current_input = text_input_fill_density;
+                                }
                             }
                         }
                     }
@@ -1983,6 +2244,7 @@ Rectangle {
                                 anchors.fill: parent
                                 onClicked: {
                                     solid_bottom.isActive = !solid_bottom.isActive
+                                    mainwindow.onBoolSettingChange(solid_bottom.objectName, solid_bottom.isActive)
                                 }
 
                                 Image {
@@ -2035,6 +2297,7 @@ Rectangle {
                                 anchors.fill: parent
                                 onClicked: {
                                     solid_top.isActive = !solid_top.isActive
+                                    mainwindow.onBoolSettingChange(solid_top.objectName, solid_top.isActive)
                                 }
 
                                 Image {
@@ -2100,6 +2363,7 @@ Rectangle {
                     //             anchors.fill: parent
                     //             onClicked: {
                     //                 platform_adhesion.isActive = !platform_adhesion.isActive
+                    //                 mainwindow.onBoolSettingChange(platform_adhesion.objectName, platform_adhesion.isActive)
                     //             }
 
                     //             Image {
@@ -2148,25 +2412,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_raft_margin
                                 objectName: "raft_margin"
-                                width: parent.width - text_mm_raft_margin.width
                                 height: parent.height
-                                text: qsTr("5.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_raft_margin.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_raft_margin
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_raft_margin.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_raft_margin
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2176,6 +2446,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_raft_margin.forceActiveFocus();
+                                    row_options.current_input = text_input_raft_margin;
+                                }
                             }
                         }
                     }
@@ -2214,25 +2492,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_raft_line_spacing
                                 objectName: "raft_line_spacing"
-                                width: parent.width - text_mm_raft_line_spacing.width
                                 height: parent.height
-                                text: qsTr("3.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_raft_line_spacing.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_raft_line_spacing
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_raft_line_spacing.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_raft_line_spacing
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2242,6 +2526,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_raft_line_spacing.forceActiveFocus();
+                                    row_options.current_input = text_input_raft_line_spacing;
+                                }
                             }
                         }
                     }
@@ -2280,25 +2572,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_raft_base_thickness
                                 objectName: "raft_base_thickness"
-                                width: parent.width - text_mm_raft_base_thickness.width
                                 height: parent.height
-                                text: qsTr("0.3")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_raft_base_thickness.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_raft_base_thickness
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_raft_base_thickness.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_raft_base_thickness
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2308,6 +2606,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_raft_base_thickness.forceActiveFocus();
+                                    row_options.current_input = text_input_raft_base_thickness;
+                                }
                             }
                         }
                     }
@@ -2346,25 +2652,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_raft_interface_thickness
                                 objectName: "raft_interface_thickness"
-                                width: parent.width - text_mm_raft_interface_thickness.width
                                 height: parent.height
-                                text: qsTr("0.27")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_raft_interface_thickness.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_raft_interface_thickness
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_raft_interface_thickness.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_raft_interface_thickness
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2374,6 +2686,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_raft_interface_thickness.forceActiveFocus();
+                                    row_options.current_input = text_input_raft_interface_thickness;
+                                }
                             }
                         }
                     }
@@ -2412,25 +2732,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_raft_interface_linewidth
                                 objectName: "raft_interface_linewidth"
-                                width: parent.width - text_mm_raft_interface_linewidth.width
                                 height: parent.height
-                                text: qsTr("0.4")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_raft_interface_linewidth.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_raft_interface_linewidth
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_raft_interface_linewidth.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_raft_interface_linewidth
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2440,6 +2766,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_raft_interface_linewidth.forceActiveFocus();
+                                    row_options.current_input = text_input_raft_interface_linewidth;
+                                }
                             }
                         }
                     }
@@ -2478,25 +2812,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_raft_airgap
                                 objectName: "raft_airgap"
-                                width: parent.width - text_mm_raft_airgap.width
                                 height: parent.height
-                                text: qsTr("0.22")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_raft_airgap.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_raft_airgap
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_raft_airgap.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_raft_airgap
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2506,6 +2846,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_raft_airgap.forceActiveFocus();
+                                    row_options.current_input = text_input_raft_airgap;
+                                }
                             }
                         }
                     }
@@ -2544,25 +2892,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_skirt_line_count
                                 objectName: "skirt_line_count"
-                                width: parent.width - text_mm_skirt_line_count.width
                                 height: parent.height
-                                text: qsTr("1.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_skirt_line_count.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_skirt_line_count
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_skirt_line_count.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_skirt_line_count
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2572,6 +2926,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_skirt_line_count.forceActiveFocus();
+                                    row_options.current_input = text_input_skirt_line_count;
+                                }
                             }
                         }
                     }
@@ -2610,25 +2972,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_fill_overlap
                                 objectName: "fill_overlap"
-                                width: parent.width - text_mm_fill_overlap.width
                                 height: parent.height
-                                text: qsTr("15")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_fill_overlap.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: IntValidator{bottom: 0; top: 100;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_fill_overlap
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_fill_overlap.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_fill_overlap
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("%")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2638,6 +3006,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_fill_overlap.forceActiveFocus();
+                                    row_options.current_input = text_input_fill_overlap;
+                                }
                             }
                         }
                     }
@@ -2676,25 +3052,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_skirt_minimal_length
                                 objectName: "skirt_minimal_length"
-                                width: parent.width - text_mm_skirt_minimal_length.width
                                 height: parent.height
-                                text: qsTr("150.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_skirt_minimal_length.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_skirt_minimal_length
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_skirt_minimal_length.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_skirt_minimal_length
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2704,6 +3086,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_skirt_minimal_length.forceActiveFocus();
+                                    row_options.current_input = text_input_skirt_minimal_length;
+                                }
                             }
                         }
                     }
@@ -2755,25 +3145,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_support_angle
                                 objectName: "support_angle"
-                                width: parent.width - text_mm_support_angle.width
                                 height: parent.height
-                                text: qsTr("60.0")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_support_angle.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0; top: 360;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_support_angle
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_support_angle.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_support_angle
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("deg")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2783,6 +3179,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_support_angle.forceActiveFocus();
+                                    row_options.current_input = text_input_support_angle;
+                                }
                             }
                         }
                     }
@@ -2821,25 +3225,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_support_fill_rate
                                 objectName: "support_fill_rate"
-                                width: parent.width - text_mm_support_fill_rate.width
                                 height: parent.height
-                                text: qsTr("15")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_support_fill_rate.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: IntValidator{bottom: 0; top: 100;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_support_fill_rate
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_support_fill_rate.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_support_fill_rate
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("%")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2849,6 +3259,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_support_fill_rate.forceActiveFocus();
+                                    row_options.current_input = text_input_support_fill_rate;
+                                }
                             }
                         }
                     }
@@ -2887,25 +3305,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_support_xy_distance
                                 objectName: "support_xy_distance"
-                                width: parent.width - text_mm_support_xy_distance.width
                                 height: parent.height
-                                text: qsTr("0.7")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_support_xy_distance.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0; top: 360;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_support_xy_distance
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_support_xy_distance.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_support_xy_distance
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2915,6 +3339,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_support_xy_distance.forceActiveFocus();
+                                    row_options.current_input = text_input_support_xy_distance;
+                                }
                             }
                         }
                     }
@@ -2953,25 +3385,31 @@ Rectangle {
                             TextInput {
                                 id: text_input_support_z_distance
                                 objectName: "support_z_distance"
-                                width: parent.width - text_mm_support_z_distance.width
                                 height: parent.height
-                                text: qsTr("0.15")
                                 anchors.top: parent.top
                                 anchors.topMargin: 3
                                 anchors.right: text_mm_support_z_distance.left
                                 anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
                                 color: "#d1d1d2"
                                 font.family: "Lato"
                                 font.pixelSize: 11
-                                horizontalAlignment: TextInput.AlignRight
+                                horizontalAlignment: TextInput.AlignHCenter
                                 validator: DoubleValidator{bottom: 0; top: 10;}
                                 readOnly: false
+                                cursorVisible: row_options.current_input == text_input_support_z_distance
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_support_z_distance.objectName, text)
+                                    }
+                                }
                             }
 
                             Text {
                                 id: text_mm_support_z_distance
                                 height: parent.height
-                                width: 25
+                                width: 22
                                 text: qsTr("mm")
                                 color: "#d1d1d2"
                                 anchors.right: parent.right
@@ -2981,6 +3419,14 @@ Rectangle {
                                 horizontalAlignment: Text.AlignHCenter
                                 font.pixelSize: 11
                                 font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_support_z_distance.forceActiveFocus();
+                                    row_options.current_input = text_input_support_z_distance;
+                                }
                             }
                         }
                     }
@@ -3012,6 +3458,7 @@ Rectangle {
                             anchors.fill: parent
                             onClicked: {
                                 options_layer.hideLayer();
+                                mainwindow.saveAdvancedOptions();
                                 graphicsscene.onRunEngine();
                                 print_button.state = "SLICING";
                             }

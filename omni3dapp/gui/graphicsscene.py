@@ -1063,6 +1063,11 @@ class SceneView(QtGui.QGraphicsScene):
             menu.exec_(QtCore.QPoint(pos.x(), pos.y()))
 
     def wheelEvent(self, evt):
+        pos = evt.scenePos()
+        if self.topContainer.mousePressEvent(pos.x(), pos.y()) or \
+                self._layerOn:
+                    return
+
         delta = evt.delta()
         delta = delta/abs(delta)
         self.zoom *= 1.0 - delta / 10.0

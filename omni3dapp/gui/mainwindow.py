@@ -50,8 +50,6 @@ class MainWindow(QtGui.QGraphicsView):
         # self.ui = Ui_MainWindow()
         # self.ui.setupUi(self)
 
-        # self.set_up_fields()
-
         # Create a scene to present and modify 3d objects
         self.setup_qmlview()
 
@@ -60,6 +58,12 @@ class MainWindow(QtGui.QGraphicsView):
 
         self.top_bar = self.qmlobject.findChild(
             QtCore.QObject, "bars")
+
+        self.advanced_options = self.qmlobject.findChild(
+            QtCore.QObject, "options_layer")
+
+        # self.set_up_fields()
+        self.setUpFields()
 
         self.setup_scene()
 
@@ -125,6 +129,39 @@ class MainWindow(QtGui.QGraphicsView):
 
         self.setScene(self.sceneview)
 
+    def setUpFields(self):
+        for key, val in profile.settingsDictionary.iteritems():
+            try:
+                elem = self.advanced_options.findChild(QtCore.QObject, key)
+                val = val.getValue()
+                if isinstance(val, bool):
+                    elem.setProperty('isActive', val)
+                else:
+                    elem.setProperty('text', str(val))
+
+                # TODO: set tooltips
+                # elem.setToolTip(val.getTooltip())
+            except Exception as e:
+                # log.error('Could not set value to field {0}: {1}'.format(key, e))
+                # Pass as there are more settings in the profile file than we
+                # really use
+                pass
+
+    @QtCore.Slot()
+    def saveAdvancedOptions(self):
+        self.sceneview.setInfoText(_("Saving options..."))
+        for key, val in profile.settingsDictionary.iteritems():
+            try:
+                elem = self.advanced_options.findChild(QtCore.QObject, key)
+                if val.getType() == bool:
+                    self.onBoolSettingChange(key, elem.property('text'))
+                else:
+                    self.onFloatSettingChange(key, elem.property('text'))
+            except Exception as e:
+                # Pass as there are more settings in the profile file than we
+                # really use
+                pass
+
     def set_up_fields(self):
         for key, val in profile.settingsDictionary.iteritems():
             elem = getattr(self.ui, key, None)
@@ -159,7 +196,7 @@ class MainWindow(QtGui.QGraphicsView):
             # Set recent MRU files list
             for elem in xrange(self.MAX_MRU_FILES):
                 action = QtGui.QAction(self, visible=False,
-                        triggered=self.open_model_file)
+                    triggered=self.open_model_file)
                 action.setObjectName("recent_model_file_{0}".format(elem))
                 self.model_files_history_actions.append(action)
                 self.ui.menuRecent_Model_Files.addAction(action)
@@ -356,10 +393,24 @@ class MainWindow(QtGui.QGraphicsView):
     #         log.error("Key not found in preferences: {0}".format(e))
     #     self.validate_normal_mode()
 
-    @QtCore.Slot(str, float)
-    def onSettingChange(self, obj_name, value):
+    @QtCore.Slot(str, str)
+    def onFloatSettingChange(self, obj_name, value):
         try:
             value = float(value)
+        except ValueError as e:
+            log.error("Could not assign value {0} to setting {1}: {2}".format(
+                value, obj_name, e))
+            return
+        try:
+            profile.settingsDictionary[obj_name].setValue(value)
+        except KeyError as e:
+            log.error("Key not found in preferences: {0}".format(e))
+        self.validateNormalMode()
+
+    @QtCore.Slot(str, bool)
+    def onBoolSettingChange(self, obj_name, value):
+        try:
+            value = bool(value)
         except ValueError as e:
             log.error("Could not assign value {0} to setting {1}: {2}".format(
                 value, obj_name, e))

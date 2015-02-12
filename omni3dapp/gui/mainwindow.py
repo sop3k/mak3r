@@ -112,6 +112,8 @@ class MainWindow(QtGui.QGraphicsView):
 
         self.qmlview.rootContext().setContextProperty(
             "graphicsscene", self.sceneview)
+        self.qmlview.rootContext().setContextProperty(
+            "mainwindow", self)
 
         palette = QtGui.QPalette()
         palette.setColor(QtGui.QPalette.Base, QtCore.Qt.transparent)
@@ -354,7 +356,21 @@ class MainWindow(QtGui.QGraphicsView):
     #         log.error("Key not found in preferences: {0}".format(e))
     #     self.validate_normal_mode()
 
-    def validate_normal_mode(self):
+    @QtCore.Slot(str, float)
+    def onSettingChange(self, obj_name, value):
+        try:
+            value = float(value)
+        except ValueError as e:
+            log.error("Could not assign value {0} to setting {1}: {2}".format(
+                value, obj_name, e))
+            return
+        try:
+            profile.settingsDictionary[obj_name].setValue(value)
+        except KeyError as e:
+            log.error("Key not found in preferences: {0}".format(e))
+        self.validateNormalMode()
+
+    def validateNormalMode(self):
         # TODO: improve dictionary structure so that we can easily get normal
         # mode elements
         # for elem in normal_mode_elems:

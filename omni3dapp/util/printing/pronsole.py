@@ -248,12 +248,15 @@ class Pronsole(cmd.Cmd):
         return False
 
     def log(self, *msg):
-        print u"".join(unicode(i) for i in msg)
+        msg = u"".join(unicode(i) for i in msg)
+        log.debug(msg)
+        self.parent.set_statusbar(msg)
 
     def logError(self, *msg):
         msg = u"".join(unicode(i) for i in msg)
         log.error(msg)
         self.guisignals.addtext.emit(msg)
+        self.parent.set_statusbar(msg)
         # if not self.settings.error_command:
         #     return
         # output = get_command_output(self.settings.error_command, {"$m": msg})
@@ -1602,6 +1605,8 @@ class Pronsole(cmd.Cmd):
             self.onecmd("M81")
         else:
             self.logError(_("Printer is not online. Unable to turn it off."))
+            return False
+        return True
 
     def help_off(self):
         self.log(_("Turns off everything on the printer"))

@@ -494,9 +494,7 @@ class MainWindow(QtGui.QGraphicsView):
         return QtCore.QFileInfo(full_filename).fileName()
 
     def set_statusbar(self, msg):
-        # TODO: set status somewhere
-        print msg
-        # self.statusBar().showMessage(msg)
+        self.sceneview.setInfoText(msg)
 
     def connect_printer(self):
         port_val = self.ui.port_type.itemText(self.ui.port_type.currentIndex())
@@ -508,6 +506,15 @@ class MainWindow(QtGui.QGraphicsView):
             log.error(_("Could not parse baud rate: {0}".format(e)))
             traceback.print_exc(file = sys.stdout)
         return self.pc.connect(port_val, baud_val)
+
+    @QtCore.Slot()
+    def pausePrinting(self):
+        self.pc.pause()
+
+    @QtCore.Slot()
+    def turnOffPrinter(self):
+        ret = self.pc.off()
+        return ret
 
     def settemp(self):
         temp = self.ui.print_temperature.text()
@@ -586,7 +593,8 @@ class MainWindow(QtGui.QGraphicsView):
         self.set_statusbar(_("Connected to printer."))
 
         if self.pc.fgcode:
-            self.sceneview.printButton.setDisabled(False)
+            # self.sceneview.printButton.setDisabled(False)
+            self.print_button.enable()
 
     def set_disconnected(self):
         self.enable_elements(False)

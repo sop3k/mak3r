@@ -3,7 +3,7 @@ import QtQuick 1.1
 
 Rectangle {
     id: print_button
-    width: 220
+    width: 225 + cancel_print.width
     height: 32
     color: "#00000000"
     state: "IDLE"
@@ -13,8 +13,8 @@ Rectangle {
         width: 100
         height: 32
         color: "#ff5724"
-        anchors.right: parent.right
-        anchors.rightMargin: 0
+        anchors.right: cancel_print.left
+        anchors.rightMargin: 5
 
         Text {
             id: button_text
@@ -34,16 +34,16 @@ Rectangle {
             onClicked: {
                 if (print_button.state == "IDLE") {
                     options_layer.showLayer();
-                    // graphicsscene.onRunEngine();
-                    // print_button.state = "SLICING";
                 } else if (print_button.state == "SLICING") {
                     graphicsscene.onStopEngine();
                     print_button.state = "IDLE";
                 } else if (print_button.state == "SLICED") {
                     // start printing
+                    graphicsscene.onPrintButton();
                     print_button.state = "PRINTING";
                 } else if (print_button.state == "PRINTING") {
                     // pause printing
+                    mainwindow.pausePrinting();
                     print_button.state = "PAUSED";
                 } else if (print_button.state == "PAUSED") {
                     // resume printing
@@ -79,6 +79,37 @@ Rectangle {
         font.family: lato_font.name
     }
 
+    Rectangle {
+        id: cancel_print
+        width: 0
+        height: 0
+        color: "#51545b"
+        anchors.right: parent.right
+        anchors.rightMargin: 0
+        opacity: 0
+        enabled: false
+
+        Image {
+            id: img_cancel
+            source: "resources/icons/close.png"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+
+        MouseArea {
+            id: mouse_area_cancel_print
+            anchors.fill: parent
+            onClicked: {
+                // cancel printing
+                ret = mainwindow.turnOffPrinter()
+                if (ret) {
+                    print_button.state = "SLICED"
+                }
+            }
+        }
+    }
+
     states: [
         State {
             name: "IDLE"
@@ -111,6 +142,14 @@ Rectangle {
                 target: button_text
                 text: qsTr("Pause")
             }
+
+            PropertyChanges {
+                target: cancel_print
+                opacity: 1
+                enabled: true
+                width: 32
+                height: 32
+            }
         },
         State {
             name: "PAUSED"
@@ -118,6 +157,14 @@ Rectangle {
             PropertyChanges {
                 target: button_text
                 text: qsTr("Resume")
+            }
+
+            PropertyChanges {
+                target: cancel_print
+                opacity: 1
+                enabled: true
+                width: 32
+                height: 32
             }
         }
     ]

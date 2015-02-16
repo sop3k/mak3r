@@ -85,10 +85,6 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.loadObjectShader()
 
-        self.printButton = openglscene.glButton(self, 6, _("Print"), (1, 0),
-                                                self.onPrintButton)
-        self.printButton.setDisabled(True)
-
         self.printtemp_gauge = openglscene.glTempGauge(
             parent=self, size=(400, 10), pos=(0, -2), title="Heater:")
         self.bedtemp_gauge = openglscene.glTempGauge(
@@ -708,7 +704,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.setProgressBar(0.0)
         self.cleanEngine()
 
-        if self.engine.isSlicingEnabled(self.scene):
+        if self.engine.isSlicingEnabled(self.scene) and self.mainwindow.is_online:
             self.mainwindow.print_button.enable()
         else:
             self.mainwindow.print_button.disable()
@@ -907,7 +903,11 @@ class SceneView(QtGui.QGraphicsScene):
         if progressValue >= 1:
             self.setPrintingInfo()
             self.mainwindow.print_button.setState("SLICED")
-            self.setInfoText("")
+            if not self.mainwindow.is_online():
+                self.mainwindow.print_button.disable()
+                self.setInfoText(_("Not connected to printer"))
+            else:
+                self.setInfoText("")
 
         self.queueRefresh()
 
@@ -1295,7 +1295,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.engineResultView.setResult(self.engine._result)
 
         if self.mainwindow.pc.is_online():
-            self.printButton.setDisabled(False)
+            self.mainwindow.print_button.enable()
 
         self.showLayersButton()
         self.setViewMode('gcode')
@@ -1327,7 +1327,7 @@ class SceneView(QtGui.QGraphicsScene):
     @QtCore.Slot()
     def enablePrinting(self):
         if self.isPrintingEnabled():
-            self.printButton.setDisabled(False)
+            self.mainwindow.print_button.enable()
             self.update()
 
     @QtCore.Slot(float)
@@ -1346,24 +1346,15 @@ class SceneView(QtGui.QGraphicsScene):
     def setBedtempValue(self, temp):
         self.bedtemp_gauge.setValue(temp)
 
-    def onStartprint(self):
-        self.printButton.setImageID(30)
-        self.printButton.setTooltip(_("Pause"))
-        self.printButton.setCallback(self.mainwindow.pc.pause)
-
     def onEndprint(self):
-        self.printButton.setImageID(6)
-        self.printButton.setTooltip(_("Print"))
+        self.mainwindow.print_button.setState("IDLE")
 
-    def onPrintButton(self, button=LEFT_BUTTON):
-        self.on_startprint()
+    @QtCore.Slot()
+    def onPrintButton(self):
         self.mainwindow.pc.printfile(self.engine._result.getGCode())
 
     @QtCore.Slot()
-    def showLoadModel(self, button=LEFT_BUTTON):
-        if button is not LEFT_BUTTON:
-            return
-
+    def showLoadModel(self):
         img_extentions = imageToMesh.supportedExtensions()
         mesh_extentions = meshLoader.loadSupportedExtensions()
 

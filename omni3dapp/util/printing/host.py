@@ -283,15 +283,12 @@ class PrinterConnection(Pronsole):
     @QtCore.Slot(str)
     def addtexttolog(self, text):
         if self.is_printable(text):
-            self.ui.logbox.appendPlainText(text)
-            # max_length = 20000
-            # current_length = self.logbox.GetLastPosition()
-            # if current_length > max_length:
-            #     self.logbox.Remove(0, current_length / 10)
+            pass
+            # self.ui.logbox.appendPlainText(text)
         else:
             msg = _("Attempted to write invalid text to console, which could be due to an invalid baudrate")
             log.debug(msg)
-            self.ui.logbox.appendPlainText(msg)
+            # self.ui.logbox.appendPlainText(msg)
 
     def sentcb(self, line, gline):
         """Callback when a printer gcode has been sent"""
@@ -433,34 +430,32 @@ class PrinterConnection(Pronsole):
 
     def statuschecker(self):
         Pronsole.statuschecker(self)
-        self.parent.set_statusbar(_("Not connected to printer."))
+        self.parent.set_statusbar(_("Not connected to printer"))
 
-    def pause(self, button):
-        if not self.paused:
-            self.log(_("Print paused at: %s") % format_time(time.time()))
-            if self.sdprinting:
-                self.p.send_now("M25")
-            else:
-                if not self.p.printing:
-                    return
-                self.p.pause()
-                self.p.runSmallScript(self.pauseScript)
-            self.paused = True
-            # self.p.runSmallScript(self.pauseScript)
-            self.extra_print_time += int(time.time() - self.starttime)
-            self.parent.sceneview.onPauseprint()
-            # wx.CallAfter(self.pausebtn.SetLabel, _("Resume"))
-            # wx.CallAfter(self.toolbarsizer.Layout)
+    def pause(self):
+        if self.paused:
+            self.log(_("Already paused"))
+            return
+
+        self.log(_("Print paused at: %s") % format_time(time.time()))
+        if self.sdprinting:
+            self.p.send_now("M25")
         else:
-            self.log(_("Resuming."))
-            self.paused = False
-            if self.sdprinting:
-                self.p.send_now("M24")
-            else:
-                self.p.resume()
-            self.parent.sceneview.onResumeprint()
-            # wx.CallAfter(self.pausebtn.SetLabel, _("Pause"))
-            # wx.CallAfter(self.toolbarsizer.Layout)
+            if not self.p.printing:
+                return
+            self.p.pause()
+            self.p.runSmallScript(self.pauseScript)
+        self.paused = True
+        # self.p.runSmallScript(self.pauseScript)
+        self.extra_print_time += int(time.time() - self.starttime)
+
+    def resume(self):
+        self.log(_("Resuming."))
+        self.paused = False
+        if self.sdprinting:
+            self.p.send_now("M24")
+        else:
+            self.p.resume()
 
     def recover(self, event):
         self.extra_print_time = 0

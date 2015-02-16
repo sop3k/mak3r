@@ -407,7 +407,7 @@ class Printcore(QtCore.QObject):
             else:
                 self.priqueue.put_nowait(command)
         else:
-            self.logError(_("Not connected to printer."))
+            self.logError(_("Not connected to printer"))
 
     def send_now(self, command, wait = 0):
         """Sends a command to the printer ahead of the command queue, without a
@@ -415,7 +415,7 @@ class Printcore(QtCore.QObject):
         if self.online:
             self.priqueue.put_nowait(command)
         else:
-            self.logError(_("Not connected to printer."))
+            self.logError(_("Not connected to printer"))
 
     @QtCore.Slot(dict)
     def _send(self, args_dict):

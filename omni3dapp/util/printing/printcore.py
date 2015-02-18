@@ -59,7 +59,7 @@ def disable_hup(port):
 
 
 class ConnectionSignals(QtCore.QObject):
-    connect_sig = QtCore.Signal(dict)
+    connect_sig = QtCore.Signal(str, int)
     disconnect_sig = QtCore.Signal()
 
 
@@ -116,8 +116,8 @@ class Printcore(QtCore.QObject):
         self.signals.connect_sig.connect(self.connect)
         self.signals.disconnect_sig.connect(self.disconnect)
 
-        if port is not None and baud is not None:
-            self.signals.connect_sig.emit({'port': port, 'baud': baud})
+        # if port is not None and baud is not None:
+        #     self.signals.connect_sig.emit({'port': port, 'baud': baud})
         self.xy_feedrate = None
         self.z_feedrate = None
 
@@ -160,82 +160,87 @@ class Printcore(QtCore.QObject):
         self.online = False
         self.printing = False
 
-    @QtCore.Slot(dict)
-    def connect(self, attrs_dict):
+    @QtCore.Slot(str, int)
+    def connect(self, port, baud):
         """Set port and baudrate if given, then connect to printer
         """
-        port = attrs_dict.get('port') or ''
-        baud = attrs_dict.get('baud') or ''
         if self.printer:
-            self.signals.disconnect_sig.emit()
+            # self.signals.disconnect_sig.emit()
+            self.disconnect()
         if port:
             self.port = port
         if baud:
             self.baud = baud
-        if self.port and self.baud:
-            # Connect to socket if "port" is an IP, device if not
-            host_regexp = re.compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$|^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$")
-            is_serial = True
-            if ":" in port:
-                bits = port.split(":")
-                if len(bits) == 2:
-                    hostname = bits[0]
-                    try:
-                        port = int(bits[1])
-                        if host_regexp.match(hostname) and 1 <= port <= 65535:
-                            is_serial = False
-                    except:
-                        pass
-            self.writefailures = 0
-            if not is_serial:
-                self.printer_tcp = socket.socket(socket.AF_INET,
-                                                 socket.SOCK_STREAM)
-                self.timeout = 0.25
-                self.printer_tcp.settimeout(1.0)
+        if not (self.port and self.baud):
+            return
+
+        # Connect to socket if "port" is an IP, device if not
+        host_regexp = re.compile("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$|^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$")
+        is_serial = True
+        if ":" in port:
+            bits = port.split(":")
+            if len(bits) == 2:
+                hostname = bits[0]
                 try:
-                    self.printer_tcp.connect((hostname, port))
-                    self.printer_tcp.settimeout(self.timeout)
-                    self.printer = self.printer_tcp.makefile()
-                except socket.error as e:
-                    self.logError(_("Could not connect to %s:%s:") % (hostname, port) +
-                                  "\n" + _("Socket error %s:") % e.errno +
-                                  "\n" + e.strerror)
-                    self.printer = None
-                    self.printer_tcp = None
-                    return
-            else:
-                disable_hup(self.port)
+                    port = int(bits[1])
+                    if host_regexp.match(hostname) and 1 <= port <= 65535:
+                        is_serial = False
+                except:
+                    pass
+        self.writefailures = 0
+        if not is_serial:
+            self.printer_tcp = socket.socket(socket.AF_INET,
+                                             socket.SOCK_STREAM)
+            self.timeout = 0.25
+            self.printer_tcp.settimeout(1.0)
+            try:
+                self.printer_tcp.connect((hostname, port))
+                self.printer_tcp.settimeout(self.timeout)
+                self.printer = self.printer_tcp.makefile()
+            except socket.error as e:
+                self.logError(_("Could not connect to %s:%s:") % (hostname, port) +
+                              "\n" + _("Socket error %s:") % e.errno +
+                              "\n" + e.strerror)
+                self.printer = None
                 self.printer_tcp = None
-                try:
-                    self.printer = Serial(port = self.port,
-                                          baudrate = self.baud,
-                                          timeout = 0.25)
-                except (SerialException, IOError) as e:
-                    if type(e) == SerialException:
-                        txt = _("Serial error: ")
-                    else:
-                        txt = _("IO error: ")
-                    self.logError(_("Could not connect to %s at baudrate %s:") % (self.port, self.baud) +
-                            "\n" + txt + str(e))
-                    self.parent.set_statusbar(_("Could not connet to printer."))
-                    self.printer = None
-                    return
-            self.stop_read_thread = False
-            self.listener = Listener(self)
-            self.read_thread = QtCore.QThread(self.parent)
-            self.listener.moveToThread(self.read_thread)
+                return
+        else:
+            disable_hup(self.port)
+            self.printer_tcp = None
+            try:
+                self.printer = Serial(port = self.port,
+                                      baudrate = self.baud,
+                                      timeout = 0.25)
+            except (SerialException, IOError) as e:
+                if type(e) == SerialException:
+                    txt = _("Serial error: ")
+                else:
+                    txt = _("IO error: ")
+                self.logError(_("Could not connect to %s at baudrate %s:") % (self.port, self.baud) +
+                        "\n" + txt + str(e))
+                self.parent.set_statusbar(_("Could not connet to printer."))
+                self.printer = None
+                return
 
-            self.read_thread.started.connect(self.listener.listen)
-            self.listener.send_command.connect(self._send)
-            self.listener.recvcb_sig.connect(self.recvcb)
-            self.listener.finished.connect(self.read_thread.quit)
-            self.listener.finished.connect(self.listener.deleteLater)
-            self.read_thread.finished.connect(self.read_thread.deleteLater)
+        self.stop_read_thread = False
+        self.listener = Listener(self)
+        self.read_thread = QtCore.QThread(self.parent)
+        self.listener.moveToThread(self.read_thread)
 
-            self.read_thread.start()
-            self._start_sender()
+        self.read_thread.started.connect(self.listener.listen)
+        self.listener.send_command.connect(self._send)
+        self.listener.recvcb_sig.connect(self.recvcb)
+        self.listener.set_online.connect(self.onlinecb)
+        self.listener.finished.connect(self.read_thread.quit)
+        self.listener.finished.connect(self.listener.deleteLater)
+        self.read_thread.finished.connect(self.read_thread.deleteLater)
 
-            self.host.after_connect()
+        self.read_thread.start()
+        self._start_sender()
+
+        self.host.after_connect()
+
+        self.parent.set_statusbar(_("Connected to printer"))
 
     def reset(self):
         """Reset the printer
@@ -260,14 +265,16 @@ class Printcore(QtCore.QObject):
         self.send_thread.start()
 
     def _stop_sender(self):
-        if self.send_thread:
-            self.stop_send_thread = True
-            try:
-                self.send_thread.terminate()
-            except RuntimeError as e:
-                log.error(e)
-            finally:
-                self.send_thread = None
+        if not self.send_thread:
+            return
+
+        self.stop_send_thread = True
+        try:
+            self.send_thread.terminate()
+        except RuntimeError as e:
+            log.error(e)
+        finally:
+            self.send_thread = None
 
     def _checksum(self, command):
         return reduce(lambda x, y: x ^ y, map(ord, command))
@@ -280,11 +287,14 @@ class Printcore(QtCore.QObject):
         self.printer_thread.started.connect(self.printer_worker._print)
         self.printer_worker.send_command.connect(self._send,
                 QtCore.Qt.DirectConnection)
+        self.printer_worker.startcb_sig.connect(self.startcb)
+        self.printer_worker.endcb_sig.connect(self.endcb)
         self.printer_worker.finished.connect(self.finish_printer_thread)
         self.printer_worker.finished.connect(self.printer_thread.quit)
         self.printer_worker.finished.connect(self.printer_worker.deleteLater)
         self.printer_thread.finished.connect(self.printer_thread.deleteLater)
 
+        self._stop_sender()
         self.printer_thread.start()
 
     def startprint(self, gcode, startindex=0):
@@ -471,6 +481,7 @@ class Printcore(QtCore.QObject):
 class Listener(QtCore.QObject):
     send_command = QtCore.Signal(dict)
     recvcb_sig = QtCore.Signal(str)
+    set_online = QtCore.Signal()
     finished = QtCore.Signal()
 
     greetings = ['start', 'Grbl ']
@@ -548,8 +559,11 @@ class Listener(QtCore.QObject):
                    or line.startswith('ok') or "T:" in line:
                     self.parent.online = True
                     if self.parent.onlinecb:
-                        try: self.parent.onlinecb()
-                        except: traceback.print_exc()
+                        try: 
+                            # self.parent.onlinecb()
+                            self.set_online.emit()
+                        except:
+                            traceback.print_exc()
                     return
 
     def _listen_can_continue(self):
@@ -630,6 +644,8 @@ class Sender(QtCore.QObject):
 
 class Printer(QtCore.QObject):
     send_command = QtCore.Signal(tuple)
+    startcb_sig = Qtcore.Signal(bool)
+    endcb_sig = Qtcore.Signal(bool)
     finished = QtCore.Signal()
 
     def __init__(self, parent, resuming=False):
@@ -638,11 +654,12 @@ class Printer(QtCore.QObject):
         self.resuming = resuming
 
     def _print(self):
-        self.parent._stop_sender()
         try:
             if self.parent.startcb:
                 # callback for printing started
-                try: self.parent.startcb(self.resuming)
+                try: 
+                    # self.parent.startcb(self.resuming)
+                    self.startcb_sig.emit(self.resuming)
                 except:
                     self.parent.logError(_("Print start callback failed with:") +
                                   "\n" + traceback.format_exc())
@@ -655,7 +672,8 @@ class Printer(QtCore.QObject):
             if self.parent.endcb:
                 # callback for printing done
                 try:
-                    self.parent.endcb()
+                    # self.parent.endcb()
+                    self.endcb_sig.emit()
                 except:
                     self.parent.logError(_("Print end callback failed with:") +
                                   "\n" + traceback.format_exc())

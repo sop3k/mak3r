@@ -3,6 +3,7 @@
 import re
 import os
 import sys
+import time
 import subprocess
 import traceback
 
@@ -11,7 +12,6 @@ from PySide import QtCore, QtGui, QtDeclarative
 from omni3dapp.util import profile
 from omni3dapp.util.printing import host
 from omni3dapp.gui.util.gcode_text_styling import GCodeSyntaxHighlighter
-from omni3dapp.gui import sceneview
 from omni3dapp.gui.graphicsscene import SceneView
 from omni3dapp.logger import log
 
@@ -51,8 +51,13 @@ class MainWindow(QtGui.QGraphicsView):
         # self.ui.setupUi(self)
 
         # Create a scene to present and modify 3d objects
+        print "setting up qml view..."
+        start = time.time()
         self.setup_qmlview()
+        print "set: ", time.time() - start
 
+        print "getting handlers to qml objects"
+        start = time.time()
         self.print_button = self.qmlobject.findChild(
             QtCore.QObject, "print_button")
 
@@ -61,14 +66,24 @@ class MainWindow(QtGui.QGraphicsView):
 
         self.advanced_options = self.qmlobject.findChild(
             QtCore.QObject, "options_layer")
+        print "got it: ", time.time() - start
 
         # self.set_up_fields()
+        print "setting up fields"
+        start = time.time()
         self.setUpFields()
+        print "set up: ", time.time() - start
 
+        print "setting up scene"
+        start = time.time()
         self.setup_scene()
+        print "set up: ", time.time() - start
 
         # Class that enables connecting to printer
+        print "initializing printer connection"
+        start = time.time()
         self.pc = host.PrinterConnection(self)
+        print "done: ", time.time() - start
 
         # self.connect_actions()
         # self.connect_buttons()
@@ -81,7 +96,7 @@ class MainWindow(QtGui.QGraphicsView):
         # self.timer.timeout.connect(self.onTimer)
         # self.timer.start(1000)
 
-        self.lastTriedClipboard = profile.getProfileString()
+        # self.lastTriedClipboard = profile.getProfileString()
 
         # self.update_slice_mode()
 
@@ -130,6 +145,8 @@ class MainWindow(QtGui.QGraphicsView):
         self.setScene(self.sceneview)
 
     def setUpFields(self):
+        # self.advanced_options.setFields({'layer_height': '10.0',
+        #                                  'wall_thickness': '22.5'})
         for key, val in profile.settingsDictionary.iteritems():
             try:
                 elem = self.advanced_options.findChild(QtCore.QObject, key)
@@ -496,16 +513,16 @@ class MainWindow(QtGui.QGraphicsView):
     def set_statusbar(self, msg):
         self.sceneview.setInfoText(msg)
 
-    def connect_printer(self):
-        port_val = self.ui.port_type.itemText(self.ui.port_type.currentIndex())
-        baud_val = 115200
-        try:
-            baud_val = int(self.ui.port_baud_rate.itemText(
-                self.ui.port_baud_rate.currentIndex()))
-        except (TypeError, ValueError), e:
-            log.error(_("Could not parse baud rate: {0}".format(e)))
-            traceback.print_exc(file = sys.stdout)
-        return self.pc.connect(port_val, baud_val)
+    # def connect_printer(self):
+    #     port_val = self.ui.port_type.itemText(self.ui.port_type.currentIndex())
+    #     baud_val = 115200
+    #     try:
+    #         baud_val = int(self.ui.port_baud_rate.itemText(
+    #             self.ui.port_baud_rate.currentIndex()))
+    #     except (TypeError, ValueError), e:
+    #         log.error(_("Could not parse baud rate: {0}".format(e)))
+    #         traceback.print_exc(file = sys.stdout)
+    #     return self.pc.connect(port_val, baud_val)
 
     @QtCore.Slot()
     def pausePrinting(self):
@@ -523,6 +540,15 @@ class MainWindow(QtGui.QGraphicsView):
     def bedtemp(self):
         temp = self.ui.print_bed_temperature.text()
         self.pc.set_bedtemp(temp)
+
+    def heatUp(self):
+        printtemp = profile.settingsDictionary.get("print_temperature")
+        if printtemp:
+            self.pc.set_printtemp(printtemp.getValue())
+
+        bedtemp = profile.settingsDictionary.get("print_bed_temperature")
+        if bedtemp:
+            self.pc.set_bedtemp(bedtemp.getValue())
 
     def is_online(self):
         return self.pc.p.online
@@ -545,10 +571,10 @@ class MainWindow(QtGui.QGraphicsView):
         elem = QtCore.QObject.sender(self)
         try:
             axis, direction, step = re.match('move_([xyz])_(down|up)(\d{1,2})',
-                    elem.objectName()).groups()
+                elem.objectName()).groups()
         except AttributeError, e:
             log.error("Clicked button does not have an expected name: \
-                    {0}".format(e))
+                {0}".format(e))
             return
         func = getattr(self.pc, 'move_{0}'.format(axis), None)
         if not func:
@@ -569,26 +595,27 @@ class MainWindow(QtGui.QGraphicsView):
             axis = re.match('home_([xyz]+)', elem.objectName()).group(1)
         except AttributeError, e:
             log.error('Clicked button does not have an expected name: \
-                    {0}'.format(e))
+                {0}'.format(e))
             return
         return self.pc.home_position(axis)
 
     def enable_elements(self, enable=True):
-        self.ui.commandbox.setEnabled(enable)
-        self.ui.send_btn.setEnabled(enable)
-        for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
-            elem.setEnabled(enable)
+        return
+        # self.ui.commandbox.setEnabled(enable)
+        # self.ui.send_btn.setEnabled(enable)
+        # for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
+        #     elem.setEnabled(enable)
 
-        self.ui.set_bedtemp_btn.setEnabled(enable)
-        self.ui.set_printtemp_btn.setEnabled(enable)
+        # self.ui.set_bedtemp_btn.setEnabled(enable)
+        # self.ui.set_printtemp_btn.setEnabled(enable)
 
     def set_connected(self):
-        self.enable_elements(True)
+        # self.enable_elements(True)
 
-        self.ui.connect_btn.setText(_("Disconnect"))
-        self.ui.connect_btn.setToolTip(_("Disconnect from the printer"))
-        self.ui.connect_btn.clicked.disconnect(self.connect_printer)
-        self.ui.connect_btn.clicked.connect(self.pc.disconnect)
+        # self.ui.connect_btn.setText(_("Disconnect"))
+        # self.ui.connect_btn.setToolTip(_("Disconnect from the printer"))
+        # self.ui.connect_btn.clicked.disconnect(self.connect_printer)
+        # self.ui.connect_btn.clicked.connect(self.pc.disconnect)
 
         self.set_statusbar(_("Connected to printer."))
 
@@ -597,12 +624,12 @@ class MainWindow(QtGui.QGraphicsView):
             self.print_button.enable()
 
     def set_disconnected(self):
-        self.enable_elements(False)
+        # self.enable_elements(False)
 
-        self.ui.connect_btn.setText(_("Connect"))
-        self.ui.connect_btn.setToolTip(_("Connect with the printer"))
-        self.ui.connect_btn.clicked.disconnect(self.pc.disconnect)
-        self.ui.connect_btn.clicked.connect(self.connect_printer)
+        # self.ui.connect_btn.setText(_("Connect"))
+        # self.ui.connect_btn.setToolTip(_("Connect with the printer"))
+        # self.ui.connect_btn.clicked.disconnect(self.pc.disconnect)
+        # self.ui.connect_btn.clicked.connect(self.connect_printer)
 
         self.set_statusbar(_("Disconnected."))
 

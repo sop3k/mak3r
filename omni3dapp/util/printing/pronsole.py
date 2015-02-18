@@ -1138,7 +1138,8 @@ class Pronsole(cmd.Cmd):
     #  Printcore callbacks
     #  --------------------------------------------------------------
 
-    def startcb(self, resuming = False):
+    @QtCore.Slot(bool)
+    def startcb(self, resuming=False):
         self.starttime = time.time()
         if resuming:
             print _("Print resumed at: %s") % format_time(self.starttime)
@@ -1592,7 +1593,7 @@ class Pronsole(cmd.Cmd):
 
     def off(self, ignore = None):
         if self.p.online:
-            if self.p.printing: self.pause(None)
+            if self.p.printing: self.pause()
             self.log(_("; Motors off"))
             self.onecmd("M84")
             self.log(_("; Extruder off"))

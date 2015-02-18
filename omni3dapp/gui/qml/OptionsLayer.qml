@@ -85,6 +85,7 @@ Rectangle {
 
             Rectangle {
                 id: row_options
+                objectName: "row_options"
                 color: "#00000000"
                 width: parent.width
                 height: parent.height - row_tabs.height
@@ -3458,7 +3459,7 @@ Rectangle {
                             anchors.fill: parent
                             onClicked: {
                                 options_layer.hideLayer();
-                                mainwindow.saveAdvancedOptions();
+                                // mainwindow.saveAdvancedOptions();
                                 graphicsscene.onRunEngine();
                                 print_button.state = "SLICING";
                             }
@@ -3514,5 +3515,8 @@ Rectangle {
         options_layer.opacity = 0;
         graphicsscene.setLayerOff();
     }
+
+    // function setFields(fdict) {
+    // }
 }
 

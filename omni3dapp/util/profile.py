@@ -59,6 +59,7 @@ class setting(object):
         self._tooltip = ''
         self._default = unicode(default)
         self._values = []
+        self._options = None
         self._type = type
         self._category = category
         self._subcategory = subcategory
@@ -138,6 +139,12 @@ class setting(object):
         while index >= len(self._values):
             self._values.append(self._default)
         self._values[index] = unicode(value)
+
+    def setOptions(self, options):
+        self._options = options
+
+    def getOptions(self):
+        return self._options
 
     def getValueIndex(self):
         if self.isMachineSetting() or self.isProfile() or self.isAlteration():
@@ -478,6 +485,7 @@ setting('save_profile', 'False', bool, 'preference', 'hidden').setLabel(_("Save 
 setting('filament_cost_kg', '0', float, 'preference', 'hidden').setLabel(_("Cost (price/kg)"), _("Cost of your filament per kg, to estimate the cost of the final print."))
 setting('filament_cost_meter', '0', float, 'preference', 'hidden').setLabel(_("Cost (price/m)"), _("Cost of your filament per meter, to estimate the cost of the final print."))
 setting('auto_detect_sd', 'True', bool, 'preference', 'hidden').setLabel(_("Auto detect SD card drive"), _("Auto detect the SD card. You can disable this because on some systems external hard-drives or USB sticks are detected as SD card."))
+setting('auto_connect', 'True', bool, 'preference', 'hidden').setLabel(_("Auto connect printer"), _("Auto connect printer at the startup of the application"))
 setting('check_for_updates', 'True', bool, 'preference', 'hidden').setLabel(_("Check for updates"), _("Check for newer versions of Cura on startup"))
 setting('submit_slice_information', 'False', bool, 'preference', 'hidden').setLabel(_("Send usage statistics"), _("Submit anonymous usage information to improve future versions of Cura"))
 setting('youmagine_token', '', str, 'preference', 'hidden')
@@ -529,8 +537,7 @@ setting('extruder_offset_y3', '0.0', float, 'machine', 'hidden').setLabel(_("Off
 setting('steps_per_e', '103.888', float, 'machine', 'hidden').setLabel(_("E-Steps per 1mm filament"), _("Amount of steps per mm filament extrusion. If set to 0 then this value is ignored and the value in your firmware is used."))
 
 setting('port_type', '', [], 'machine', _('Printer connection')).setLabel(_("Serial port"), _("Port used to communicate with printer"))
-setting('port_baud_rate', '115200', ['2400', '9600', '19200', '38400', '57600', '115200', '250000'], 'machine', _('Printer connection')).setLabel('@', _("Select baud rate for printer communication"))
-
+setting('port_baud_rate', 250000, int, 'machine', _('Printer connection')).setLabel('@', _("Select baud rate for printer communication")).setOptions([2400, 9600, 19200, 38400, 57600, 115200, 250000])
 setting('extruder_head_size_min_x', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards X min (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 75mm for an Ultimaker if the fan is on the left side."))
 setting('extruder_head_size_min_y', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards Y min (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 18mm for an Ultimaker if the fan is on the left side."))
 setting('extruder_head_size_max_x', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards X max (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 18mm for an Ultimaker if the fan is on the left side."))

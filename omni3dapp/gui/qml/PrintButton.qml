@@ -102,10 +102,8 @@ Rectangle {
             anchors.fill: parent
             onClicked: {
                 // cancel printing
-                ret = mainwindow.turnOffPrinter()
-                if (ret) {
-                    print_button.state = "SLICED"
-                }
+                mainwindow.turnOffPrinter()
+                print_button.state = "SLICED"
             }
         }
     }
@@ -175,6 +173,10 @@ Rectangle {
 
     function setPrintParams(text) {
         print_params.text = qsTr(text);
+    }
+
+    function getState() {
+        return print_button.state;
     }
 
     function setState(state) {

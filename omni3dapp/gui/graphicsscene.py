@@ -85,10 +85,10 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.loadObjectShader()
 
-        self.printtemp_gauge = openglscene.glTempGauge(
-            parent=self, size=(400, 10), pos=(0, -2), title="Heater:")
-        self.bedtemp_gauge = openglscene.glTempGauge(
-            parent=self, size=(400, 10), pos=(0, -1), title="Bed:")
+        # self.printtemp_gauge = openglscene.glTempGauge(
+        #     parent=self, size=(400, 10), pos=(0, -2), title="Heater:")
+        # self.bedtemp_gauge = openglscene.glTempGauge(
+        #     parent=self, size=(400, 10), pos=(0, -1), title="Bed:")
 
         self.engineResultView = engineResultView.EngineResultView(self)
         self.engine = sliceEngine.Engine(self, self.updateEngineProgress,
@@ -107,6 +107,9 @@ class SceneView(QtGui.QGraphicsScene):
         self.idleTimer.start(0)
 
         self.updateProfileToControls()
+        
+        # TODO: move to place where the printer gets connected
+        # self.tempGraphView = 
 
     def add(self, ctrl):
         if hasattr(self, 'container'):
@@ -722,7 +725,9 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot()
     def onRunEngine(self):
+        print "inside onrunengine"
         self.setInfoText(_("Slicing scene..."))
+        print "set info"
         self.engine.runEngine(self.scene)
 
     @QtCore.Slot()
@@ -1314,6 +1319,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.queueRefresh()
 
     def setPrintingGcode(self, gcode):
+        print "setting printing gcode"
         self.mainwindow.pc.fgcode = gcode
 
     def loadLayers(self):
@@ -1326,25 +1332,34 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot()
     def enablePrinting(self):
-        if self.isPrintingEnabled():
+        if self.isPrintingEnabled() and \
+                self.mainwindow.print_button.getState() == "SLICED":
             self.mainwindow.print_button.enable()
             self.update()
 
     @QtCore.Slot(float)
     def setPrinttempTarget(self, temp):
-        self.printtemp_gauge.setTarget(temp)
+        pass
+        # self.printtemp_gauge.setTarget(temp)
 
     @QtCore.Slot(float)
     def setBedtempTarget(self, temp):
-        self.bedtemp_gauge.setTarget(temp)
+        pass
+        # self.bedtemp_gauge.setTarget(temp)
 
     @QtCore.Slot(float)
     def setPrinttempValue(self, temp):
-        self.printtemp_gauge.setValue(temp)
+        pass
+        # self.printtemp_gauge.setValue(temp)
 
     @QtCore.Slot(float)
     def setBedtempValue(self, temp):
-        self.bedtemp_gauge.setValue(temp)
+        pass
+        # self.bedtemp_gauge.setValue(temp)
+
+    @QtCore.Slot(float)
+    def setExtr0TempTarget(self, temp):
+        pass
 
     def onEndprint(self):
         self.mainwindow.print_button.setState("IDLE")
@@ -1385,8 +1400,7 @@ class SceneView(QtGui.QGraphicsScene):
         if len(filenames) < 1:
             return False
 
-        # TODO: uncomment
-        # self.viewSelection.setValue(0)
+        self.setViewMode('normal')
 
         profile.putPreference('lastFile', filenames[0])
 

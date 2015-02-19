@@ -231,6 +231,7 @@ class Printcore(QtCore.QObject):
         self.listener.send_command.connect(self._send)
         self.listener.recvcb_sig.connect(self.recvcb)
         self.listener.set_online.connect(self.onlinecb)
+
         self.listener.finished.connect(self.read_thread.quit)
         self.listener.finished.connect(self.listener.deleteLater)
         self.read_thread.finished.connect(self.read_thread.deleteLater)
@@ -499,7 +500,7 @@ class Listener(QtCore.QObject):
         while self._listen_can_continue():
             line = self._readline()
             if line is None:
-                break
+                continue
             if line.startswith('DEBUG_'):
                 continue
             if line.startswith(tuple(self.greetings)) or line.startswith('ok'):
@@ -509,8 +510,9 @@ class Listener(QtCore.QObject):
                 # TODO
                 try:
                     self.tempcb(line)
-                except:
-                    traceback.print_exc()
+                except Exception as e:
+                    # traceback.print_exc()
+                    log.error(e)
                     self.finished.emit()
             elif line.startswith('Error'):
                 self.logError(line)
@@ -541,7 +543,8 @@ class Listener(QtCore.QObject):
             empty_lines = 0
             while self._listen_can_continue():
                 line = self._readline()
-                if line is None: break  # connection problem
+                if line is None: 
+                    break  # connection problem
                 # workaround cases where M105 was sent before printer Serial
                 # was online an empty line means read timeout was reached,
                 # meaning no data was received thus we count those empty lines,
@@ -644,8 +647,8 @@ class Sender(QtCore.QObject):
 
 class Printer(QtCore.QObject):
     send_command = QtCore.Signal(tuple)
-    startcb_sig = Qtcore.Signal(bool)
-    endcb_sig = Qtcore.Signal(bool)
+    startcb_sig = QtCore.Signal(bool)
+    endcb_sig = QtCore.Signal(bool)
     finished = QtCore.Signal()
 
     def __init__(self, parent, resuming=False):

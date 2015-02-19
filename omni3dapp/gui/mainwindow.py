@@ -541,15 +541,6 @@ class MainWindow(QtGui.QGraphicsView):
         temp = self.ui.print_bed_temperature.text()
         self.pc.set_bedtemp(temp)
 
-    def heatUp(self):
-        printtemp = profile.settingsDictionary.get("print_temperature")
-        if printtemp:
-            self.pc.set_printtemp(printtemp.getValue())
-
-        bedtemp = profile.settingsDictionary.get("print_bed_temperature")
-        if bedtemp:
-            self.pc.set_bedtemp(bedtemp.getValue())
-
     def is_online(self):
         return self.pc.p.online
 

@@ -90,6 +90,11 @@ class SceneView(QtGui.QGraphicsScene):
         # self.bedtemp_gauge = openglscene.glTempGauge(
         #     parent=self, size=(400, 10), pos=(0, -1), title="Bed:")
 
+        # initialize temperatures targets
+        self._printtemp = None
+        self._bedtemp = None
+        self._extr0temp = None
+
         self.engineResultView = engineResultView.EngineResultView(self)
         self.engine = sliceEngine.Engine(self, self.updateEngineProgress,
                                          self.engineResultView)
@@ -1339,13 +1344,32 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot(float)
     def setPrinttempTarget(self, temp):
-        pass
+        self._printtemp = temp
         # self.printtemp_gauge.setTarget(temp)
 
     @QtCore.Slot(float)
     def setBedtempTarget(self, temp):
-        pass
+        self._bedtemp = temp
         # self.bedtemp_gauge.setTarget(temp)
+
+    @QtCore.Slot(float, float)
+    def setTempProgress(self, printtemp, bedtemp):
+        print "printtemp: ", printtemp, " bedtemp: ", bedtemp
+        if not (self._printtemp or self._bedtemp):
+            return
+
+        if printtemp:
+            printtemp /= self._printtemp
+
+        if bedtemp:
+            bedtemp /= self._bedtemp
+
+        val = min(printtemp, bedtemp)
+        if not val:
+            val = printtemp or bedtemp
+
+        print "setting temp progress to: ", val or 0
+        self.progressBar.setValue(val or 0)
 
     @QtCore.Slot(float)
     def setPrinttempValue(self, temp):
@@ -1359,6 +1383,7 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot(float)
     def setExtr0TempTarget(self, temp):
+        self._extr0temp = temp
         pass
 
     def onEndprint(self):

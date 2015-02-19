@@ -1206,6 +1206,7 @@ class Pronsole(cmd.Cmd):
         return isreport
 
     def recvcb(self, l):
+        print "inside recvb in host"
         report_type = self.recvcb_report(l)
         if report_type == REPORT_TEMP:
             self.status.update_tempreading(l)

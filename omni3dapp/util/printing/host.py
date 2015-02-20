@@ -210,7 +210,6 @@ class PrinterConnection(Pronsole):
         # except (TypeError, ValueError), e:
         #     log.error(_("Could not parse baud rate: {0}".format(e)))
         #     traceback.print_exc(file = sys.stdout)
-        print "Connecting at baudrate: ", baud_val
         return self.connect(port_val, baud_val)
 
     def connect(self, port_val, baud_val):
@@ -330,7 +329,7 @@ class PrinterConnection(Pronsole):
         else:
             msg = _("Attempted to write invalid text to console, which could be due to an invalid baudrate. Reconnecting...")
             log.debug(msg)
-            self.parent.set_statusbar(msg)
+            # self.parent.set_statusbar(msg)
             self.connect_printer()
             # self.ui.logbox.appendPlainText(msg)
 
@@ -434,6 +433,7 @@ class PrinterConnection(Pronsole):
     @QtCore.Slot(bool)
     def endcb(self):
         """Callback on print end/pause"""
+        print "inside endcb"
         Pronsole.endcb(self)
         if self.p.queueindex == 0:
             self.p.runSmallScript(self.endScript)
@@ -544,13 +544,10 @@ class PrinterConnection(Pronsole):
         """Callback when printer goes online"""
         msg = _("Printer is now online.")
         self.log(msg)
-        print "adding text"
         # self.guisignals.addtext.emit(msg)
         self.addtexttolog(msg)
-        print "setting online"
         # self.guisignals.setonline.emit()
         self.online_gui()
-        print "enable printing"
         self.parent.sceneview.enablePrinting()
         # self.guisignals.enable_printing.emit()
         # self.parent.sceneview.printtemp_gauge.setHidden(False)
@@ -576,7 +573,6 @@ class PrinterConnection(Pronsole):
             # wx.CallAfter(self.gviz.setlayer, newlayer)
 
     def update_tempdisplay(self):
-        print "inside update_tempdisplay"
         try:
             temps = parse_temperature_report(self.tempreadings)
             if "T0" in temps and temps["T0"][0]:
@@ -633,7 +629,6 @@ class PrinterConnection(Pronsole):
 
     @QtCore.Slot(str)
     def recvcb(self, l):
-        print "inside recvb in host"
         report_type = self.recvcb_report(l)
         isreport = report_type != REPORT_NONE
         if report_type == REPORT_POS:
@@ -709,12 +704,12 @@ class PrinterConnection(Pronsole):
             return
 
         # Heat up the bed and extruders
-        # self.parent.heatUp()
         self.start_heating()
 
-        # ret = self.p.startprint(self.fgcode)
-        # if not ret:
-        #     self.parent.set_statusbar(_("Printing failed to start"))
+    def startprint(self):
+        ret = self.p.startprint(self.fgcode)
+        if not ret:
+            self.parent.set_statusbar(_("Printing failed to start"))
 
     def sethotendgui(self, f):
         self.hsetpoint = f
@@ -740,6 +735,9 @@ class PrinterConnection(Pronsole):
     def is_online(self):
         return self.p.online
 
+    def set_heating_started(self):
+        self.parent.sceneview.setHeatingStarted()
+
     def start_heating(self):
         self.heating_thread = QtCore.QThread(self.parent)
         self.heater = Heater(self.p)
@@ -755,26 +753,24 @@ class PrinterConnection(Pronsole):
         self.parent.set_statusbar(_("Heating up..."))
         self.heating_thread.start()
 
+        self.set_heating_started()
+
 
 class Heater(QtCore.QObject):
     addtext = QtCore.Signal(str)
     finished = QtCore.Signal()
 
     def __init__(self, printcore):
-        print "initializing heater"
         super(Heater, self).__init__()
         self.p = printcore
 
     def heat_up(self):
-        print "heating up"
         printtemp = profile.settingsDictionary.get("print_temperature")
         if printtemp:
-            print "setting print temperature to ", printtemp.getValue()
             self.set_printtemp(printtemp.getValue())
 
         bedtemp = profile.settingsDictionary.get("print_bed_temperature")
         if bedtemp:
-            print "setting bed temperature to ", bedtemp.getValue()
             self.set_bedtemp(bedtemp.getValue())
 
     def set_printtemp(self, l):

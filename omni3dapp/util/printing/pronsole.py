@@ -1164,6 +1164,7 @@ class Pronsole(cmd.Cmd):
             traceback.print_exc(file = sys.stdout)
 
     def endcb(self):
+        print "pronsole's endcb"
         try:
             powerset_print_stop()
         except:

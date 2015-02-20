@@ -80,8 +80,8 @@ Item {
                 height: custom_height
                 hoverEnabled: true
                 onClicked: {
-                    graphicsscene.showSaveModel();
-                    // graphicsscene.showSaveGCode();
+                    // graphicsscene.showSaveModel();
+                    graphicsscene.showSaveGCode();
                 }
             }
         }

@@ -94,6 +94,7 @@ class SceneView(QtGui.QGraphicsScene):
         self._printtemp = None
         self._bedtemp = None
         self._extr0temp = None
+        self._heating = False
 
         self.engineResultView = engineResultView.EngineResultView(self)
         self.engine = sliceEngine.Engine(self, self.updateEngineProgress,
@@ -1352,10 +1353,19 @@ class SceneView(QtGui.QGraphicsScene):
         self._bedtemp = temp
         # self.bedtemp_gauge.setTarget(temp)
 
+    def setHeatingFinished(self):
+        print "set heating finished"
+        self._heating = False
+        self.progressBar.setValue(0)
+        self.mainwindow.pc.startprint()
+
+    def setHeatingStarted(self):
+        print "set heating started"
+        self._heating = True
+
     @QtCore.Slot(float, float)
     def setTempProgress(self, printtemp, bedtemp):
-        print "printtemp: ", printtemp, " bedtemp: ", bedtemp
-        if not (self._printtemp or self._bedtemp):
+        if not (self._heating and (self._printtemp or self._bedtemp)):
             return
 
         if printtemp:
@@ -1368,8 +1378,10 @@ class SceneView(QtGui.QGraphicsScene):
         if not val:
             val = printtemp or bedtemp
 
-        print "setting temp progress to: ", val or 0
         self.progressBar.setValue(val or 0)
+
+        if val >= 1.0:
+            self.setHeatingFinished()
 
     @QtCore.Slot(float)
     def setPrinttempValue(self, temp):

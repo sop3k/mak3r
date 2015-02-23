@@ -133,7 +133,11 @@ class EngineResult(object):
     def isFinished(self):
         return self._finished
 
-    def getGCodeLayers(self, engine_results_view):
+    @QtCore.Slot()
+    def startPrinting(self):
+        self._parent.startPrinting(self.getGCode())
+
+    def generateGCodeLayers(self, engine_results_view, printing=False):
         if not self._finished:
             return None
 
@@ -145,6 +149,9 @@ class EngineResult(object):
         self._gcodeInterpreter.set_progress_sig.connect(engine_results_view._gcodeLoadCallback)
 
         self._gcodeInterpreter.finished.connect(lambda: self._parent.setProgressBar(0.0))
+
+        if printing:
+            self._gcodeInterpreter.finished.connect(self.startPrinting)
 
         self._gcodeInterpreter.finished.connect(self.layers_loader_thread.quit)
         self._gcodeInterpreter.finished.connect(self._gcodeInterpreter.deleteLater)

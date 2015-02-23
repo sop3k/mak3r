@@ -324,8 +324,10 @@ class PrinterConnection(Pronsole):
     @QtCore.Slot(str)
     def addtexttolog(self, text):
         if self.is_printable(text):
-            self.parent.set_statusbar(text)
+            # self.parent.set_statusbar(text)
             # self.ui.logbox.appendPlainText(text)
+            # TODO: display messages from printer somewhere...
+            pass
         else:
             msg = _("Attempted to write invalid text to console, which could be due to an invalid baudrate. Reconnecting...")
             log.debug(msg)

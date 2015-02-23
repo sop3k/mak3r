@@ -3459,7 +3459,7 @@ Rectangle {
                             anchors.fill: parent
                             onClicked: {
                                 options_layer.hideLayer();
-                                // mainwindow.saveAdvancedOptions();
+                                mainwindow.saveAdvancedOptions();
                                 graphicsscene.onRunEngine();
                                 print_button.state = "SLICING";
                             }

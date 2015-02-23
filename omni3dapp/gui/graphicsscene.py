@@ -731,9 +731,7 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot()
     def onRunEngine(self):
-        print "inside onrunengine"
         self.setInfoText(_("Slicing scene..."))
-        print "set info"
         self.engine.runEngine(self.scene)
 
     @QtCore.Slot()
@@ -1325,13 +1323,12 @@ class SceneView(QtGui.QGraphicsScene):
         self.queueRefresh()
 
     def setPrintingGcode(self, gcode):
-        print "setting printing gcode"
         self.mainwindow.pc.fgcode = gcode
 
-    def loadLayers(self):
+    def loadLayers(self, printing=False):
         if self.engine._result._gcodeInterpreter.layerList:
             return
-        self.engine._result.getGCodeLayers(self.engineResultView)
+        self.engine._result.generateGCodeLayers(self.engineResultView, printing)
 
     def isPrintingEnabled(self):
         return self.slicing_finished and self.mainwindow.is_online()
@@ -1354,13 +1351,12 @@ class SceneView(QtGui.QGraphicsScene):
         # self.bedtemp_gauge.setTarget(temp)
 
     def setHeatingFinished(self):
-        print "set heating finished"
         self._heating = False
         self.progressBar.setValue(0)
+        self.setInfoText(_("Printing..."))
         self.mainwindow.pc.startprint()
 
     def setHeatingStarted(self):
-        print "set heating started"
         self._heating = True
 
     @QtCore.Slot(float, float)
@@ -1403,7 +1399,10 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot()
     def onPrintButton(self):
-        self.mainwindow.pc.printfile(self.engine._result.getGCode())
+        self.loadLayers(printing=True)
+
+    def startPrinting(self, gcode):
+        self.mainwindow.pc.printfile(gcode)
 
     @QtCore.Slot()
     def showLoadModel(self):

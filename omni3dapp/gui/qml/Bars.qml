@@ -1002,7 +1002,7 @@ Item {
 
                 Image {
                     id: locked
-                    source: "resources/icons/link-intact-2x.png"
+                    source: "resources/icons/lock_closed.png"
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.verticalCenter: parent.verticalCenter
                     property bool isCurrentLock: true
@@ -1011,7 +1011,7 @@ Item {
 
                 Image {
                     id: unlocked
-                    source: "resources/icons/link-broken-2x.png"
+                    source: "resources/icons/lock_opened.png"
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.verticalCenter: parent.verticalCenter
                     property bool isCurrentLock: false
@@ -1037,6 +1037,8 @@ Item {
             color: "#00000000"
             opacity: 0
 
+            property Rectangle currentView: normal_view
+
             Rectangle {
                 id: option_name_view_modes
                 x: 0
@@ -1060,28 +1062,26 @@ Item {
 
             Rectangle {
                 id: normal_view
-                width: 75
-                height: 20
-                color: "#333333"
+                width: custom_height
+                height: custom_height
+                color: (view_modes_bar.currentView == normal_view || mouse_area_normal_view.containsMouse) ? "#5f646c" : "#00000000"
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
                 anchors.leftMargin: option_name_view_modes.width + options_bar.left_margin
 
-                Text {
-                    id: text_normal_view
-                    color: "#d1d1d2"
-                    text: qsTr("Normal")
-                    verticalAlignment: Text.AlignVCenter
-                    horizontalAlignment: Text.AlignHCenter
-                    anchors.fill: parent
-                    font.pixelSize: 11
-                    font.family: lato_font.name
+                Image {
+                    id: image_normal_view
+                    source: "resources/icons/normal.png"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.verticalCenter: parent.verticalCenter
                 }
 
                 MouseArea {
                     id: mouse_area_normal_view
                     anchors.fill: parent
+                    hoverEnabled: true
                     onClicked: {
+                        view_modes_bar.currentView = normal_view;
                         graphicsscene.setViewMode('normal');
                     }
                 }
@@ -1089,28 +1089,26 @@ Item {
 
             Rectangle {
                 id: overhang_view
-                width: 75
-                height: 20
-                color: "#333333"
+                width: custom_height
+                height: custom_height
+                color: (view_modes_bar.currentView == overhang_view || mouse_area_overhang_view.containsMouse) ? "#5f646c" : "#00000000"
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
                 anchors.leftMargin: normal_view.anchors.leftMargin + normal_view.width + 30
 
-                Text {
-                    id: text_overhang_view
-                    color: "#d1d1d2"
-                    text: qsTr("Overhang")
-                    verticalAlignment: Text.AlignVCenter
-                    horizontalAlignment: Text.AlignHCenter
-                    anchors.fill: parent
-                    font.pixelSize: 11
-                    font.family: lato_font.name
+                Image {
+                    id: image_overhang_view
+                    source: "resources/icons/overhang.png"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.verticalCenter: parent.verticalCenter
                 }
 
                 MouseArea {
                     id: mouse_area_overhang_view
                     anchors.fill: parent
+                    hoverEnabled: true
                     onClicked: {
+                        view_modes_bar.currentView = overhang_view;
                         graphicsscene.setViewMode('overhang');
                     }
                 }
@@ -1118,28 +1116,26 @@ Item {
 
             Rectangle {
                 id: xray_view
-                width: 75
-                height: 20
-                color: "#333333"
+                width: custom_height
+                height: custom_height
+                color: (view_modes_bar.currentView == xray_view || mouse_area_xray_view.containsMouse) ? "#5f646c" : "#00000000"
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
                 anchors.leftMargin: overhang_view.anchors.leftMargin + overhang_view.width + 30
 
-                Text {
-                    id: text_xray_view
-                    color: "#d1d1d2"
-                    text: qsTr("Xray")
-                    verticalAlignment: Text.AlignVCenter
-                    horizontalAlignment: Text.AlignHCenter
-                    anchors.fill: parent
-                    font.pixelSize: 11
-                    font.family: lato_font.name
+                Image {
+                    id: image_xray_view
+                    source: "resources/icons/xray.png"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.verticalCenter: parent.verticalCenter
                 }
 
                 MouseArea {
                     id: mouse_area_xray_view
                     anchors.fill: parent
+                    hoverEnabled: true
                     onClicked: {
+                        view_modes_bar.currentView = xray_view;
                         graphicsscene.setViewMode('xray');
                     }
                 }
@@ -1147,28 +1143,26 @@ Item {
 
             Rectangle {
                 id: transparent_view
-                width: 75
-                height: 20
-                color: "#333333"
+                width: custom_height
+                height: custom_height
+                color: (view_modes_bar.currentView == transparent_view || mouse_area_transparent_view.containsMouse) ? "#5f646c" : "#00000000"
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
                 anchors.leftMargin: xray_view.anchors.leftMargin + xray_view.width + 30
 
-                Text {
-                    id: text_transparent_view
-                    color: "#d1d1d2"
-                    text: qsTr("Transparent")
-                    verticalAlignment: Text.AlignVCenter
-                    horizontalAlignment: Text.AlignHCenter
-                    anchors.fill: parent
-                    font.pixelSize: 11
-                    font.family: lato_font.name
+                Image {
+                    id: image_transparent_view
+                    source: "resources/icons/transparent.png"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.verticalCenter: parent.verticalCenter
                 }
 
                 MouseArea {
                     id: mouse_area_transparent_view
                     anchors.fill: parent
+                    hoverEnabled: true
                     onClicked: {
+                        view_modes_bar.currentView = transparent_view;
                         graphicsscene.setViewMode('transparent');
                     }
                 }
@@ -1176,30 +1170,28 @@ Item {
 
             Rectangle {
                 id: layers_view
-                width: 75
-                height: 20
-                color: "#333333"
+                width: custom_height
+                height: custom_height
+                color: (view_modes_bar.currentView == layers_view || mouse_area_layers_view.containsMouse) ? "#5f646c" : "#00000000"
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
                 anchors.leftMargin: transparent_view.anchors.leftMargin + transparent_view.width + 30
                 opacity: 0
 
-                Text {
-                    id: text_layers_view
-                    color: "#d1d1d2"
-                    text: qsTr("Layers")
-                    verticalAlignment: Text.AlignVCenter
-                    horizontalAlignment: Text.AlignHCenter
-                    anchors.fill: parent
-                    font.pixelSize: 11
-                    font.family: lato_font.name
+                Image {
+                    id: image_layers_view
+                    source: "resources/icons/layers.png"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.verticalCenter: parent.verticalCenter
                 }
 
                 MouseArea {
                     id: mouse_area_layers_view
                     anchors.fill: parent
                     enabled: false
+                    hoverEnabled: true
                     onClicked: {
+                        view_modes_bar.currentView = layers_view;
                         graphicsscene.setViewMode('gcode');
                     }
                 }
@@ -1217,6 +1209,27 @@ Item {
         anchors.top: parent.top
         anchors.topMargin: custom_height 
     }
+
+    transitions: [
+        Transition {
+            to: "*"
+            /*
+            NumberAnimation {
+                target: options_bar
+                property: "anchors.topMargin"
+                duration: 350
+                easing.type: Easing.InOutQuad
+            }
+            */
+            NumberAnimation {
+                target: options_bar
+                property: "opacity"
+                duration: 400
+                easing.type: Easing.InOutQuad
+            }
+        }
+    ]
+
 
     function enableObjectTools(enabled) {
         rotate.setOptionEnabled(enabled)

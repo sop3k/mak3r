@@ -721,7 +721,6 @@ class Printer(QtCore.QObject):
             if self.parent.preprintsendcb:
                 if self.parent.queueindex + 1 < len(self.parent.mainqueue):
                     (next_layer, next_line) = self.parent.mainqueue.idxs(self.parent.queueindex + 1)
-                            next_line)
                     next_gline = self.parent.mainqueue.all_layers[next_layer][next_line]
                 else:
                     next_gline = None

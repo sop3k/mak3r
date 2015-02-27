@@ -3516,7 +3516,100 @@ Rectangle {
         graphicsscene.setLayerOff();
     }
 
-    // function setFields(fdict) {
-    // }
+    function setFields(fdict) {
+        text_input_layer_height.text = qsTr(fdict['layer_height']);
+        text_input_wall_thickness.text = qsTr(fdict['wall_thickness']);
+        text_input_solid_layer_thickness.text = qsTr(fdict['solid_layer_thickness']);
+        text_input_bottom_thickness.text = qsTr(fdict['bottom_thickness']);
+        text_input_layer0_width_factor.text = qsTr(fdict['layer0_width_factor']);
+        text_input_print_temperature.text = qsTr(fdict['print_temperature']);
+        text_input_print_temperature_2.text = qsTr(fdict['print_temperature2']);
+        text_input_print_bed_temperature.text = qsTr(fdict['print_bed_temperature']);
+        text_input_cool_min_layer_time.text = qsTr(fdict['cool_min_layer_time']);
+        text_input_fan_full_height.text = qsTr(fdict['fan_full_height']);
+        text_input_fan_speed.text = qsTr(fdict['fan_speed']);
+        text_input_fan_speed_max.text = qsTr(fdict['fan_speed_max']);
+        text_input_cool_min_feedrate.text = qsTr(fdict['cool_min_feedrate']);
+        text_input_object_sink.text = qsTr(fdict['object_sink']);
+        text_input_filament_flow.text = qsTr(fdict['filament_flow']);
+        text_input_retraction_speed.text = qsTr(fdict['retraction_speed']);
+        text_input_retraction_min_travel.text = qsTr(fdict['retraction_min_travel']);
+        text_input_retraction_dual_amount.text = qsTr(fdict['retraction_dual_amount']);
+        text_input_fill_density.text = qsTr(fdict['fill_density']);
+        text_input_raft_margin.text = qsTr(fdict['raft_margin']);
+        text_input_raft_line_spacing.text = qsTr(fdict['raft_line_spacing']);
+        text_input_raft_base_thickness.text = qsTr(fdict['raft_base_thickness']);
+        text_input_raft_interface_thickness.text = qsTr(fdict['raft_interface_thickness']);
+        text_input_raft_interface_linewidth.text = qsTr(fdict['raft_interface_linewidth']);
+        text_input_raft_airgap.text = qsTr(fdict['raft_airgap']);
+        text_input_skirt_line_count.text = qsTr(fdict['skirt_line_count']);
+        text_input_fill_overlap.text = qsTr(fdict['fill_overlap']);
+        text_input_skirt_minimal_length.text = qsTr(fdict['skirt_minimal_length']);
+        text_input_support_angle.text = qsTr(fdict['support_angle']);
+        text_input_support_fill_rate.text = qsTr(fdict['support_fill_rate']);
+        text_input_support_xy_distance.text = qsTr(fdict['support_xy_distance']);
+        text_input_support_z_distance.text = qsTr(fdict['support_z_distance']);
+
+        // ticks
+        cool_head_lift.isActive = fdict['cool_head_lift'];
+        simple_mode.isActive = fdict['simple_mode'];
+        spiralize.isActive = fdict['spiralize'];
+        fan_enabled.isActive = fdict['fan_enabled'];
+        retraction_enable.isActive = fdict['retraction_enable'];
+        solid_bottom.isActive = fdict['solid_bottom'];
+        solid_top.isActive = fdict['solid_top'];
+        fix_horrible_union_all_type_a.isActive = fdict['fix_horrible_union_all_type_a'];
+        fix_horrible_union_all_type_b.isActive = fdict['fix_horrible_union_all_type_b'];
+        fix_horrible_use_open_bits.isActive = fdict['fix_horrible_use_open_bits'];
+        fix_horrible_extensive_stitching.isActive = fdict['fix_horrible_extensive_stitching'];
+    }
+
+    function getFields() {
+        return {
+            'layer_height': text_input_layer_height.text,
+            'wall_thickness': text_input_wall_thickness.text,
+            'solid_layer_thickness': text_input_solid_layer_thickness.text,
+            'bottom_thickness': text_input_bottom_thickness.text,
+            'layer0_width_factor': text_input_layer0_width_factor.text,
+            'print_temperature': text_input_print_temperature.text,
+            'print_temperature2': text_input_print_temperature_2.text,
+            'print_bed_temperature': text_input_print_bed_temperature.text,
+            'cool_min_layer_time': text_input_cool_min_layer_time.text,
+            'fan_full_height': text_input_fan_full_height.text,
+            'fan_speed': text_input_fan_speed.text,
+            'fan_speed_max': text_input_fan_speed_max.text,
+            'cool_min_feedrate': text_input_cool_min_feedrate.text,
+            'object_sink': text_input_object_sink.text,
+            'filament_flow': text_input_filament_flow.text,
+            'retraction_speed': text_input_retraction_speed.text,
+            'retraction_min_travel': text_input_retraction_min_travel.text,
+            'retraction_dual_amount': text_input_retraction_dual_amount.text,
+            'fill_density': text_input_fill_density.text,
+            'raft_margin': text_input_raft_margin.text,
+            'raft_line_spacing': text_input_raft_line_spacing.text,
+            'raft_base_thickness': text_input_raft_base_thickness.text,
+            'raft_interface_thickness': text_input_raft_interface_thickness.text,
+            'raft_interface_linewidth': text_input_raft_interface_linewidth.text,
+            'raft_airgap': text_input_raft_airgap.text,
+            'skirt_line_count': text_input_skirt_line_count.text,
+            'fill_overlap': text_input_fill_overlap.text,
+            'skirt_minimal_length': text_input_skirt_minimal_length.text,
+            'support_angle': text_input_support_angle.text,
+            'support_fill_rate': text_input_support_fill_rate.text,
+            'support_xy_distance': text_input_support_xy_distance.text,
+            'support_z_distance': text_input_support_z_distance.text,
+            'cool_head_lift': cool_head_lift.isActive,
+            'simple_mode': simple_mode.isActive,
+            'spiralize': spiralize.isActive,
+            'fan_enabled': fan_enabled.isActive,
+            'retraction_enable': retraction_enable.isActive,
+            'solid_bottom': solid_bottom.isActive,
+            'solid_top': solid_top.isActive,
+            'fix_horrible_union_all_type_a': fix_horrible_union_all_type_a.isActive,
+            'fix_horrible_union_all_type_b': fix_horrible_union_all_type_b.isActive,
+            'fix_horrible_use_open_bits': fix_horrible_use_open_bits.isActive,
+            'fix_horrible_extensive_stitching': fix_horrible_extensive_stitching.isActive,
+            }
+    }
 }
 

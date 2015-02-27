@@ -54,10 +54,7 @@ class MainWindow(QtGui.QGraphicsView):
         print "setting up qml view..."
         start = time.time()
         self.setup_qmlview()
-        print "set: ", time.time() - start
 
-        print "getting handlers to qml objects"
-        start = time.time()
         self.print_button = self.qmlobject.findChild(
             QtCore.QObject, "print_button")
 
@@ -68,22 +65,12 @@ class MainWindow(QtGui.QGraphicsView):
             QtCore.QObject, "options_layer")
         print "got it: ", time.time() - start
 
-        # self.set_up_fields()
-        print "setting up fields"
-        start = time.time()
         self.setUpFields()
-        print "set up: ", time.time() - start
 
-        print "setting up scene"
-        start = time.time()
         self.setup_scene()
-        print "set up: ", time.time() - start
 
         # Class that enables connecting to printer
-        print "initializing printer connection"
-        start = time.time()
         self.pc = host.PrinterConnection(self)
-        print "done: ", time.time() - start
 
         # self.connect_actions()
         # self.connect_buttons()
@@ -145,35 +132,23 @@ class MainWindow(QtGui.QGraphicsView):
         self.setScene(self.sceneview)
 
     def setUpFields(self):
-        # self.advanced_options.setFields({'layer_height': '10.0',
-        #                                  'wall_thickness': '22.5'})
+        field_vals = {}
         for key, val in profile.settingsDictionary.iteritems():
-            try:
-                elem = self.advanced_options.findChild(QtCore.QObject, key)
-                val = val.getValue()
-                if isinstance(val, bool):
-                    elem.setProperty('isActive', val)
-                else:
-                    elem.setProperty('text', str(val))
+            field_vals[key] = val.getValue()
 
-                # TODO: set tooltips
-                # elem.setToolTip(val.getTooltip())
-            except Exception as e:
-                # log.error('Could not set value to field {0}: {1}'.format(key, e))
-                # Pass as there are more settings in the profile file than we
-                # really use
-                pass
+        self.advanced_options.setFields(field_vals)
 
     @QtCore.Slot()
     def saveAdvancedOptions(self):
         self.sceneview.setInfoText(_("Saving options..."))
-        for key, val in profile.settingsDictionary.iteritems():
+
+        field_vals = self.advanced_options.getFields()
+        for key, val in field_vals.iteritems():
             try:
-                elem = self.advanced_options.findChild(QtCore.QObject, key)
-                if val.getType() == bool:
-                    self.onBoolSettingChange(key, elem.property('text'))
+                if isinstance(val, bool):
+                    self.onBoolSettingChange(key, val)
                 else:
-                    self.onFloatSettingChange(key, elem.property('text'))
+                    self.onFloatSettingChange(key, val)
             except Exception as e:
                 # Pass as there are more settings in the profile file than we
                 # really use

@@ -33,7 +33,8 @@ Item {
             y: 0
             width: custom_height
             height: custom_height
-            color: mouse_area_load.containsMouse ? "#5f646c" : "#00000000"
+            property bool isCurrentItem: false
+            color: isCurrentItem ? orange_bar.color : (mouse_area_load.containsMouse ? "#5f646c" : "#00000000")
             anchors.left: parent.left
             anchors.leftMargin: 1.5*logo.width
 
@@ -51,7 +52,10 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 onClicked: {
+                    load.isCurrentItem = !load.isCurrentItem;
+                    setActive(load, null);
                     graphicsscene.showLoadModel();
+                    unsetActive();
                 }
             }
         }
@@ -61,7 +65,8 @@ Item {
             y: 0
             width: custom_height
             height: custom_height
-            color: mouse_area_save.containsMouse ? "#5f646c" : "#00000000"
+            property bool isCurrentItem: false
+            color: isCurrentItem ? orange_bar.color : (mouse_area_save.containsMouse ? "#5f646c" : "#00000000")
             anchors.leftMargin: load.anchors.leftMargin + custom_height
             anchors.left: parent.left
 
@@ -80,8 +85,8 @@ Item {
                 height: custom_height
                 hoverEnabled: true
                 onClicked: {
-                    // graphicsscene.showSaveModel();
-                    graphicsscene.showSaveGCode();
+                    save.isCurrentItem = !save.isCurrentItem;
+                    setActive(save, save_bar);
                 }
             }
         }
@@ -91,7 +96,8 @@ Item {
             y: 0
             width: custom_height
             height: custom_height
-            color: mouse_area_reload.containsMouse ? "#5f646c" : "#00000000"
+            property bool isCurrentItem: false
+            color: isCurrentItem ? orange_bar.color : (mouse_area_reload.containsMouse ? "#5f646c" : "#00000000")
             anchors.leftMargin: save.anchors.leftMargin + custom_height
             anchors.left: parent.left
 
@@ -110,6 +116,8 @@ Item {
                 height: custom_height
                 hoverEnabled: true
                 onClicked: {
+                    reload.isCurrentItem = !reload.isCurrentItem;
+                    setActive(reload, null);
                     graphicsscene.reloadScene();
                 }
             }
@@ -120,7 +128,8 @@ Item {
             y: 0
             width: custom_height
             height: custom_height
-            color: mouse_area_deleteall.containsMouse ? "#5f646c" : "#00000000"
+            property bool isCurrentItem: false
+            color: isCurrentItem ? orange_bar.color : (mouse_area_deleteall.containsMouse ? "#5f646c" : "#00000000")
             Image {
                 id: image_deleteall
                 x: 0
@@ -136,7 +145,10 @@ Item {
                 height: custom_height
                 hoverEnabled: true
                 onClicked: {
+                    deleteall.isCurrentItem = !deleteall.isCurrentItem;
+                    setActive(deleteall, null);
                     graphicsscene.onDeleteAll();
+                    unsetActive();
                 }
             }
             anchors.leftMargin: reload.anchors.leftMargin + custom_height
@@ -180,7 +192,7 @@ Item {
                 enabled: false
                 onClicked: {
                     rotate.isCurrentItem = !rotate.isCurrentItem;
-                    set_active(rotate, rotate_bar);
+                    setActive(rotate, rotate_bar);
                     graphicsscene.selectRotateTool();
                 }
             }
@@ -222,9 +234,10 @@ Item {
                 hoverEnabled: true
                 enabled: false
                 onClicked: {
+                    lay_flat.isCurrentItem = !lay_flat.isCurrentItem;
+                    setActive(lay_flat, null);
                     graphicsscene.onLayFlat();
                     lay_flat.isCurrentItem = !lay_flat.isCurrentItem;
-                    set_active(lay_flat, null);
                 }
             }
             anchors.leftMargin: rotate.anchors.leftMargin + custom_height
@@ -266,7 +279,7 @@ Item {
                 enabled: false
                 onClicked: {
                     scale.isCurrentItem = !scale.isCurrentItem;
-                    set_active(scale, scale_bar);
+                    setActive(scale, scale_bar);
                     graphicsscene.selectScaleTool();
                 }
             }
@@ -308,9 +321,10 @@ Item {
                 hoverEnabled: true
                 enabled: false
                 onClicked: {
+                    to_max.isCurrentItem = !to_max.isCurrentItem;
+                    setActive(to_max, null);
                     graphicsscene.onScaleMax();
                     to_max.isCurrentItem = !to_max.isCurrentItem;
-                    set_active(to_max, null);
                 }
             }
             anchors.leftMargin: scale.anchors.leftMargin + custom_height
@@ -363,9 +377,10 @@ Item {
                 hoverEnabled: true
                 enabled: false
                 onClicked: {
+                    mirror_x.isCurrentItem = !mirror_x.isCurrentItem;
+                    setActive(mirror_x, null);
                     graphicsscene.onMirror(0);
                     mirror_x.isCurrentItem = !mirror_x.isCurrentItem;
-                    set_active(mirror_x, null);
                 }
             }
             anchors.leftMargin: separator2.anchors.leftMargin + separator2.width + 5 
@@ -406,9 +421,10 @@ Item {
                 hoverEnabled: true
                 enabled: false
                 onClicked: {
+                    mirror_y.isCurrentItem = !mirror_y.isCurrentItem;
+                    setActive(mirror_y, null);
                     graphicsscene.onMirror(1);
                     mirror_y.isCurrentItem = !mirror_y.isCurrentItem;
-                    set_active(mirror_y, null);
                 }
             }
             anchors.leftMargin: mirror_x.anchors.leftMargin + custom_height
@@ -449,9 +465,10 @@ Item {
                 hoverEnabled: true
                 enabled: false
                 onClicked: {
+                    mirror_z.isCurrentItem = !mirror_z.isCurrentItem;
+                    setActive(mirror_z, null);
                     graphicsscene.onMirror(2);
                     mirror_z.isCurrentItem = !mirror_z.isCurrentItem;
-                    set_active(mirror_z, null);
                 }
             }
             anchors.leftMargin: mirror_y.anchors.leftMargin + custom_height
@@ -488,6 +505,7 @@ Item {
             height: custom_height
             property bool isCurrentItem: false
             color: isCurrentItem ? orange_bar.color : (mouse_area_view_modes.containsMouse ? "#5f646c" : "#00000000")
+
             Image {
                 id: image_view_modes
                 x: 0
@@ -506,7 +524,7 @@ Item {
                 enabled: false
                 onClicked: {
                     view_modes.isCurrentItem = !view_modes.isCurrentItem;
-                    set_active(view_modes, view_modes_bar);
+                    setActive(view_modes, view_modes_bar);
                 }
             }
             anchors.leftMargin: separator3.anchors.leftMargin + separator3.width + 5 
@@ -548,6 +566,87 @@ Item {
         opacity: 0
         property int left_margin: 50
         property TextInput current_input: null
+        
+        Rectangle {
+            id: save_bar
+            anchors.fill: parent
+            color: "#00000000"
+            opacity: 0
+
+            Rectangle {
+                id: option_name_save
+                x: 0
+                y: 0
+                width: 85
+                height: options_bar.height
+                color: "#51545b"
+
+                Text {
+                    id: option_text_save
+                    color: "#d1d1d2"
+                    text: qsTr("Save")
+                    font.bold: true
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    anchors.fill: parent
+                    font.pixelSize: 11
+                    font.family: lato_font.name
+                }
+            }
+
+            Rectangle {
+                id: save_scene
+                width: custom_height
+                height: custom_height
+                color: mouse_area_save_scene.containsMouse ? "#5f646c" : "#00000000"
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: option_name_save.width + options_bar.left_margin
+
+                Image {
+                    id: image_save_scene
+                    source: "resources/icons/save_scene.png"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                MouseArea {
+                    id: mouse_area_save_scene
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: {
+                        graphicsscene.showSaveModel();
+                    }
+                }
+            }
+
+            Rectangle {
+                id: save_gcode
+                width: custom_height
+                height: custom_height
+                color: mouse_area_save_gcode.containsMouse ? "#5f646c" : "#00000000"
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: save_scene.anchors.leftMargin + save_scene.width + 30
+
+                Image {
+                    id: image_save_gcode
+                    source: "resources/icons/save_g.png"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                MouseArea {
+                    id: mouse_area_save_gcode
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: {
+                        graphicsscene.showSaveGCode();
+                    }
+                }
+            }
+
+        }
 
         Rectangle {
             id: rotate_bar
@@ -1258,7 +1357,7 @@ Item {
             }
     }
 
-    function set_active(rect_tool, rect_bar) {
+    function setActive(rect_tool, rect_bar) {
         graphicsscene.selectMirrorTool();
         if (rect_tool == bars.last_active_tool) {
             if (bars.last_active_bar) {
@@ -1286,6 +1385,14 @@ Item {
             }
         }
 
+    }
+
+    function unsetActive() {
+        if (bars.last_active_tool) {
+            bars.last_active_tool.isCurrentItem = false;
+        }
+        bars.last_active_tool = null;
+        bars.last_active_bar = null;
     }
 
     function setScales(scaleX, scaleY, scaleZ, sizeX, sizeY, sizeZ) {

@@ -408,6 +408,9 @@ class SceneView(QtGui.QGraphicsScene):
                 GL_STENCIL_BUFFER_BIT)
 
     def renderObject(self, obj, brightness=0, addSink=True):
+        if not obj:
+            return
+
         glPushMatrix()
         if addSink:
             glTranslate(obj.getPosition()[0],
@@ -728,6 +731,8 @@ class SceneView(QtGui.QGraphicsScene):
         self.onDeleteAll()
 
         self.startFilesLoader(fileList)
+
+        self.bars.unsetActive()
 
     @QtCore.Slot()
     def onRunEngine(self):

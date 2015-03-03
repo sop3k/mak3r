@@ -254,6 +254,8 @@ class SceneView(QtGui.QGraphicsScene):
         self.updateProfileToControls()
         self.sceneUpdated()
 
+        self.bars.unsetActive()
+
     @QtCore.Slot(int)
     def onMirror(self, axis):
         if self.selectedObj is None:

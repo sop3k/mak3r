@@ -19,7 +19,7 @@ Rectangle {
         y: 0
         width: parent.width
         height: 34
-        color: "#3f4245"
+        color: "#00000000"
 
         Text {
             id: title
@@ -81,23 +81,85 @@ Rectangle {
                 color: "#00000000"
                 width: parent.width
                 height: 30
+                anchors.left: parent.left
+                anchors.leftMargin: row_options.padding
+
+                Rectangle {
+                    id: tab_options
+                    x: 0
+                    y: 0
+                    width: 133
+                    height: parent.height
+                    color: active ? "#5d6169" : "#3f4245"
+
+                    property bool active: true
+
+                    Text {
+                        id: text2
+                        color: "#ffffff"
+                        text: qsTr("Options")
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: 13
+                        anchors.fill: parent
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            tab_options.active = true;
+                            tab_gcodes.active = false;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    id: tab_gcodes
+                    width: 133
+                    height: parent.height
+                    color: active ? "#5d6169" : "#3f4245"
+                    anchors.left: tab_options.right
+                    anchors.leftMargin: 0
+
+                    property bool active: false
+
+                    Text {
+                        id: text3
+                        color: "#ffffff"
+                        text: qsTr("Start/End gcode")
+                        height: parent.height
+                        font.pixelSize: 13
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        anchors.fill: parent
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            tab_gcodes.active = true;
+                            tab_options.active = false;
+                        }
+                    }
+                }
             }
 
             Rectangle {
                 id: row_options
                 objectName: "row_options"
-                color: "#00000000"
+                color: "#5d6169"
                 width: parent.width
                 height: parent.height - row_tabs.height
                 anchors.top: row_tabs.bottom
                 anchors.topMargin: 0
+                anchors.left: parent.left
+                anchors.leftMargin: row_options.padding/2
                 anchors.right: parent.right
-                anchors.rightMargin: 0
+                anchors.rightMargin: row_options.padding/2
+                opacity: tab_options.active ? 1 : 0
 
                 property int padding: 50
-
                 property TextInput current_input: null
-
 
                 Rectangle {
                     id: column_left
@@ -106,6 +168,8 @@ Rectangle {
                     height: parent.height
                     anchors.left: parent.left
                     anchors.leftMargin: row_options.padding
+                    anchors.top: parent.top
+                    anchors.topMargin: 10
 
                     Text {
                         id: title_layer
@@ -1807,6 +1871,8 @@ Rectangle {
                     anchors.rightMargin: row_options.padding
                     anchors.left: column_left.right
                     anchors.leftMargin: 40
+                    anchors.top: parent.top
+                    anchors.topMargin: 10
 
                     Text {
                         id: title_retract
@@ -3469,6 +3535,103 @@ Rectangle {
                 }
             }
 
+            Rectangle {
+                id: row_gcodes
+                color: "#5d6169"
+                width: parent.width
+                height: parent.height - row_tabs.height
+                anchors.top: row_tabs.bottom
+                anchors.topMargin: 0
+                anchors.left: parent.left
+                anchors.leftMargin: row_options.padding/2
+                anchors.right: parent.right
+                anchors.rightMargin: row_options.padding/2
+                opacity: tab_gcodes.active ? 1 : 0
+
+                Rectangle {
+                    id: start_gcode_rect
+                    color: "#00000000"
+                    width: (parent.width - 2*row_options.padding) / 2 - 20
+                    height: parent.height
+                    anchors.left: parent.left
+                    anchors.leftMargin: row_options.padding
+                    anchors.top: parent.top
+                    anchors.topMargin: 10
+
+                    Text {
+                        id: start_gcode_label
+                        text: qsTr("Start GCode")
+                        verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        width: parent.width
+                        font.pixelSize: 12
+                        color: "#ffffff"
+                        font.bold: true
+                        font.family: lato_font.name
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        anchors.top: start_gcode_label.bottom
+                        anchors.topMargin: 10
+                        color: "#333333"
+                        height: parent.height - start_gcode_label.height - 50
+
+                        TextEdit {
+                            id: startgcode
+                            objectName: "startgcode"
+                            font.pixelSize: 12
+                            color: "#d1d1d2"
+                            wrapMode: TextEdit.WordWrap
+                            anchors.fill: parent
+                        }
+                    }
+
+                }
+
+                Rectangle {
+                    id: end_gcode_rect
+                    color: "#00000000"
+                    width: (parent.width - 2*row_options.padding) / 2 - 20
+                    height: parent.height
+                    anchors.right: parent.right
+                    anchors.rightMargin: row_options.padding
+                    anchors.left: start_gcode_rect.right
+                    anchors.leftMargin: 40
+                    anchors.top: parent.top
+                    anchors.topMargin: 10
+
+                    Text {
+                        id: end_gcode_label
+                        text: qsTr("End GCode")
+                        verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        width: parent.width
+                        font.pixelSize: 13
+                        color: "#ffffff"
+                        font.bold: true
+                        font.family: lato_font.name
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        anchors.top: end_gcode_label.bottom
+                        anchors.topMargin: 10
+                        color: "#333333"
+                        height: parent.height - end_gcode_label.height - 50
+
+                        TextEdit {
+                            id: endgcode
+                            objectName: "endgcode"
+                            font.pixelSize: 12
+                            color: "#d1d1d2"
+                            wrapMode: TextEdit.WordWrap
+                            anchors.fill: parent
+                        }
+                    }
+                }
+            }
+
             // Only show the scrollbars when the view is moving.
             // states: State {
             //     name: "ShowBars"
@@ -3549,6 +3712,8 @@ Rectangle {
         text_input_support_fill_rate.text = qsTr(fdict['support_fill_rate']);
         text_input_support_xy_distance.text = qsTr(fdict['support_xy_distance']);
         text_input_support_z_distance.text = qsTr(fdict['support_z_distance']);
+        startgcode.text = fdict['startgcode'];
+        endgcode.text = fdict['endgcode'];
 
         // ticks
         cool_head_lift.isActive = fdict['cool_head_lift'];
@@ -3598,6 +3763,8 @@ Rectangle {
             'support_fill_rate': text_input_support_fill_rate.text,
             'support_xy_distance': text_input_support_xy_distance.text,
             'support_z_distance': text_input_support_z_distance.text,
+            'startgcode': startgcode.text,
+            'endgcode': endgcode.text,
             'cool_head_lift': cool_head_lift.isActive,
             'simple_mode': simple_mode.isActive,
             'spiralize': spiralize.isActive,

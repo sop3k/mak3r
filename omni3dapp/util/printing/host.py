@@ -417,8 +417,10 @@ class PrinterConnection(Pronsole):
 
     def printsentcb(self, gline):
         """Callback when a print gcode has been sent"""
-        if gline.is_move:
-            print "should set current gline here"
+        pass
+        # if gline.is_move:
+        #     print "should set current gline here"
+
         # if gline.is_move:
         #     if hasattr(self.gwindow, "set_current_gline"):
         #         wx.CallAfter(self.gwindow.set_current_gline, gline)

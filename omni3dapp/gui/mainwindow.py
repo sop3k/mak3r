@@ -138,6 +138,14 @@ class MainWindow(QtGui.QGraphicsView):
 
         self.advanced_options.setFields(field_vals)
 
+        # startgcode = self.advanced_options.findChild(
+        #     QtCore.QObject, "startgcode")
+        # GCodeSyntaxHighlighter(startgcode)
+
+        # endgcode = self.advanced_options.findChild(
+        #     QtCore.QObject, "endgcode")
+        # GCodeSyntaxHighlighter(endgcode)
+
     @QtCore.Slot()
     def saveAdvancedOptions(self):
         self.sceneview.setInfoText(_("Saving options..."))

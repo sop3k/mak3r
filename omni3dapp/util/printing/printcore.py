@@ -718,13 +718,13 @@ class Printer(QtCore.QObject):
                 if prev_layer != layer:
                     try: self.parent.layerchangecb(layer)
                     except: traceback.print_exc()
-            if self.parent.preprintsendcb:
-                if self.parent.queueindex + 1 < len(self.parent.mainqueue):
-                    (next_layer, next_line) = self.parent.mainqueue.idxs(self.parent.queueindex + 1)
-                    next_gline = self.parent.mainqueue.all_layers[next_layer][next_line]
-                else:
-                    next_gline = None
-                gline = self.parent.preprintsendcb(gline, next_gline)
+            # if self.parent.preprintsendcb:
+            #     if self.parent.queueindex + 1 < len(self.parent.mainqueue):
+            #         (next_layer, next_line) = self.parent.mainqueue.idxs(self.parent.queueindex + 1)
+            #         next_gline = self.parent.mainqueue.all_layers[next_layer][next_line]
+            #     else:
+            #         next_gline = None
+            #     gline = self.parent.preprintsendcb(gline, next_gline)
             if gline is None:
                 self.parent.queueindex += 1
                 self.parent.clear = True

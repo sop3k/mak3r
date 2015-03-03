@@ -324,7 +324,6 @@ Item {
                     to_max.isCurrentItem = !to_max.isCurrentItem;
                     setActive(to_max, null);
                     graphicsscene.onScaleMax();
-                    to_max.isCurrentItem = !to_max.isCurrentItem;
                 }
             }
             anchors.leftMargin: scale.anchors.leftMargin + custom_height

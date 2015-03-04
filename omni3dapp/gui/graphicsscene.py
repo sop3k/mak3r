@@ -1162,6 +1162,7 @@ class SceneView(QtGui.QGraphicsScene):
                 self.selectObject(self.selectedObj)
             self.tempMatrix = None
             self.tool.onDragEnd()
+            self.updateModelSettingsToControls()
             self.sceneUpdated()
         self.mouseState = None
 
@@ -1402,7 +1403,7 @@ class SceneView(QtGui.QGraphicsScene):
         pass
 
     def onEndprint(self):
-        self.mainwindow.print_button.setState("IDLE")
+        self.mainwindow.print_button.setState("SLICED")
 
     @QtCore.Slot()
     def onPrintButton(self):

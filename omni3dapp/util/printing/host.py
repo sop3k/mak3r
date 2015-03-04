@@ -8,7 +8,6 @@ import traceback
 import cStringIO as StringIO
 import subprocess
 import glob
-import logging
 try: import simplejson as json
 except ImportError: import json
 
@@ -437,7 +436,6 @@ class PrinterConnection(Pronsole):
     @QtCore.Slot(bool)
     def endcb(self):
         """Callback on print end/pause"""
-        print "inside endcb"
         Pronsole.endcb(self)
         if self.p.queueindex == 0:
             self.p.runSmallScript(self.endScript)

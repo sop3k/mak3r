@@ -693,12 +693,14 @@ def loadProfile(filename, allMachines = False):
             if profileParser.has_option(section, set.getName()):
                 set.setValue(unicode(profileParser.get(section, set.getName()), 'utf-8', 'replace'))
 
-def saveProfile(filename, allMachines = False):
+def saveProfile(filename=None, allMachines=False):
     """
         Save the current profile to an ini file.
     :param filename:    The ini filename to save the profile in.
     :param allMachines: When False only the current active profile is saved. If True all profiles for all machines are saved.
     """
+    if not filename:
+        filename = getDefaultProfilePath()
     global settingsList
     profileParser = ConfigParser.ConfigParser()
     if allMachines:

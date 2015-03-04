@@ -15,8 +15,9 @@
 
 import platform
 import traceback
-import logging
 import os
+
+from omni3dapp.logger import log
 
 if platform.system() == "Darwin":
     from .osx import inhibit_sleep_osx, deinhibit_sleep_osx
@@ -68,7 +69,7 @@ else:
             inhibit_sleep_handler.UnInhibit(inhibit_sleep_token)
             inhibit_sleep_token = None
     except dbus.DBusException, e:
-        logging.warning("Could not setup DBus for sleep inhibition: %s" % e)
+        log.warning("Could not setup DBus for sleep inhibition: %s" % e)
 
         def inhibit_sleep(reason):
             return
@@ -114,8 +115,7 @@ try:
         reset_priority()
         deinhibit_sleep()
 except ImportError:
-    print "psutil unavailable, could not import power utils:"
-    traceback.print_exc()
+    log.debug("psutil unavailable, could not import power utils: {}".format(e))
 
     def powerset_print_start(reason):
         pass

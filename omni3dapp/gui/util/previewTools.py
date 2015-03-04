@@ -280,6 +280,7 @@ class toolRotate(object):
         glEnd()
         glEnable(GL_DEPTH_TEST)
 
+
 class toolScale(object):
     def __init__(self, parent):
         self.parent = parent

@@ -19,7 +19,6 @@ import cmd
 import glob
 import os
 import time
-# import threading
 import sys
 import shutil
 import subprocess
@@ -1164,7 +1163,6 @@ class Pronsole(cmd.Cmd):
             traceback.print_exc(file = sys.stdout)
 
     def endcb(self):
-        print "pronsole's endcb"
         try:
             powerset_print_stop()
         except:
@@ -1207,7 +1205,6 @@ class Pronsole(cmd.Cmd):
         return isreport
 
     def recvcb(self, l):
-        print "inside recvb in host"
         report_type = self.recvcb_report(l)
         if report_type == REPORT_TEMP:
             self.status.update_tempreading(l)

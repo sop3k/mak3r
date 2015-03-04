@@ -39,6 +39,10 @@ class MainWindow(QtGui.QGraphicsView):
             'port_baud_rate',
             'qt_spinbox_lineedit',
             ]
+    TEXT_SETTINGS = [
+            'startgcode',
+            'endgcode'
+            ]
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -155,6 +159,8 @@ class MainWindow(QtGui.QGraphicsView):
             try:
                 if isinstance(val, bool):
                     self.onBoolSettingChange(key, val)
+                elif key in self.TEXT_SETTINGS:
+                    self.changeSetting(key, val)
                 else:
                     self.onFloatSettingChange(key, val)
             except Exception as e:
@@ -401,11 +407,7 @@ class MainWindow(QtGui.QGraphicsView):
             log.error("Could not assign value {0} to setting {1}: {2}".format(
                 value, obj_name, e))
             return
-        try:
-            profile.settingsDictionary[obj_name].setValue(value)
-        except KeyError as e:
-            log.error("Key not found in preferences: {0}".format(e))
-        self.validateNormalMode()
+        self.changeSetting(obj_name, value)
 
     @QtCore.Slot(str, bool)
     def onBoolSettingChange(self, obj_name, value):
@@ -415,6 +417,10 @@ class MainWindow(QtGui.QGraphicsView):
             log.error("Could not assign value {0} to setting {1}: {2}".format(
                 value, obj_name, e))
             return
+        self.changeSetting(obj_nmae, value)
+
+    @QtCore.Slot(str, str)
+    def changeSetting(self, obj_name, value):
         try:
             profile.settingsDictionary[obj_name].setValue(value)
         except KeyError as e:
@@ -628,6 +634,7 @@ class MainWindow(QtGui.QGraphicsView):
         # terminate all slicer-related threads
         # TODO: check if needed
         # self.terminate_threads()
+        profile.saveProfile(allMachines=True)
         super(MainWindow, self).closeEvent(evt)
 
 

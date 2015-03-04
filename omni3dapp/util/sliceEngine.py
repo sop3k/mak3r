@@ -395,7 +395,6 @@ class Engine(QtCore.QObject):
         return True
 
     def runEngine(self, scene):
-        print "inside runengine"
         if not self.isSlicingEnabled(scene):
             return
         objects = scene.objects()

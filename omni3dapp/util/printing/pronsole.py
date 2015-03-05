@@ -758,7 +758,7 @@ class Pronsole(cmd.Cmd):
             # self.status_thread.finished.emit()
             self.status_thread.terminate()
         except Exception, e:
-            print e
+            log.error(e)
         finally:
             self.status_thread = None
 

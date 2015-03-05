@@ -55,7 +55,6 @@ class MainWindow(QtGui.QGraphicsView):
         # self.ui.setupUi(self)
 
         # Create a scene to present and modify 3d objects
-        print "setting up qml view..."
         start = time.time()
         self.setup_qmlview()
 
@@ -67,7 +66,6 @@ class MainWindow(QtGui.QGraphicsView):
 
         self.advanced_options = self.qmlobject.findChild(
             QtCore.QObject, "options_layer")
-        print "got it: ", time.time() - start
 
         self.setUpFields()
 
@@ -111,7 +109,7 @@ class MainWindow(QtGui.QGraphicsView):
     def setup_qmlview(self):
         self.qmlview = QtDeclarative.QDeclarativeView()
         self.qmlview.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
-        self.qmlview.setMinimumWidth(900)
+        self.qmlview.setMinimumWidth(1000)
         self.qmlview.setMinimumHeight(600)
         self.qmlview.setResizeMode(self.qmlview.SizeRootObjectToView)
 
@@ -417,7 +415,7 @@ class MainWindow(QtGui.QGraphicsView):
             log.error("Could not assign value {0} to setting {1}: {2}".format(
                 value, obj_name, e))
             return
-        self.changeSetting(obj_nmae, value)
+        self.changeSetting(obj_name, value)
 
     @QtCore.Slot(str, str)
     def changeSetting(self, obj_name, value):
@@ -520,6 +518,8 @@ class MainWindow(QtGui.QGraphicsView):
     @QtCore.Slot()
     def turnOffPrinter(self):
         ret = self.pc.off()
+        self.sceneview.setProgressBar(0.0)
+        self.set_statusbar(_("Printing cancelled"))
         return ret
 
     def settemp(self):

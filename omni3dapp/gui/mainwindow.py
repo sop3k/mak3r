@@ -639,6 +639,12 @@ class MainWindow(QtGui.QGraphicsView):
         self.print_button.setPrintTime(time_info)
         self.print_button.setPrintParams(params_info)
 
+    def enablePrintButton(self, enable):
+        if enable:
+            self.print_button.enable()
+        else:
+            self.print_button.disable()
+
     def eventFilter(self, obj, evt):
         if obj == self.ui.commandbox:
             if evt.type() == QtCore.QEvent.KeyPress:

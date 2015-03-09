@@ -526,6 +526,7 @@ Item {
                     setActive(view_modes, view_modes_bar);
                 }
             }
+
             anchors.leftMargin: separator3.anchors.leftMargin + separator3.width + 5 
             anchors.left: parent.left
 
@@ -1402,6 +1403,10 @@ Item {
         text_input_sizeX.text = sizeX;
         text_input_sizeY.text = sizeY;
         text_input_sizeZ.text = sizeZ;
+    }
+
+    function showOptionsBar() {
+        options_bar.opacity = 1;
     }
 
 }

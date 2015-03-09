@@ -721,10 +721,9 @@ class SceneView(QtGui.QGraphicsScene):
         self.setProgressBar(0.0)
         self.cleanEngine()
 
-        if self.engine.isSlicingEnabled(self.scene) and self.mainwindow.is_online:
-            self.mainwindow.print_button.enable()
-        else:
-            self.mainwindow.print_button.disable()
+        enable = self.engine.isSlicingEnabled(self.scene) and \
+                self.mainwindow.is_online
+        self.mainwindow.enablePrintButton(enable)
         self.scene.updateSizeOffsets()
         self.queueRefresh()
 
@@ -1303,6 +1302,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.queueRefresh()
 
     def loadGCodeFile(self, filename):
+        self.setInfoText(_("Loading GCode..."))
         self.onDeleteAll()
         # Cheat the engine results to load a GCode file into it.
         self.engine.abortEngine()
@@ -1314,11 +1314,15 @@ class SceneView(QtGui.QGraphicsScene):
         self.engine._result.setFinished(True)
         self.engineResultView.setResult(self.engine._result)
 
-        if self.mainwindow.pc.is_online():
-            self.mainwindow.print_button.enable()
+        self.mainwindow.print_button.setState("SLICED")
+        self.mainwindow.qmlobject.setPrintButtonVisible(1)
 
         self.showLayersButton()
         self.setViewMode('gcode')
+        if self.mainwindow.is_online():
+            self.mainwindow.enablePrintButton(True)
+            self.queueRefresh()
+
 
     @QtCore.Slot(str)
     def setViewMode(self, viewmode='normal'):
@@ -1330,7 +1334,7 @@ class SceneView(QtGui.QGraphicsScene):
         if viewmode == 'gcode':
             self.tool = previewTools.toolNone(self)
             self.loadLayers()
-        self.engineResultView.setEnabled(self.viewMode == 'gcode')
+        self.engineResultView.setEnabled(self.viewMode=='gcode')
         self.queueRefresh()
 
     def setPrintingGcode(self, gcode):
@@ -1351,7 +1355,7 @@ class SceneView(QtGui.QGraphicsScene):
     def enablePrinting(self):
         if self.isPrintingEnabled() and \
                 self.mainwindow.print_button.getState() == "SLICED":
-            self.mainwindow.print_button.enable()
+            self.mainwindow.enablePrintButton(True)
             self.update()
 
     @QtCore.Slot(float)

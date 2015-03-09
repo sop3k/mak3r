@@ -33,6 +33,8 @@ Rectangle {
 
     function setLayersSliderVisible(val) {
         layers_slider.opacity = val;
+        bars.showOptionsBar();
+        // bars.setLayersViewOnly();
     }
 
     PrintButton {

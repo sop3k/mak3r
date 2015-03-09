@@ -252,7 +252,6 @@ class Printcore(QtCore.QObject):
             self.printer.setDTR(0)
 
     def _start_sender(self):
-        print "calling start sender"
         self.stop_send_thread = False
         self.sender_worker = Sender(self)
         self.send_thread = QtCore.QThread(self.parent)
@@ -267,7 +266,6 @@ class Printcore(QtCore.QObject):
         self.send_thread.start()
 
     def _stop_sender(self):
-        print "calling stop sender"
         if not self.send_thread:
             return
 
@@ -346,7 +344,6 @@ class Printcore(QtCore.QObject):
         return True
 
     def finish_printer_thread(self):
-        print "calling finish printer thread"
         if not self.printer_thread:
             return
         try:
@@ -355,7 +352,6 @@ class Printcore(QtCore.QObject):
             log.error(e)
         finally:
             self.printer_thread = None
-        print "start sender"
         self._start_sender()
 
     def cancelprint(self):
@@ -451,9 +447,7 @@ class Printcore(QtCore.QObject):
     def send_now(self, command, wait=0):
         """Sends a command to the printer ahead of the command queue, without a
         checksum"""
-        print "inside send_now"
         if self.online:
-            print "scheduling command"
             self.priqueue.put_nowait(command)
         else:
             self.logError(_("Not connected to printer"))
@@ -660,7 +654,6 @@ class Sender(QtCore.QObject):
 
     def sender(self):
         while not self.parent.stop_send_thread:
-            print "inside sender"
             try:
                 command = self.parent.priqueue.get(True, 0.1)
             except QueueEmpty:

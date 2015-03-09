@@ -922,7 +922,7 @@ class SceneView(QtGui.QGraphicsScene):
             self.setPrintingInfo()
             self.mainwindow.print_button.setState("SLICED")
             if not self.mainwindow.is_online():
-                self.mainwindow.print_button.disable()
+                self.mainwindow.enablePrintButton(False)
                 self.setInfoText(_("Not connected to printer"))
             else:
                 self.setInfoText("")

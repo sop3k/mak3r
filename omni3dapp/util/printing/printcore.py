@@ -241,7 +241,7 @@ class Printcore(QtCore.QObject):
 
         self.host.after_connect()
 
-        self.parent.set_statusbar(_("Connected to printer"))
+        self.parent.set_connected()
 
     def reset(self):
         """Reset the printer

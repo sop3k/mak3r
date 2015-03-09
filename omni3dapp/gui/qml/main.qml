@@ -47,6 +47,16 @@ Rectangle {
         anchors.bottomMargin: 25
     }
 
+    ConnectButton {
+        id: connect_button
+        objectName: "connect_button"
+        opacity: 1
+        anchors.right: parent.right
+        anchors.rightMargin: 30
+        anchors.bottom: print_button.opacity == 1 ? print_button.top : parent.bottom
+        anchors.bottomMargin: 25
+    }
+
     function setPrintButtonVisible(val) {
         print_button.opacity = val;
     }

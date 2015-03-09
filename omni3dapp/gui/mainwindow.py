@@ -60,6 +60,9 @@ class MainWindow(QtGui.QGraphicsView):
         self.print_button = self.qmlobject.findChild(
             QtCore.QObject, "print_button")
 
+        self.connect_button = self.qmlobject.findChild(
+            QtCore.QObject, "connect_button")
+
         self.top_bar = self.qmlobject.findChild(
             QtCore.QObject, "bars")
 
@@ -522,6 +525,24 @@ class MainWindow(QtGui.QGraphicsView):
     def set_statusbar(self, msg):
         self.sceneview.setInfoText(msg)
 
+    @QtCore.Slot()
+    def connectPrinter(self):
+        if not self.is_online():
+            print "calling host's connect printer"
+            self.pc.connect_printer()
+        else:
+            print "was already online"
+            self.set_statusbar(_("Connected to printer."))
+
+    @QtCore.Slot()
+    def disconnectPrinter(self):
+        if not self.is_online():
+            print "already was disconnected"
+            self.set_statusbar(_("Printer disconnected."))
+        else:
+            print "calling host's disconnect"
+            self.pc.disconnect()
+
     # def connect_printer(self):
     #     port_val = self.ui.port_type.itemText(self.ui.port_type.currentIndex())
     #     baud_val = 115200
@@ -621,9 +642,11 @@ class MainWindow(QtGui.QGraphicsView):
 
         self.set_statusbar(_("Connected to printer."))
 
-        if self.pc.fgcode:
-            # self.sceneview.printButton.setDisabled(False)
+        if hasattr(self, 'pc') and self.pc.fgcode:
             self.print_button.enable()
+
+        print "setting connect button to online"
+        self.connect_button.setState("ONLINE")
 
     def set_disconnected(self):
         # self.enable_elements(False)
@@ -633,6 +656,8 @@ class MainWindow(QtGui.QGraphicsView):
         # self.ui.connect_btn.clicked.disconnect(self.pc.disconnect)
         # self.ui.connect_btn.clicked.connect(self.connect_printer)
 
+        print "setting connect button to offline"
+        self.connect_button.setState("OFFLINE")
         self.set_statusbar(_("Disconnected."))
 
     def setPrintButton(self, time_info, params_info):

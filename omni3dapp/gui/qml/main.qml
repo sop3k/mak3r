@@ -64,4 +64,20 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
     }
+
+    Wizard {
+        id: wizard
+        objectName: "wizard"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+    }
+
+    // PrintArea {
+    //     id: print_area
+    //     objectName: "print_area"
+    //     anchors.right: parent.right
+    //     anchors.rightMargin: 20
+    //     anchors.top: bars.bottom
+    //     anchors.topMargin: 55
+    // }
 }

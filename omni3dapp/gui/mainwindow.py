@@ -3,7 +3,6 @@
 import re
 import os
 import sys
-import time
 import subprocess
 import traceback
 
@@ -41,7 +40,8 @@ class MainWindow(QtGui.QGraphicsView):
             ]
     TEXT_SETTINGS = [
             'startgcode',
-            'endgcode'
+            'endgcode',
+            'machine_name'
             ]
 
     def __init__(self, parent=None):
@@ -55,7 +55,6 @@ class MainWindow(QtGui.QGraphicsView):
         # self.ui.setupUi(self)
 
         # Create a scene to present and modify 3d objects
-        start = time.time()
         self.setup_qmlview()
 
         self.print_button = self.qmlobject.findChild(
@@ -67,9 +66,18 @@ class MainWindow(QtGui.QGraphicsView):
         self.advanced_options = self.qmlobject.findChild(
             QtCore.QObject, "options_layer")
 
-        self.setUpFields()
-
         self.setup_scene()
+
+        # If we haven't run it before, run the configuration wizard.
+        if profile.getMachineSetting('machine_type') == 'unknown':
+            self.runConfigWizard()
+
+        if profile.getMachineSetting('machine_name') == '':
+            log.debug('Machine name not found')
+            # Notify that we need to have at least one machine
+            return
+
+        self.setUpFields()
 
         # Class that enables connecting to printer
         self.pc = host.PrinterConnection(self)
@@ -133,6 +141,11 @@ class MainWindow(QtGui.QGraphicsView):
 
         self.setScene(self.sceneview)
 
+    def runConfigWizard(self):
+        self.wizard = self.qmlobject.findChild(
+            QtCore.QObject, "wizard")
+        self.wizard.showLayer()
+
     def setUpFields(self):
         field_vals = {}
         for key, val in profile.settingsDictionary.iteritems():
@@ -153,6 +166,23 @@ class MainWindow(QtGui.QGraphicsView):
         self.sceneview.setInfoText(_("Saving options..."))
 
         field_vals = self.advanced_options.getFields()
+        for key, val in field_vals.iteritems():
+            try:
+                if isinstance(val, bool):
+                    self.onBoolSettingChange(key, val)
+                elif key in self.TEXT_SETTINGS:
+                    self.changeSetting(key, val)
+                else:
+                    self.onFloatSettingChange(key, val)
+            except Exception as e:
+                # Pass as there are more settings in the profile file than we
+                # really use
+                pass
+
+    @QtCore.Slot()
+    def saveMachineSettings(self):
+        field_vals = self.wizard.getMachineSettings()
+
         for key, val in field_vals.iteritems():
             try:
                 if isinstance(val, bool):

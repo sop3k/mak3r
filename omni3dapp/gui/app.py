@@ -69,25 +69,27 @@ class OmniApp(object):
             pixmap, QtCore.Qt.WindowStaysOnTopHint)
 
     def run_config_wizard(self, resource_base_path):
-        if platform.system() == "Windows":
-            exampleFile = os.path.normpath(os.path.join(
-                resource_base_path, 'example', 'UltimakerRobot_support.stl'))
-        else:
-            # Check if we need to copy our examples
-            exampleFile = os.path.expanduser(
-                '~/CuraExamples/UltimakerRobot_support.stl')
-            if not os.path.isfile(exampleFile):
-                try:
-                    os.makedirs(os.path.dirname(exampleFile))
-                except Exception, e:
-                    log.error(e)
-                for filename in glob.glob(os.path.normpath(os.path.join(
-                        resource_base_path, 'example', '*.*'))):
-                    shutil.copy(filename, os.path.join(os.path.dirname(
-                        exampleFile), os.path.basename(filename)))
-        self.loadFiles = [exampleFile]
+        # if platform.system() == "Windows":
+        #     exampleFile = os.path.normpath(os.path.join(
+        #         resource_base_path, 'example', 'UltimakerRobot_support.stl'))
+        # else:
+        #     # Check if we need to copy our examples
+        #     exampleFile = os.path.expanduser(
+        #         '~/CuraExamples/UltimakerRobot_support.stl')
+        #     if not os.path.isfile(exampleFile):
+        #         try:
+        #             os.makedirs(os.path.dirname(exampleFile))
+        #         except Exception, e:
+        #             log.error(e)
+        #         for filename in glob.glob(os.path.normpath(os.path.join(
+        #                 resource_base_path, 'example', '*.*'))):
+        #             shutil.copy(filename, os.path.join(os.path.dirname(
+        #                 exampleFile), os.path.basename(filename)))
+        # self.loadFiles = [exampleFile]
         if self.splash is not None:
-            self.splash.finish()
+            self.splash.finish(self.main_window)
+        # Run config wizard
+        pass
 
     def get_executable(self):
         executable = sys.executable
@@ -166,7 +168,3 @@ class OmniApp(object):
         # If we haven't run it before, run the configuration wizard.
         # if profile.getMachineSetting('machine_type') == 'unknown':
         #     self.run_config_wizard(resources.resourceBasePath)
-
-        if profile.getMachineSetting('machine_name') == '':
-            log.debug('Machine name not found')
-            return

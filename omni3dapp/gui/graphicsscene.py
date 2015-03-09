@@ -180,6 +180,9 @@ class SceneView(QtGui.QGraphicsScene):
         p1 -= self.viewTarget
         return p0, p1
 
+    def resetMachineSize(self):
+        self._machineSize = None
+
     @property
     def machineSize(self):
         if self._machineSize is None:
@@ -1334,9 +1337,12 @@ class SceneView(QtGui.QGraphicsScene):
         self.mainwindow.pc.fgcode = gcode
 
     def loadLayers(self, printing=False):
-        if self.engine._result._gcodeInterpreter.layerList:
+        result = self.engine.getResult()
+        if result._gcodeInterpreter.layerList:
+            if printing:
+                self.startPrinting(result.getGCode())
             return
-        self.engine._result.generateGCodeLayers(self.engineResultView, printing)
+        result.generateGCodeLayers(self.engineResultView, printing)
 
     def isPrintingEnabled(self):
         return self.slicing_finished and self.mainwindow.is_online()
@@ -1362,6 +1368,7 @@ class SceneView(QtGui.QGraphicsScene):
         self._heating = False
         self.progressBar.setValue(0)
         self.setInfoText(_("Printing..."))
+        self.mainwindow.pc.heating_finished()
         self.mainwindow.pc.startprint()
 
     def setHeatingStarted(self):

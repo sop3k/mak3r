@@ -3,7 +3,6 @@
 import re
 import os
 import sys
-import time
 import subprocess
 import traceback
 
@@ -41,7 +40,8 @@ class MainWindow(QtGui.QGraphicsView):
             ]
     TEXT_SETTINGS = [
             'startgcode',
-            'endgcode'
+            'endgcode',
+            'machine_name'
             ]
 
     def __init__(self, parent=None):
@@ -55,8 +55,6 @@ class MainWindow(QtGui.QGraphicsView):
         # self.ui.setupUi(self)
 
         # Create a scene to present and modify 3d objects
-        print "setting up qml view..."
-        start = time.time()
         self.setup_qmlview()
 
         self.print_button = self.qmlobject.findChild(
@@ -67,11 +65,19 @@ class MainWindow(QtGui.QGraphicsView):
 
         self.advanced_options = self.qmlobject.findChild(
             QtCore.QObject, "options_layer")
-        print "got it: ", time.time() - start
-
-        self.setUpFields()
 
         self.setup_scene()
+
+        # If we haven't run it before, run the configuration wizard.
+        if not profile.getMachineSetting('machine_name'):
+            self.runConfigWizard()
+
+        # if profile.getMachineSetting('machine_name') == '':
+        #     log.debug('Machine name not found')
+        #     # Notify that we need to have at least one machine
+        #     return
+
+        self.setUpFields()
 
         # Class that enables connecting to printer
         self.pc = host.PrinterConnection(self)
@@ -111,7 +117,7 @@ class MainWindow(QtGui.QGraphicsView):
     def setup_qmlview(self):
         self.qmlview = QtDeclarative.QDeclarativeView()
         self.qmlview.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
-        self.qmlview.setMinimumWidth(900)
+        self.qmlview.setMinimumWidth(1000)
         self.qmlview.setMinimumHeight(600)
         self.qmlview.setResizeMode(self.qmlview.SizeRootObjectToView)
 
@@ -135,6 +141,11 @@ class MainWindow(QtGui.QGraphicsView):
 
         self.setScene(self.sceneview)
 
+    def runConfigWizard(self):
+        self.wizard = self.qmlobject.findChild(
+            QtCore.QObject, "wizard")
+        self.wizard.showLayer()
+
     def setUpFields(self):
         field_vals = {}
         for key, val in profile.settingsDictionary.iteritems():
@@ -156,17 +167,26 @@ class MainWindow(QtGui.QGraphicsView):
 
         field_vals = self.advanced_options.getFields()
         for key, val in field_vals.iteritems():
-            try:
-                if isinstance(val, bool):
-                    self.onBoolSettingChange(key, val)
-                elif key in self.TEXT_SETTINGS:
-                    self.changeSetting(key, val)
-                else:
-                    self.onFloatSettingChange(key, val)
-            except Exception as e:
-                # Pass as there are more settings in the profile file than we
-                # really use
-                pass
+            if isinstance(val, bool):
+                self.onBoolSettingChange(key, val)
+            elif key in self.TEXT_SETTINGS:
+                self.changeSetting(key, val)
+            else:
+                self.onFloatSettingChange(key, val)
+
+    @QtCore.Slot()
+    def saveMachineSettings(self):
+        field_vals = self.wizard.getMachineSettings()
+
+        for key, val in field_vals.iteritems():
+            if not isinstance(val, bool) and key not in self.TEXT_SETTINGS:
+                try:
+                    val = float(val)
+                except ValueError:
+                    pass
+            profile.putMachineSetting(key, val)
+
+        self.sceneview.resetMachineSize()
 
     def set_up_fields(self):
         for key, val in profile.settingsDictionary.iteritems():
@@ -417,7 +437,7 @@ class MainWindow(QtGui.QGraphicsView):
             log.error("Could not assign value {0} to setting {1}: {2}".format(
                 value, obj_name, e))
             return
-        self.changeSetting(obj_nmae, value)
+        self.changeSetting(obj_name, value)
 
     @QtCore.Slot(str, str)
     def changeSetting(self, obj_name, value):
@@ -520,6 +540,8 @@ class MainWindow(QtGui.QGraphicsView):
     @QtCore.Slot()
     def turnOffPrinter(self):
         ret = self.pc.off()
+        self.sceneview.setProgressBar(0.0)
+        self.set_statusbar(_("Printing cancelled"))
         return ret
 
     def settemp(self):

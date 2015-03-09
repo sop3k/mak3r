@@ -2926,11 +2926,91 @@ Rectangle {
                     }
 
                     Rectangle {
-                        id: rect_skirt_line_count
+                        id: rect_raft_surface_layers
                         width: options_layer.line_width
                         height: options_layer.line_height
                         color: "#00000000"
                         anchors.top: rect_raft_airgap.bottom
+                        anchors.topMargin: row_spacing
+
+                        Text {
+                            id: text_raft_surface_layers
+                            color: "#a8a8a8"
+                            text: qsTr("Surface layers")
+                            anchors.left: parent.left
+                            anchors.leftMargin: 0
+                            anchors.verticalCenter: parent.verticalCenter
+                            verticalAlignment: Text.AlignVCenter
+                            font.pixelSize: 11
+                            font.family: lato_font.name
+                        }
+
+                        Rectangle {
+                            id: raft_surface_layers
+                            width: options_layer.input_width
+                            height: 20
+                            color: "#333333"
+                            radius: 1
+                            border.color: "#333333"
+                            anchors.right: parent.right
+                            anchors.rightMargin: 0
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            TextInput {
+                                id: text_input_raft_surface_layers
+                                objectName: "raft_surface_layers"
+                                height: parent.height
+                                anchors.top: parent.top
+                                anchors.topMargin: 3
+                                anchors.right: text_mm_raft_surface_layers.left
+                                anchors.rightMargin: 3
+                                anchors.left: parent.left
+                                anchors.leftMargin: 4
+                                color: "#d1d1d2"
+                                font.family: "Lato"
+                                font.pixelSize: 11
+                                horizontalAlignment: TextInput.AlignHCenter
+                                validator: DoubleValidator{bottom: 0;}
+                                readOnly: false
+                                cursorVisible: row_options.current_input == text_input_raft_surface_layers
+                                Keys.onPressed: {
+                                    if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
+                                        mainwindow.onFloatSettingChange(text_input_raft_surface_layers.objectName, text)
+                                    }
+                                }
+                            }
+
+                            Text {
+                                id: text_mm_raft_surface_layers
+                                height: parent.height
+                                width: 22
+                                text: qsTr("mm")
+                                color: "#d1d1d2"
+                                anchors.right: parent.right
+                                anchors.rightMargin: 3
+                                anchors.top: parent.top
+                                anchors.topMargin: 3
+                                horizontalAlignment: Text.AlignHCenter
+                                font.pixelSize: 11
+                                font.family: "Lato"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    text_input_raft_surface_layers.forceActiveFocus();
+                                    row_options.current_input = text_input_raft_surface_layers;
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        id: rect_skirt_line_count
+                        width: options_layer.line_width
+                        height: options_layer.line_height
+                        color: "#00000000"
+                        anchors.top: rect_raft_surface_layers.bottom
                         anchors.topMargin: row_spacing
 
                         Text {
@@ -3172,7 +3252,7 @@ Rectangle {
                         anchors.left: parent.left
                         anchors.leftMargin: 0
                         anchors.top: rect_skirt_minimal_length.bottom
-                        anchors.topMargin: row_spacing
+                        anchors.topMargin: row_spacing * 4
                         font.pixelSize: 13
                         font.bold: true
                         font.family: lato_font.name
@@ -3705,6 +3785,7 @@ Rectangle {
         text_input_raft_interface_thickness.text = qsTr(fdict['raft_interface_thickness']);
         text_input_raft_interface_linewidth.text = qsTr(fdict['raft_interface_linewidth']);
         text_input_raft_airgap.text = qsTr(fdict['raft_airgap']);
+        text_input_raft_surface_layers.text = qsTr(fdict['raft_surface_layers']);
         text_input_skirt_line_count.text = qsTr(fdict['skirt_line_count']);
         text_input_fill_overlap.text = qsTr(fdict['fill_overlap']);
         text_input_skirt_minimal_length.text = qsTr(fdict['skirt_minimal_length']);
@@ -3752,6 +3833,7 @@ Rectangle {
             'fill_density': text_input_fill_density.text,
             'raft_margin': text_input_raft_margin.text,
             'raft_line_spacing': text_input_raft_line_spacing.text,
+            'raft_surface_layers': text_input_raft_surface_layers.text,
             'raft_base_thickness': text_input_raft_base_thickness.text,
             'raft_interface_thickness': text_input_raft_interface_thickness.text,
             'raft_interface_linewidth': text_input_raft_interface_linewidth.text,

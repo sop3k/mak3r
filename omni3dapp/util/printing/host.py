@@ -326,6 +326,7 @@ class PrinterConnection(Pronsole):
             # self.parent.set_statusbar(text)
             # self.ui.logbox.appendPlainText(text)
             # TODO: display messages from printer somewhere...
+            log.debug(text)
             pass
         else:
             msg = _("Attempted to write invalid text to console, which could be due to an invalid baudrate. Reconnecting...")
@@ -740,7 +741,24 @@ class PrinterConnection(Pronsole):
     def set_heating_started(self):
         self.parent.sceneview.setHeatingStarted()
 
+    def heating_finished(self):
+        self.heater.finished.emit()
+
+    def stop_heating_thread(self):
+        if not hasattr(self, 'heating_thread'):
+            return
+        
+        try:
+            self.heating_thread.terminate()
+        except Exception, e:
+            log.error(e)
+        finally:
+            del self.heating_thread
+            del self.heater
+
     def start_heating(self):
+        # self.stop_heating_thread()
+
         self.heating_thread = QtCore.QThread(self.parent)
         self.heater = Heater(self.p)
         self.heater.moveToThread(self.heating_thread)

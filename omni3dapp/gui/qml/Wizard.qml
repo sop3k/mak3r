@@ -780,11 +780,11 @@ Rectangle {
 
     function getMachineSettings() {
         return {
-            'machine_name': text_input_machine_name,
-            'machine_width': text_input_machine_width,
-            'machine_depth': text_input_machine_depth,
-            'machine_height': text_input_machine_height,
-            'nozzle_size': text_input_nozzle_size,
+            'machine_name': text_input_machine_name.text,
+            'machine_width': text_input_machine_width.text,
+            'machine_depth': text_input_machine_depth.text,
+            'machine_height': text_input_machine_height.text,
+            'nozzle_size': text_input_nozzle_size.text,
             'has_heated_bed': heated_bed.isActive,
             'machine_center_is_zero': bed_center.isActive
         }

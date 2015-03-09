@@ -180,6 +180,9 @@ class SceneView(QtGui.QGraphicsScene):
         p1 -= self.viewTarget
         return p0, p1
 
+    def resetMachineSize(self):
+        self._machineSize = None
+
     @property
     def machineSize(self):
         if self._machineSize is None:

@@ -69,13 +69,13 @@ class MainWindow(QtGui.QGraphicsView):
         self.setup_scene()
 
         # If we haven't run it before, run the configuration wizard.
-        if profile.getMachineSetting('machine_type') == 'unknown':
+        if not profile.getMachineSetting('machine_name'):
             self.runConfigWizard()
 
-        if profile.getMachineSetting('machine_name') == '':
-            log.debug('Machine name not found')
-            # Notify that we need to have at least one machine
-            return
+        # if profile.getMachineSetting('machine_name') == '':
+        #     log.debug('Machine name not found')
+        #     # Notify that we need to have at least one machine
+        #     return
 
         self.setUpFields()
 
@@ -167,34 +167,26 @@ class MainWindow(QtGui.QGraphicsView):
 
         field_vals = self.advanced_options.getFields()
         for key, val in field_vals.iteritems():
-            try:
-                if isinstance(val, bool):
-                    self.onBoolSettingChange(key, val)
-                elif key in self.TEXT_SETTINGS:
-                    self.changeSetting(key, val)
-                else:
-                    self.onFloatSettingChange(key, val)
-            except Exception as e:
-                # Pass as there are more settings in the profile file than we
-                # really use
-                pass
+            if isinstance(val, bool):
+                self.onBoolSettingChange(key, val)
+            elif key in self.TEXT_SETTINGS:
+                self.changeSetting(key, val)
+            else:
+                self.onFloatSettingChange(key, val)
 
     @QtCore.Slot()
     def saveMachineSettings(self):
         field_vals = self.wizard.getMachineSettings()
 
         for key, val in field_vals.iteritems():
-            try:
-                if isinstance(val, bool):
-                    self.onBoolSettingChange(key, val)
-                elif key in self.TEXT_SETTINGS:
-                    self.changeSetting(key, val)
-                else:
-                    self.onFloatSettingChange(key, val)
-            except Exception as e:
-                # Pass as there are more settings in the profile file than we
-                # really use
-                pass
+            if not isinstance(val, bool) and key not in self.TEXT_SETTINGS:
+                try:
+                    val = float(val)
+                except ValueError:
+                    pass
+            profile.putMachineSetting(key, val)
+
+        self.sceneview.resetMachineSize()
 
     def set_up_fields(self):
         for key, val in profile.settingsDictionary.iteritems():

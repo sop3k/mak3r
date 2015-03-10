@@ -159,7 +159,7 @@ Rectangle {
                 opacity: tab_options.active ? 1 : 0
 
                 property int padding: 50
-                property TextInput current_input: null
+                property Item current_input: null
 
                 Rectangle {
                     id: column_left
@@ -3664,6 +3664,15 @@ Rectangle {
                             color: "#d1d1d2"
                             wrapMode: TextEdit.WordWrap
                             anchors.fill: parent
+                            cursorVisible: row_options.current_input == startgcode
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                startgcode.forceActiveFocus();
+                                row_options.current_input = startgcode;
+                            }
                         }
                     }
 
@@ -3707,6 +3716,15 @@ Rectangle {
                             color: "#d1d1d2"
                             wrapMode: TextEdit.WordWrap
                             anchors.fill: parent
+                            cursorVisible: row_options.current_input == endgcode
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                endgcode.forceActiveFocus();
+                                row_options.current_input = endgcode;
+                            }
                         }
                     }
                 }

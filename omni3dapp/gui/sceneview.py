@@ -28,16 +28,10 @@ from omni3dapp.gui.util import openglscene, openglHelpers
 from omni3dapp.gui.util import previewTools
 from omni3dapp.gui.util import engineResultView
 from omni3dapp.gui.tools import imageToMesh
-# from omni3dapp.util.printerConnection import printerConnectionManager
 from omni3dapp.util.shortcuts import *
 from omni3dapp.util.printing import gcoder
 from omni3dapp.gui.shadereditor_ui import Ui_ShaderEditor
 from omni3dapp.logger import log
-
-
-# from Cura.gui import printWindow
-# from Cura.util import pluginInfo
-# from Cura.gui.tools import youmagineGui
 
 
 class SceneView(QtOpenGL.QGLWidget):
@@ -60,10 +54,6 @@ class SceneView(QtOpenGL.QGLWidget):
         self._refreshQueued = False
         self._idleCalled = False
 
-        # wx.EVT_ERASE_BACKGROUND(self, self._OnEraseBackground)
-        # wx.EVT_CHAR(self, self._OnGuiKeyChar)
-        # wx.EVT_KILL_FOCUS(self, self.OnFocusLost)
-
         self._yaw = 30
         self._pitch = 60
         self._zoom = 300
@@ -83,78 +73,77 @@ class SceneView(QtOpenGL.QGLWidget):
         self._platformMesh = {}
         self._platformTexture = None
         self._isSimpleMode = True
-        # self._printerConnectionManager = printerConnectionManager.PrinterConnectionManager()
 
         self._viewport = None
         self._modelMatrix = None
         self._projMatrix = None
         self.tempMatrix = None
 
-        self.openFileButton = openglscene.glButton(self, 4, _("Load"), (0,0), self.showLoadModel)
-        self.printButton = openglscene.glButton(self, 6, _("Print"), (1,0), self.onPrintButton)
-        self.printButton.setDisabled(True)
-
-        group = []
-        self.rotateToolButton = openglscene.glRadioButton(self, 8, _("Rotate"), (0,-1), group, self.onToolSelect)
-        self.scaleToolButton  = openglscene.glRadioButton(self, 9, _("Scale"), (1,-1), group, self.onToolSelect)
-        self.mirrorToolButton  = openglscene.glRadioButton(self, 10, _("Mirror"), (2,-1), group, self.onToolSelect)
-
-        self.resetRotationButton = openglscene.glButton(self, 12, _("Reset"), (0,-2), self.onRotateReset)
-        self.layFlatButton       = openglscene.glButton(self, 16, _("Lay flat"), (0,-3), self.onLayFlat)
-
-        self.resetScaleButton    = openglscene.glButton(self, 13, _("Reset"), (1,-2), self.onScaleReset)
-        self.scaleMaxButton      = openglscene.glButton(self, 17, _("To max"), (1,-3), self.onScaleMax)
-
-        self.mirrorXButton       = openglscene.glButton(self, 14, _("Mirror X"), (2,-2), lambda button: self.onMirror(0))
-        self.mirrorYButton       = openglscene.glButton(self, 18, _("Mirror Y"), (2,-3), lambda button: self.onMirror(1))
-        self.mirrorZButton       = openglscene.glButton(self, 22, _("Mirror Z"), (2,-4), lambda button: self.onMirror(2))
-
-        self.rotateToolButton.setExpandArrow(True)
-        self.scaleToolButton.setExpandArrow(True)
-        self.mirrorToolButton.setExpandArrow(True)
-
-        self.scaleForm = openglscene.glFrame(self, (2, -2))
-        openglscene.glGuiLayoutGrid(self.scaleForm)
-        openglscene.glLabel(self.scaleForm, _("Scale X"), (0,0))
-        self.scaleXctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '1.0', (1,0), lambda value: self.onScaleEntry(value, 0))
-        openglscene.glLabel(self.scaleForm, _("Scale Y"), (0,1))
-        self.scaleYctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '1.0', (1,1), lambda value: self.onScaleEntry(value, 1))
-        openglscene.glLabel(self.scaleForm, _("Scale Z"), (0,2))
-        self.scaleZctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '1.0', (1,2), lambda value: self.onScaleEntry(value, 2))
-        openglscene.glLabel(self.scaleForm, _("Size X (mm)"), (0,4))
-        self.scaleXmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,4), lambda value: self.onScaleEntry(value, 0, True))
-        openglscene.glLabel(self.scaleForm, _("Size Y (mm)"), (0,5))
-        self.scaleYmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,5), lambda value: self.onScaleEntry(value, 1, True))
-        openglscene.glLabel(self.scaleForm, _("Size Z (mm)"), (0,6))
-        self.scaleZmmctrl = openglscene.glNumberCtrl(self.scaleForm,
-                '0.0', (1,6), lambda value: self.onScaleEntry(value, 2, True))
-        openglscene.glLabel(self.scaleForm, _("Uniform scale"), (0,8))
-        self.scaleUniform = openglscene.glCheckbox(self.scaleForm, True,
-                (1,8), None)
-
+#         self.openFileButton = openglscene.glButton(self, 4, _("Load"), (0,0), self.showLoadModel)
+#         self.printButton = openglscene.glButton(self, 6, _("Print"), (1,0), self.onPrintButton)
+#         self.printButton.setDisabled(True)
+# 
+#         group = []
+#         self.rotateToolButton = openglscene.glRadioButton(self, 8, _("Rotate"), (0,-1), group, self.onToolSelect)
+#         self.scaleToolButton  = openglscene.glRadioButton(self, 9, _("Scale"), (1,-1), group, self.onToolSelect)
+#         self.mirrorToolButton  = openglscene.glRadioButton(self, 10, _("Mirror"), (2,-1), group, self.onToolSelect)
+# 
+#         self.resetRotationButton = openglscene.glButton(self, 12, _("Reset"), (0,-2), self.onRotateReset)
+#         self.layFlatButton       = openglscene.glButton(self, 16, _("Lay flat"), (0,-3), self.onLayFlat)
+# 
+#         self.resetScaleButton    = openglscene.glButton(self, 13, _("Reset"), (1,-2), self.onScaleReset)
+#         self.scaleMaxButton      = openglscene.glButton(self, 17, _("To max"), (1,-3), self.onScaleMax)
+# 
+#         self.mirrorXButton       = openglscene.glButton(self, 14, _("Mirror X"), (2,-2), lambda button: self.onMirror(0))
+#         self.mirrorYButton       = openglscene.glButton(self, 18, _("Mirror Y"), (2,-3), lambda button: self.onMirror(1))
+#         self.mirrorZButton       = openglscene.glButton(self, 22, _("Mirror Z"), (2,-4), lambda button: self.onMirror(2))
+# 
+#         self.rotateToolButton.setExpandArrow(True)
+#         self.scaleToolButton.setExpandArrow(True)
+#         self.mirrorToolButton.setExpandArrow(True)
+# 
+#         self.scaleForm = openglscene.glFrame(self, (2, -2))
+#         openglscene.glGuiLayoutGrid(self.scaleForm)
+#         openglscene.glLabel(self.scaleForm, _("Scale X"), (0,0))
+#         self.scaleXctrl = openglscene.glNumberCtrl(self.scaleForm,
+#                 '1.0', (1,0), lambda value: self.onScaleEntry(value, 0))
+#         openglscene.glLabel(self.scaleForm, _("Scale Y"), (0,1))
+#         self.scaleYctrl = openglscene.glNumberCtrl(self.scaleForm,
+#                 '1.0', (1,1), lambda value: self.onScaleEntry(value, 1))
+#         openglscene.glLabel(self.scaleForm, _("Scale Z"), (0,2))
+#         self.scaleZctrl = openglscene.glNumberCtrl(self.scaleForm,
+#                 '1.0', (1,2), lambda value: self.onScaleEntry(value, 2))
+#         openglscene.glLabel(self.scaleForm, _("Size X (mm)"), (0,4))
+#         self.scaleXmmctrl = openglscene.glNumberCtrl(self.scaleForm,
+#                 '0.0', (1,4), lambda value: self.onScaleEntry(value, 0, True))
+#         openglscene.glLabel(self.scaleForm, _("Size Y (mm)"), (0,5))
+#         self.scaleYmmctrl = openglscene.glNumberCtrl(self.scaleForm,
+#                 '0.0', (1,5), lambda value: self.onScaleEntry(value, 1, True))
+#         openglscene.glLabel(self.scaleForm, _("Size Z (mm)"), (0,6))
+#         self.scaleZmmctrl = openglscene.glNumberCtrl(self.scaleForm,
+#                 '0.0', (1,6), lambda value: self.onScaleEntry(value, 2, True))
+#         openglscene.glLabel(self.scaleForm, _("Uniform scale"), (0,8))
+#         self.scaleUniform = openglscene.glCheckbox(self.scaleForm, True,
+#                 (1,8), None)
+# 
         self.viewSelection = openglscene.glComboButton(self, _("View mode"),
                 [7,19,11,15,23], [_("Normal"), _("Overhang"), _("Transparent"),
                 _("X-Ray"), _("Layers")], (-1,0), self.onViewChange)
 
-        # self.youMagineButton = openglscene.glButton(self, 26, _("Share on YouMagine"), (2,0), lambda button: youmagineGui.youmagineManager(self.GetTopLevelParent(), self._scene))
-        # self.youMagineButton.setDisabled(True)
-        #         lambda button: youmagineGui.youmagineManager(self.GetTopLevelParent(), self._scene))
-
-        # self.notification = openglGui.glNotification(self, (0, 0))
-
-        self.printtemp_gauge = openglscene.glTempGauge(parent=self, size=(400, 10),
-                pos=(0, -2), title="Heater:")
-        self.bedtemp_gauge = openglscene.glTempGauge(parent=self, size=(400, 10),
-                pos=(0, -1), title="Bed:")
-
-        self._engine = sliceEngine.Engine(self, self._updateEngineProgress)
-        self._engineResultView = engineResultView.EngineResultView(self)
-        self._slicing_finished = False
+#         # self.youMagineButton = openglscene.glButton(self, 26, _("Share on YouMagine"), (2,0), lambda button: youmagineGui.youmagineManager(self.GetTopLevelParent(), self._scene))
+#         # self.youMagineButton.setDisabled(True)
+#         #         lambda button: youmagineGui.youmagineManager(self.GetTopLevelParent(), self._scene))
+# 
+#         # self.notification = openglGui.glNotification(self, (0, 0))
+# 
+#         self.printtemp_gauge = openglscene.glTempGauge(parent=self, size=(400, 10),
+#                 pos=(0, -2), title="Heater:")
+#         self.bedtemp_gauge = openglscene.glTempGauge(parent=self, size=(400, 10),
+#                 pos=(0, -1), title="Bed:")
+# 
+#         self._engine = sliceEngine.Engine(self, self._updateEngineProgress)
+#         self._engineResultView = engineResultView.EngineResultView(self)
+#         self._slicing_finished = False
 
         self._sceneUpdateTimer = QtCore.QTimer(self)
 
@@ -163,11 +152,9 @@ class SceneView(QtOpenGL.QGLWidget):
         self._idleTimer.start(0)
 
         self.onViewChange()
-        self.onToolSelect(0)
-        self.updateToolButtons()
+#         self.onToolSelect(0)
+#         self.updateToolButtons()
         self.updateProfileToControls()
-
-        self.setMouseTracking(True)
 
     def _onIdle(self):
         self._idleCalled = True
@@ -178,50 +165,50 @@ class SceneView(QtOpenGL.QGLWidget):
                     self._animationList.remove(anim)
             self.updateGL()
 
-    def is_printing_enabled(self):
-        return self._slicing_finished and self._parent.is_online()
-
-    @QtCore.Slot()
-    def enable_printing(self):
-        if self.is_printing_enabled():
-            self.printButton.setDisabled(False)
-            self.updateGL()
-
-    @QtCore.Slot(float)
-    def _updateEngineProgress(self, progressValue):
-        result = self._engine.getResult()
-        self._slicing_finished = result is not None and result.isFinished()
-        if not self._slicing_finished:
-            if self.printButton.getProgressBar() is not None and \
-                    progressValue >= 0.0 and abs(
-                        self.printButton.getProgressBar()-progressValue) < 0.01:
-                return
-        printing_enabled = self.is_printing_enabled()
-        self.printButton.setDisabled(not printing_enabled)
-        if progressValue >= 0.0:
-            self.printButton.setProgressBar(progressValue)
-        else:
-            self.printButton.setProgressBar(None)
-        self._engineResultView.setResult(result)
-        if self._slicing_finished:
-            self.printButton.setProgressBar(None)
-            text = '%s' % (result.getPrintTime())
-            for e in xrange(0, int(profile.getMachineSetting('extruder_amount'))):
-                amount = result.getFilamentAmount(e)
-                if amount is None:
-                    continue
-                text += '\n%s' % (amount)
-                cost = result.getFilamentCost(e)
-                if cost is not None:
-                    text += '\n%s' % (cost)
-            self.printButton.setBottomText(text)
-        else:
-            self.printButton.setBottomText('')
-        self.queueRefresh()
-
-    @QtCore.Slot(float)
-    def _updateLoadingProgress(self, progressValue):
-        pass
+#     def is_printing_enabled(self):
+#         return self._slicing_finished and self._parent.is_online()
+# 
+#     @QtCore.Slot()
+#     def enable_printing(self):
+#         if self.is_printing_enabled():
+#             self.printButton.setDisabled(False)
+#             self.updateGL()
+# 
+#     @QtCore.Slot(float)
+#     def _updateEngineProgress(self, progressValue):
+#         result = self._engine.getResult()
+#         self._slicing_finished = result is not None and result.isFinished()
+#         if not self._slicing_finished:
+#             if self.printButton.getProgressBar() is not None and \
+#                     progressValue >= 0.0 and abs(
+#                         self.printButton.getProgressBar()-progressValue) < 0.01:
+#                 return
+#         printing_enabled = self.is_printing_enabled()
+#         self.printButton.setDisabled(not printing_enabled)
+#         if progressValue >= 0.0:
+#             self.printButton.setProgressBar(progressValue)
+#         else:
+#             self.printButton.setProgressBar(None)
+#         self._engineResultView.setResult(result)
+#         if self._slicing_finished:
+#             self.printButton.setProgressBar(None)
+#             text = '%s' % (result.getPrintTime())
+#             for e in xrange(0, int(profile.getMachineSetting('extruder_amount'))):
+#                 amount = result.getFilamentAmount(e)
+#                 if amount is None:
+#                     continue
+#                 text += '\n%s' % (amount)
+#                 cost = result.getFilamentCost(e)
+#                 if cost is not None:
+#                     text += '\n%s' % (cost)
+#             self.printButton.setBottomText(text)
+#         else:
+#             self.printButton.setBottomText('')
+#         self.queueRefresh()
+# 
+#     @QtCore.Slot(float)
+#     def _updateLoadingProgress(self, progressValue):
+#         pass
 
     def _init3DView(self):
         # set viewing projection
@@ -427,49 +414,49 @@ class SceneView(QtOpenGL.QGLWidget):
         glDisable(GL_BLEND)
         glDisable(GL_CULL_FACE)
 
-    def _onRunEngine(self):
-        if self._isSimpleMode:
-            self._parent.setupSlice()
-        self._engine.runEngine(self._scene)
-        if self._isSimpleMode:
-            profile.resetTempOverride()
+#     def _onRunEngine(self):
+#         if self._isSimpleMode:
+#             self._parent.setupSlice()
+#         self._engine.runEngine(self._scene)
+#         if self._isSimpleMode:
+#             profile.resetTempOverride()
 
-    def _splitCallback(self, progress):
-        log.debug(progress)
-        print progress
-
-    def _selectObject(self, obj, zoom = True):
-        if obj != self._selectedObj:
-            self._selectedObj = obj
-            self.updateModelSettingsToControls()
-            self.updateToolButtons()
-        if zoom and obj is not None:
-            newViewPos = numpy.array([obj.getPosition()[0], obj.getPosition()[1], obj.getSize()[2] / 2])
-            self._animView = openglscene.animation(self, self._viewTarget.copy(), newViewPos, 0.5)
-            newZoom = obj.getBoundaryCircle() * 6
-            if newZoom > numpy.max(self._machineSize) * 3:
-                newZoom = numpy.max(self._machineSize) * 3
-            self._animZoom = openglscene.animation(self, self._zoom, newZoom, 0.5)
-
-    def _deleteObject(self, obj=None):
-        if not obj:
-            obj = self._focusObj
-        if obj == self._selectedObj:
-            self._selectObject(None)
-        if obj == self._focusObj:
-            self._focusObj = None
-        self._scene.remove(obj)
-        for m in obj._meshList:
-            if m.vbo is not None and m.vbo.decRef():
-                self.glReleaseList.append(m.vbo)
-        if len(self._scene.objects()) == 0:
-            self.cleanResult()
-        import gc
-        gc.collect()
-        self.sceneUpdated()
-
-    def minimumSizeHint(self):
-        return QtCore.QSize(700, 50)
+#     def _splitCallback(self, progress):
+#         log.debug(progress)
+#         print progress
+# 
+#     def _selectObject(self, obj, zoom = True):
+#         if obj != self._selectedObj:
+#             self._selectedObj = obj
+#             self.updateModelSettingsToControls()
+#             self.updateToolButtons()
+#         if zoom and obj is not None:
+#             newViewPos = numpy.array([obj.getPosition()[0], obj.getPosition()[1], obj.getSize()[2] / 2])
+#             self._animView = openglscene.animation(self, self._viewTarget.copy(), newViewPos, 0.5)
+#             newZoom = obj.getBoundaryCircle() * 6
+#             if newZoom > numpy.max(self._machineSize) * 3:
+#                 newZoom = numpy.max(self._machineSize) * 3
+#             self._animZoom = openglscene.animation(self, self._zoom, newZoom, 0.5)
+# 
+#     def _deleteObject(self, obj=None):
+#         if not obj:
+#             obj = self._focusObj
+#         if obj == self._selectedObj:
+#             self._selectObject(None)
+#         if obj == self._focusObj:
+#             self._focusObj = None
+#         self._scene.remove(obj)
+#         for m in obj._meshList:
+#             if m.vbo is not None and m.vbo.decRef():
+#                 self.glReleaseList.append(m.vbo)
+#         if len(self._scene.objects()) == 0:
+#             self.cleanResult()
+#         import gc
+#         gc.collect()
+#         self.sceneUpdated()
+# 
+#     def minimumSizeHint(self):
+#         return QtCore.QSize(700, 50)
 
     def initializeGL(self):
         self._viewport = glGetIntegerv(GL_VIEWPORT)
@@ -494,27 +481,12 @@ class SceneView(QtOpenGL.QGLWidget):
         self._idleCalled = False
         h = self.height()
         w = self.width()
-        oldButtonSize = self._buttonSize
-        if h / 3 < w / 4:
-            w = h * 4 / 3
-        if w < 64 * 8:
-            self._buttonSize = 32
-        elif w < 64 * 10:
-            self._buttonSize = 48
-        elif w < 64 * 15:
-            self._buttonSize = 64
-        elif w < 64 * 20:
-            self._buttonSize = 80
-        else:
-            self._buttonSize = 96
-        if self._buttonSize != oldButtonSize:
-            self._container.updateLayout()
 
         try:
             for obj in self.glReleaseList:
                 obj.release()
             renderStartTime = time.time()
-            self.onPaint()
+            # self.onPaint()
             self._drawScene(painter)
             glFlush()
             if version.isDevVersion():
@@ -525,7 +497,6 @@ class SceneView(QtOpenGL.QGLWidget):
                 glTranslated(10.0, self.height() - 30.0, -1.0)
                 glColor4f(0.2,0.2,0.2,0.5)
                 openglHelpers.glDrawStringLeft("fps:%d" % (1 / renderTime))
-            # self._context.swapBuffers()
         except:
             # When an exception happens, catch it and show a message box. If the exception is not caught the draw function bugs out.
             # Only show this exception once so we do not overload the user with popups.
@@ -550,82 +521,71 @@ class SceneView(QtOpenGL.QGLWidget):
         self._container.updateLayout()
 
     def onPaint(self):
-        # connectionGroup = self._printerConnectionManager.getAvailableGroup()
-        # if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
-        #     self.printButton._imageID = 2
-        #     self.printButton._tooltip = _("Toolpath to SD")
-        # elif connectionGroup is not None:
-        #     self.printButton._imageID = connectionGroup.getIconID()
-        #     self.printButton._tooltip = _("Print with %s") % (connectionGroup.getName())
-        # else:
-        #     self.printButton._imageID = 3
-        #     self.printButton._tooltip = _("Save toolpath")
+        # if self._animView is not None:
+        #     self._viewTarget = self._animView.getPosition()
+        #     if self._animView.isDone():
+        #         self._animView = None
+        # if self._animZoom is not None:
+        #     self._zoom = self._animZoom.getPosition()
+        #     if self._animZoom.isDone():
+        #         self._animZoom = None
+        # if self._objectShader is None: #TODO: add loading shaders from file(s)
+        #     if openglHelpers.hasShaderSupport():
+        #         self._objectShader = openglHelpers.GLShader("""
+        #             varying float light_amount;
 
-        if self._animView is not None:
-            self._viewTarget = self._animView.getPosition()
-            if self._animView.isDone():
-                self._animView = None
-        if self._animZoom is not None:
-            self._zoom = self._animZoom.getPosition()
-            if self._animZoom.isDone():
-                self._animZoom = None
-        if self._objectShader is None: #TODO: add loading shaders from file(s)
-            if openglHelpers.hasShaderSupport():
-                self._objectShader = openglHelpers.GLShader("""
-                    varying float light_amount;
+        #             void main(void)
+        #             {
+        #                 gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+        #                 gl_FrontColor = gl_Color;
 
-                    void main(void)
-                    {
-                        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-                        gl_FrontColor = gl_Color;
+        #                 light_amount = abs(dot(normalize(gl_NormalMatrix * gl_Normal), normalize(gl_LightSource[0].position.xyz)));
+        #                 light_amount += 0.2;
+        #             }
+        #                             ""","""
+        #             varying float light_amount;
 
-                        light_amount = abs(dot(normalize(gl_NormalMatrix * gl_Normal), normalize(gl_LightSource[0].position.xyz)));
-                        light_amount += 0.2;
-                    }
-                                    ""","""
-                    varying float light_amount;
+        #             void main(void)
+        #             {
+        #                 gl_FragColor = vec4(gl_Color.xyz * light_amount, gl_Color[3]);
+        #             }
+        #         """)
+        #         self._objectOverhangShader = openglHelpers.GLShader("""
+        #             uniform float cosAngle;
+        #             uniform mat3 rotMatrix;
+        #             varying float light_amount;
 
-                    void main(void)
-                    {
-                        gl_FragColor = vec4(gl_Color.xyz * light_amount, gl_Color[3]);
-                    }
-                """)
-                self._objectOverhangShader = openglHelpers.GLShader("""
-                    uniform float cosAngle;
-                    uniform mat3 rotMatrix;
-                    varying float light_amount;
+        #             void main(void)
+        #             {
+        #                 gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+        #                 gl_FrontColor = gl_Color;
 
-                    void main(void)
-                    {
-                        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-                        gl_FrontColor = gl_Color;
+        #                 light_amount = abs(dot(normalize(gl_NormalMatrix * gl_Normal), normalize(gl_LightSource[0].position.xyz)));
+        #                 light_amount += 0.2;
+        #                 if (normalize(rotMatrix * gl_Normal).z < -cosAngle)
+        #                 {
+        #                     light_amount = -10.0;
+        #                 }
+        #             }
+        #         ""","""
+        #             varying float light_amount;
 
-                        light_amount = abs(dot(normalize(gl_NormalMatrix * gl_Normal), normalize(gl_LightSource[0].position.xyz)));
-                        light_amount += 0.2;
-                        if (normalize(rotMatrix * gl_Normal).z < -cosAngle)
-                        {
-                            light_amount = -10.0;
-                        }
-                    }
-                ""","""
-                    varying float light_amount;
-
-                    void main(void)
-                    {
-                        if (light_amount == -10.0)
-                        {
-                            gl_FragColor = vec4(1.0, 0.0, 0.0, gl_Color[3]);
-                        }else{
-                            gl_FragColor = vec4(gl_Color.xyz * light_amount, gl_Color[3]);
-                        }
-                    }
-                                    """)
-                
-            if self._objectShader is None or not self._objectShader.isValid(): #Could not make shader.
-                self._objectShader = openglHelpers.GLFakeShader()
-                self._objectOverhangShader = openglHelpers.GLFakeShader()
-                # self._objectLoadShader = None
-        self._init3DView()
+        #             void main(void)
+        #             {
+        #                 if (light_amount == -10.0)
+        #                 {
+        #                     gl_FragColor = vec4(1.0, 0.0, 0.0, gl_Color[3]);
+        #                 }else{
+        #                     gl_FragColor = vec4(gl_Color.xyz * light_amount, gl_Color[3]);
+        #                 }
+        #             }
+        #                             """)
+        #         
+        #     if self._objectShader is None or not self._objectShader.isValid(): #Could not make shader.
+        #         self._objectShader = openglHelpers.GLFakeShader()
+        #         self._objectOverhangShader = openglHelpers.GLFakeShader()
+        #         # self._objectLoadShader = None
+        # self._init3DView()
         glTranslate(0.0, 0.0, -self._zoom)
         glRotate(-self._pitch, 1.0, 0.0, 0.0)
         glRotate(self._yaw, 0.0, 0.0, 1.0)
@@ -638,32 +598,32 @@ class SceneView(QtOpenGL.QGLWidget):
         glClearColor(1,1,1,1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
 
-        if self.viewMode != 'gcode':
-            for n in xrange(0, len(self._scene.objects())):
-                obj = self._scene.objects()[n]
-                glColor4ub((n >> 16) & 0xFF, (n >> 8) & 0xFF, (n >> 0) & 0xFF, 0xFF)
-                self._renderObject(obj)
+        # if self.viewMode != 'gcode':
+        #     for n in xrange(0, len(self._scene.objects())):
+        #         obj = self._scene.objects()[n]
+        #         glColor4ub((n >> 16) & 0xFF, (n >> 8) & 0xFF, (n >> 0) & 0xFF, 0xFF)
+        #         self._renderObject(obj)
 
-        if self._mouseX > -1: # mouse has not passed over the opengl window.
-            glFlush()
-            n = glReadPixels(self._mouseX, self.height() - 1 - self._mouseY, 1, 1, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)[0][0] >> 8
-            if n < len(self._scene.objects()):
-                self._focusObj = self._scene.objects()[n]
-            else:
-                self._focusObj = None
-            f = glReadPixels(self._mouseX, self.height() - 1 - self._mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT)[0][0]
-            #self.GetTopLevelParent().SetTitle(hex(n) + " " + str(f))
-            self._mouse3Dpos = openglHelpers.unproject(self._mouseX, self._viewport[1] + self._viewport[3] - self._mouseY, f, self._modelMatrix, self._projMatrix, self._viewport)
-            self._mouse3Dpos -= self._viewTarget
+        # if self._mouseX > -1: # mouse has not passed over the opengl window.
+        #     glFlush()
+        #     n = glReadPixels(self._mouseX, self.height() - 1 - self._mouseY, 1, 1, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8)[0][0] >> 8
+        #     if n < len(self._scene.objects()):
+        #         self._focusObj = self._scene.objects()[n]
+        #     else:
+        #         self._focusObj = None
+        #     f = glReadPixels(self._mouseX, self.height() - 1 - self._mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT)[0][0]
+        #     #self.GetTopLevelParent().SetTitle(hex(n) + " " + str(f))
+        #     self._mouse3Dpos = openglHelpers.unproject(self._mouseX, self._viewport[1] + self._viewport[3] - self._mouseY, f, self._modelMatrix, self._projMatrix, self._viewport)
+        #     self._mouse3Dpos -= self._viewTarget
 
-        self._init3DView()
-        glTranslate(0,0,-self._zoom)
-        glRotate(-self._pitch, 1,0,0)
-        glRotate(self._yaw, 0,0,1)
-        glTranslate(-self._viewTarget[0],-self._viewTarget[1],-self._viewTarget[2])
+        # self._init3DView()
+        # glTranslate(0,0,-self._zoom)
+        # glRotate(-self._pitch, 1,0,0)
+        # glRotate(self._yaw, 0,0,1)
+        # glTranslate(-self._viewTarget[0],-self._viewTarget[1],-self._viewTarget[2])
 
         self._objectShader.unbind()
-        self._engineResultView.onDraw()
+        # self._engineResultView.onDraw()
         if self.viewMode != 'gcode':
             glStencilFunc(GL_ALWAYS, 1, 1)
             glStencilOp(GL_INCR, GL_INCR, GL_INCR)
@@ -847,22 +807,22 @@ class SceneView(QtOpenGL.QGLWidget):
         self._objColors[3] = profile.getPreferenceColour('model_colour4')
         self._scene.updateMachineDimensions()
         self.updateModelSettingsToControls()
-
-    def updateToolButtons(self):
-        if self._selectedObj is None:
-            hidden = True
-        else:
-            hidden = False
-        self.rotateToolButton.setHidden(hidden)
-        self.scaleToolButton.setHidden(hidden)
-        self.mirrorToolButton.setHidden(hidden)
-        if hidden:
-            self.rotateToolButton.setSelected(False)
-            self.scaleToolButton.setSelected(False)
-            self.scaleForm.setSelected(False)
-            self.mirrorToolButton.setSelected(False)
-            self.onToolSelect(0)
-
+# 
+#     def updateToolButtons(self):
+#         if self._selectedObj is None:
+#             hidden = True
+#         else:
+#             hidden = False
+#         self.rotateToolButton.setHidden(hidden)
+#         self.scaleToolButton.setHidden(hidden)
+#         self.mirrorToolButton.setHidden(hidden)
+#         if hidden:
+#             self.rotateToolButton.setSelected(False)
+#             self.scaleToolButton.setSelected(False)
+#             self.scaleForm.setSelected(False)
+#             self.mirrorToolButton.setSelected(False)
+#             self.onToolSelect(0)
+# 
     def updateModelSettingsToControls(self):
         if self._selectedObj is not None:
             scale = self._selectedObj.getScale()
@@ -875,10 +835,11 @@ class SceneView(QtOpenGL.QGLWidget):
             self.scaleZmmctrl.setValue(round(size[2], 2))
 
     def sceneUpdated(self):
-        self._sceneUpdateTimer.singleShot(500, self._onRunEngine)
-        self._engine.abortEngine()
-        self._scene.updateSizeOffsets()
-        self.queueRefresh()
+        pass
+        # self._sceneUpdateTimer.singleShot(500, self._onRunEngine)
+        # self._engine.abortEngine()
+        # self._scene.updateSizeOffsets()
+        # self.queueRefresh()
 
     def shaderUpdate(self, v, f):
         s = openglHelpers.GLShader(v, f)
@@ -1213,27 +1174,27 @@ class SceneView(QtOpenGL.QGLWidget):
         self._animView = openglscene.animation(self, self._viewTarget.copy(), numpy.array([0,0,0], numpy.float32), 0.5)
         self.cleanResult()
 
-    def onSplitObject(self):
-        if self._focusObj is None:
-            return
-        self._scene.remove(self._focusObj)
-        for obj in self._focusObj.split(self._splitCallback):
-            if numpy.max(obj.getSize()) > 2.0:
-                self._scene.add(obj)
-        self._scene.centerAll()
-        self._selectObject(None)
-        self.sceneUpdated()
-
-    def onMergeObjects(self):
-        if self._selectedObj is None or self._focusObj is None \
-                or self._selectedObj == self._focusObj:
-            if len(self._scene.objects()) == 2:
-                self._scene.merge(self._scene.objects()[0],
-                        self._scene.objects()[1])
-                self.sceneUpdated()
-            return
-        self._scene.merge(self._selectedObj, self._focusObj)
-        self.sceneUpdated()
+#     def onSplitObject(self):
+#         if self._focusObj is None:
+#             return
+#         self._scene.remove(self._focusObj)
+#         for obj in self._focusObj.split(self._splitCallback):
+#             if numpy.max(obj.getSize()) > 2.0:
+#                 self._scene.add(obj)
+#         self._scene.centerAll()
+#         self._selectObject(None)
+#         self.sceneUpdated()
+# 
+#     def onMergeObjects(self):
+#         if self._selectedObj is None or self._focusObj is None \
+#                 or self._selectedObj == self._focusObj:
+#             if len(self._scene.objects()) == 2:
+#                 self._scene.merge(self._scene.objects()[0],
+#                         self._scene.objects()[1])
+#                 self.sceneUpdated()
+#             return
+#         self._scene.merge(self._selectedObj, self._focusObj)
+#         self.sceneUpdated()
 
     def onViewChange(self):
         if self.viewSelection.getValue() == 4:
@@ -1248,26 +1209,26 @@ class SceneView(QtOpenGL.QGLWidget):
             self.viewMode = 'xray'
         else:
             self.viewMode = 'normal'
-        self._engineResultView.setEnabled(self.viewMode == 'gcode')
+        # self._engineResultView.setEnabled(self.viewMode == 'gcode')
         self.queueRefresh()
 
-    def onToolSelect(self, button):
-        if self.rotateToolButton.getSelected():
-            self.tool = previewTools.toolRotate(self)
-        elif self.scaleToolButton.getSelected():
-            self.tool = previewTools.toolScale(self)
-        elif self.mirrorToolButton.getSelected():
-            self.tool = previewTools.toolNone(self)
-        else:
-            self.tool = previewTools.toolNone(self)
-        self.resetRotationButton.setHidden(not self.rotateToolButton.getSelected())
-        self.layFlatButton.setHidden(not self.rotateToolButton.getSelected())
-        self.resetScaleButton.setHidden(not self.scaleToolButton.getSelected())
-        self.scaleMaxButton.setHidden(not self.scaleToolButton.getSelected())
-        self.scaleForm.setHidden(not self.scaleToolButton.getSelected())
-        self.mirrorXButton.setHidden(not self.mirrorToolButton.getSelected())
-        self.mirrorYButton.setHidden(not self.mirrorToolButton.getSelected())
-        self.mirrorZButton.setHidden(not self.mirrorToolButton.getSelected())
+#     def onToolSelect(self, button):
+#         if self.rotateToolButton.getSelected():
+#             self.tool = previewTools.toolRotate(self)
+#         elif self.scaleToolButton.getSelected():
+#             self.tool = previewTools.toolScale(self)
+#         elif self.mirrorToolButton.getSelected():
+#             self.tool = previewTools.toolNone(self)
+#         else:
+#             self.tool = previewTools.toolNone(self)
+#         self.resetRotationButton.setHidden(not self.rotateToolButton.getSelected())
+#         self.layFlatButton.setHidden(not self.rotateToolButton.getSelected())
+#         self.resetScaleButton.setHidden(not self.scaleToolButton.getSelected())
+#         self.scaleMaxButton.setHidden(not self.scaleToolButton.getSelected())
+#         self.scaleForm.setHidden(not self.scaleToolButton.getSelected())
+#         self.mirrorXButton.setHidden(not self.mirrorToolButton.getSelected())
+#         self.mirrorYButton.setHidden(not self.mirrorToolButton.getSelected())
+#         self.mirrorZButton.setHidden(not self.mirrorToolButton.getSelected())
 
     def onRotateReset(self, button):
         if self._selectedObj is None:
@@ -1337,70 +1298,71 @@ class SceneView(QtOpenGL.QGLWidget):
         self._selectObject(self._selectedObj)
         self.sceneUpdated()
 
-    def on_startprint(self):
-        self.printButton.setImageID(30)
-        self.printButton.setTooltip(_("Pause"))
-        self.printButton.setCallback(self._parent.pc.pause)
+#     def on_startprint(self):
+#         self.printButton.setImageID(30)
+#         self.printButton.setTooltip(_("Pause"))
+#         self.printButton.setCallback(self._parent.pc.pause)
+# 
+#     def on_endprint(self):
+#         self.printButton.setImageID(6)
+#         self.printButton.setTooltip(_("Print"))
+# 
+#     def on_pauseprint(self):
+#         self.printButton.setImageID(6)
+#         self.printButton.setTooltip(_("Resume"))
+# 
+#     def on_resumeprint(self):
+#         self.printButton.setImageID(30)
+#         self.printButton.setTooltip(_("Pause"))
+# 
+#     def onPrintButton(self, button=LEFT_BUTTON):
+#         self.on_startprint()
+#         self._parent.pc.printfile(self._engine._result.getGCode())
+# 
+# 
+#         # if button == 1:
+#         #     connectionGroup = self._printerConnectionManager.getAvailableGroup()
+#         #     if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
+#         #         drives = removableStorage.getPossibleSDcardDrives()
+#         #         if len(drives) > 1:
+#         #             dlg = wx.SingleChoiceDialog(self, "Select SD drive", "Multiple removable drives have been found,\nplease select your SD card drive", map(lambda n: n[0], drives))
+#         #             if dlg.ShowModal() != wx.ID_OK:
+#         #                 dlg.Destroy()
+#         #                 return
+#         #             drive = drives[dlg.GetSelection()]
+#         #             dlg.Destroy()
+#         #         else:
+#         #             drive = drives[0]
+#         #         filename = self._scene._objectList[0].getName() + profile.getGCodeExtension()
+#         #         threading.Thread(target=self._saveGCode,args=(drive[1] + filename, drive[1])).start()
+#         #     elif connectionGroup is not None:
+#         #         connections = connectionGroup.getAvailableConnections()
+#         #         if len(connections) < 2:
+#         #             connection = connections[0]
+#         #         else:
+#         #             dlg = wx.SingleChoiceDialog(self, "Select the %s connection to use" % (connectionGroup.getName()), "Multiple %s connections found" % (connectionGroup.getName()), map(lambda n: n.getName(), connections))
+#         #             if dlg.ShowModal() != wx.ID_OK:
+#         #                 dlg.Destroy()
+#         #                 return
+#         #             connection = connections[dlg.GetSelection()]
+#         #             dlg.Destroy()
+#         #         self._openPrintWindowForConnection(connection)
+#         #     else:
+#         #         self.showSaveGCode()
+#         # if button == 3:
+#         #     menu = wx.Menu()
+#         #     connections = self._printerConnectionManager.getAvailableConnections()
+#         #     menu.connectionMap = {}
+#         #     for connection in connections:
+#         #         i = menu.Append(-1, _("Print with %s") % (connection.getName()))
+#         #         menu.connectionMap[i.GetId()] = connection
+#         #         self.Bind(wx.EVT_MENU, lambda e: self._openPrintWindowForConnection(e.GetEventObject().connectionMap[e.GetId()]), i)
+#         #     self.Bind(wx.EVT_MENU, lambda e: self.showSaveGCode(), menu.Append(-1, _("Save GCode...")))
+#         #     self.Bind(wx.EVT_MENU, lambda e: self._showEngineLog(), menu.Append(-1, _("Slice engine log...")))
+#         #     self.PopupMenu(menu)
+#         #     menu.Destroy()
 
-    def on_endprint(self):
-        self.printButton.setImageID(6)
-        self.printButton.setTooltip(_("Print"))
-
-    def on_pauseprint(self):
-        self.printButton.setImageID(6)
-        self.printButton.setTooltip(_("Resume"))
-
-    def on_resumeprint(self):
-        self.printButton.setImageID(30)
-        self.printButton.setTooltip(_("Pause"))
-
-    def onPrintButton(self, button=LEFT_BUTTON):
-        self.on_startprint()
-        self._parent.pc.printfile(self._engine._result.getGCode())
-
-
-        # if button == 1:
-        #     connectionGroup = self._printerConnectionManager.getAvailableGroup()
-        #     if len(removableStorage.getPossibleSDcardDrives()) > 0 and (connectionGroup is None or connectionGroup.getPriority() < 0):
-        #         drives = removableStorage.getPossibleSDcardDrives()
-        #         if len(drives) > 1:
-        #             dlg = wx.SingleChoiceDialog(self, "Select SD drive", "Multiple removable drives have been found,\nplease select your SD card drive", map(lambda n: n[0], drives))
-        #             if dlg.ShowModal() != wx.ID_OK:
-        #                 dlg.Destroy()
-        #                 return
-        #             drive = drives[dlg.GetSelection()]
-        #             dlg.Destroy()
-        #         else:
-        #             drive = drives[0]
-        #         filename = self._scene._objectList[0].getName() + profile.getGCodeExtension()
-        #         threading.Thread(target=self._saveGCode,args=(drive[1] + filename, drive[1])).start()
-        #     elif connectionGroup is not None:
-        #         connections = connectionGroup.getAvailableConnections()
-        #         if len(connections) < 2:
-        #             connection = connections[0]
-        #         else:
-        #             dlg = wx.SingleChoiceDialog(self, "Select the %s connection to use" % (connectionGroup.getName()), "Multiple %s connections found" % (connectionGroup.getName()), map(lambda n: n.getName(), connections))
-        #             if dlg.ShowModal() != wx.ID_OK:
-        #                 dlg.Destroy()
-        #                 return
-        #             connection = connections[dlg.GetSelection()]
-        #             dlg.Destroy()
-        #         self._openPrintWindowForConnection(connection)
-        #     else:
-        #         self.showSaveGCode()
-        # if button == 3:
-        #     menu = wx.Menu()
-        #     connections = self._printerConnectionManager.getAvailableConnections()
-        #     menu.connectionMap = {}
-        #     for connection in connections:
-        #         i = menu.Append(-1, _("Print with %s") % (connection.getName()))
-        #         menu.connectionMap[i.GetId()] = connection
-        #         self.Bind(wx.EVT_MENU, lambda e: self._openPrintWindowForConnection(e.GetEventObject().connectionMap[e.GetId()]), i)
-        #     self.Bind(wx.EVT_MENU, lambda e: self.showSaveGCode(), menu.Append(-1, _("Save GCode...")))
-        #     self.Bind(wx.EVT_MENU, lambda e: self._showEngineLog(), menu.Append(-1, _("Slice engine log...")))
-        #     self.PopupMenu(menu)
-        #     menu.Destroy()
-
+    @QtCore.Slot()
     def showLoadModel(self, button=LEFT_BUTTON):
         if button is not LEFT_BUTTON:
             return
@@ -1604,24 +1566,24 @@ class SceneView(QtOpenGL.QGLWidget):
 
             self.save_gcode_thread.start()
 
-    def set_printing_gcode(self, gcode):
-        self._parent.pc.fgcode = gcode
-
-    @QtCore.Slot(float)
-    def set_printtemp_target(self, temp):
-        self.printtemp_gauge.setTarget(temp)
-
-    @QtCore.Slot(float)
-    def set_bedtemp_target(self, temp):
-        self.bedtemp_gauge.setTarget(temp)
-
-    @QtCore.Slot(float)
-    def set_printtemp_value(self, temp):
-        self.printtemp_gauge.setValue(temp)
-
-    @QtCore.Slot(float)
-    def set_bedtemp_value(self, temp):
-        self.bedtemp_gauge.setValue(temp)
+#     def set_printing_gcode(self, gcode):
+#         self._parent.pc.fgcode = gcode
+# 
+#     @QtCore.Slot(float)
+#     def set_printtemp_target(self, temp):
+#         self.printtemp_gauge.setTarget(temp)
+# 
+#     @QtCore.Slot(float)
+#     def set_bedtemp_target(self, temp):
+#         self.bedtemp_gauge.setTarget(temp)
+# 
+#     @QtCore.Slot(float)
+#     def set_printtemp_value(self, temp):
+#         self.printtemp_gauge.setValue(temp)
+# 
+#     @QtCore.Slot(float)
+#     def set_bedtemp_value(self, temp):
+#         self.bedtemp_gauge.setValue(temp)
 
 
 class SaveGCodeWorker(QtCore.QObject):

@@ -1,2 +1,9 @@
 *.pyc
 *.log
+*.gcode
+*.stl
+*.STL
+build/
+dist/
+*.egg*
+TODO

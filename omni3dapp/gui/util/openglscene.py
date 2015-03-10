@@ -19,7 +19,7 @@ class animation(object):
         self._end = end
         self._startTime = time.time()
         self._runTime = runTime
-        gui._animationList.append(self)
+        gui.animationList.append(self)
 
     def isDone(self):
         return time.time() > self._startTime + self._runTime
@@ -37,7 +37,7 @@ class animation(object):
 class glGuiControl(object):
     def __init__(self, parent, pos):
         self._parent = parent
-        self._base = parent._base
+        self._base = parent
         self._pos = pos
         self._size = (0, 0, 1, 1)
         self._parent.add(self)
@@ -74,7 +74,7 @@ class glGuiControl(object):
         return False
 
     def hasFocus(self):
-        return self._base._focus == self
+        return self._base.focus == self
 
     def onMouseReleaseEvent(self, x, y):
         pass
@@ -86,7 +86,7 @@ class glGuiControl(object):
 class glGuiContainer(glGuiControl):
     def __init__(self, parent, pos):
         self._glGuiControlList = []
-        glGuiLayoutButtons(self)
+        # glGuiLayoutButtons(self)
         super(glGuiContainer, self).__init__(parent, pos)
 
     def add(self, ctrl):
@@ -266,6 +266,8 @@ class glButton(glGuiControl):
         return x0 + w / 2, y0 + h / 2
 
     def draw(self, painter=None):
+        # TODO: change if needed
+        return
         if self._hidden:
             return
 
@@ -376,7 +378,7 @@ class glRadioButton(glButton):
         self._selected = value
 
     def _onRadioSelect(self, button):
-        self._base._focus = None
+        self._base.focus = None
         for ctrl in self._group:
             if ctrl != self:
                 ctrl.setSelected(False)
@@ -398,9 +400,9 @@ class glComboButton(glButton):
 
     def _onComboOpenSelect(self, button):
         if self.hasFocus():
-            self._base._focus = None
+            self._base.focus = None
         else:
-            self._base._focus = self
+            self._base.focus = self
 
     def hide_layers_button(self):
         self._imageIDs = self._allImageIDs[:-1]
@@ -467,7 +469,7 @@ class glComboButton(glButton):
             if 0 <= x - pos[0] <= bs and 0 <= y - pos[1] - bs <= bs * len(self._imageIDs):
                 self._selection = int((y - pos[1] - bs) / bs)
                 self._imageID = self._imageIDs[self._selection]
-                self._base._focus = None
+                self._base.focus = None
                 self._comboCallback()
                 return True
         return super(glComboButton, self).onMousePressEvent(x, y, button)
@@ -495,8 +497,8 @@ class glFrame(glGuiContainer):
     def setHidden(self, value):
         self._hidden = value
         for child in self._glGuiControlList:
-            if self._base._focus == child:
-                self._base._focus = None
+            if self._base.focus == child:
+                self._base.focus = None
         self.setSelected(not value)
 
     def getSelected(self):
@@ -764,7 +766,7 @@ class glNumberCtrl(glGuiControl):
         return True
 
     def setFocus(self):
-        self._base._focus = self
+        self._base.focus = self
         self._selectPos = len(self._value)
         return True
 
@@ -873,6 +875,7 @@ class glSlider(glGuiControl):
 
         w, h = self.getMinSize()
         pos = self._getPixelPos()
+        print "slider's pos: ", pos
 
         glPushMatrix()
         glTranslatef(pos[0], pos[1], 0)
@@ -921,7 +924,7 @@ class glSlider(glGuiControl):
         return -w/2 <= x - pos[0] <= w/2 and -h/2 <= y - pos[1] <= h/2
 
     def setFocus(self):
-        self._base._focus = self
+        self._base.focus = self
         return True
 
     def onMouseMoveEvent(self, x, y):
@@ -947,7 +950,7 @@ class glSlider(glGuiControl):
 
     def onMouseReleaseEvent(self, x, y):
         if self.hasFocus():
-            self._base._focus = None
+            self._base.focus = None
             return True
         return False
 
@@ -1140,3 +1143,22 @@ class glTempGauge(glGuiControl):
 #     def onMousePressEvent(self, x, y, button):
 #         for elem in self._container:
 #             elem.onMousePressEvent(x, y, button)
+
+class Container(object):
+    def __init__(self, parent):
+        self.parent = parent
+        self.all_elements = []
+
+    def add(self, ctrl):
+        self.all_elements.append(ctrl)
+
+    def draw(self, painter=None):
+        for elem in self.all_elements:
+            elem.draw(painter)
+
+    def onMouseMoveEvent(self, x, y):
+        handled = False
+        for ctrl in self.all_elements:
+            if ctrl.onMouseMoveEvent(x, y):
+                handled = True
+        return handled

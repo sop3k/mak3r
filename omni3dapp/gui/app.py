@@ -8,7 +8,7 @@ import shutil
 import glob
 from urllib2 import URLError
 
-from PySide import QtCore, QtGui
+from PySide import QtCore, QtGui, QtOpenGL
 
 from mainwindow import MainWindow
 
@@ -25,11 +25,6 @@ UPDATES_URL = "http://localhost:8080/"
 class OmniApp(object):
 
     def __init__(self, files):
-        # TODO: check out and redirect stdout in Qt
-        # if platform.system() == "Windows" and not 'PYCHARM_HOSTED' in os.environ:
-        #     super(CuraApp, self).__init__(redirect=True, filename='output.txt')
-        # else:
-        #     super(CuraApp, self).__init__(redirect=False)
         app = QtGui.QApplication(sys.argv)
 
         self.main_window = None
@@ -44,44 +39,57 @@ class OmniApp(object):
             self.splash.show()
             app.processEvents()
             self.after_splash()
-        self.main_window = MainWindow()
-        self.splash.finish(self.main_window)
-        self.main_window.show()
 
-        if profile.getPreference('check_for_updates') == 'True'and hasattr(sys, 'frozen'):
+        gl_format = QtOpenGL.QGLFormat()
+        gl_format.setSampleBuffers(True)
+        gl_widget = QtOpenGL.QGLWidget(gl_format)
+
+        self.main_window = MainWindow()
+        self.main_window.setViewport(gl_widget)
+        self.main_window.setViewportUpdateMode(
+            QtGui.QGraphicsView.FullViewportUpdate)
+
+        self.splash.finish(self.main_window)
+        self.main_window.showMaximized()
+
+        if profile.getPreference('check_for_updates') == 'True' and \
+                hasattr(sys, 'frozen'):
             try:
                 self.check_for_updates()
             except Exception as e:
-                log.error("Something went wrong while fetching updates: {0}".format(e))
+                log.error("Something went wrong while fetching updates: "
+                          "{0}".format(e))
 
         sys.exit(app.exec_())
 
     def set_splash_screen(self):
         from omni3dapp.util.resources import getPathForImage
         pixmap = QtGui.QPixmap(getPathForImage('splashimage.png'))
-        self.splash = QtGui.QSplashScreen(pixmap, QtCore.Qt.WindowStaysOnTopHint)
+        self.splash = QtGui.QSplashScreen(
+            pixmap, QtCore.Qt.WindowStaysOnTopHint)
 
     def run_config_wizard(self, resource_base_path):
-        if platform.system() == "Windows":
-            exampleFile = os.path.normpath(os.path.join(
-                resource_base_path, 'example', 'UltimakerRobot_support.stl'))
-        else:
-            # Check if we need to copy our examples
-            exampleFile = os.path.expanduser(
-                '~/CuraExamples/UltimakerRobot_support.stl')
-            if not os.path.isfile(exampleFile):
-                try:
-                    os.makedirs(os.path.dirname(exampleFile))
-                except Exception, e:
-                    log.error(e)
-                for filename in glob.glob(os.path.normpath(os.path.join(
-                        resource_base_path, 'example', '*.*'))):
-                    shutil.copy(filename, os.path.join(os.path.dirname(
-                        exampleFile), os.path.basename(filename)))
-        self.loadFiles = [exampleFile]
+        # if platform.system() == "Windows":
+        #     exampleFile = os.path.normpath(os.path.join(
+        #         resource_base_path, 'example', 'UltimakerRobot_support.stl'))
+        # else:
+        #     # Check if we need to copy our examples
+        #     exampleFile = os.path.expanduser(
+        #         '~/CuraExamples/UltimakerRobot_support.stl')
+        #     if not os.path.isfile(exampleFile):
+        #         try:
+        #             os.makedirs(os.path.dirname(exampleFile))
+        #         except Exception, e:
+        #             log.error(e)
+        #         for filename in glob.glob(os.path.normpath(os.path.join(
+        #                 resource_base_path, 'example', '*.*'))):
+        #             shutil.copy(filename, os.path.join(os.path.dirname(
+        #                 exampleFile), os.path.basename(filename)))
+        # self.loadFiles = [exampleFile]
         if self.splash is not None:
-            self.splash.finish()
-        # configWizard.configWizard()
+            self.splash.finish(self.main_window)
+        # Run config wizard
+        pass
 
     def get_executable(self):
         executable = sys.executable
@@ -89,13 +97,14 @@ class OmniApp(object):
             # Find correct executable
             appdir = os.path.dirname(sys.executable)
             from esky.bootstrap import split_app_version, is_version_dir, \
-                                        pathjoin
+                pathjoin
             for nm in os.listdir(appdir):
                 (appnm, ver, platform_name) = split_app_version(nm)
                 if not (ver and platform_name):
                     continue
                 if is_version_dir(pathjoin(appdir, nm)):
-                    executable = pathjoin(appdir, nm, sys.executable.split("\\")[-1])
+                    executable = pathjoin(appdir, nm,
+                                          sys.executable.split("\\")[-1])
         return executable
 
     def check_for_updates(self):
@@ -112,35 +121,36 @@ class OmniApp(object):
         else:
             if newver is not None:
                 update_dialog = QtGui.QMessageBox.question(
-                            self.main_window,
-                            _("Update application?"),
-                            _("New version is available. Do you wish to update the "\
-                            "application?"),
-                            YES_BTN | NO_BTN,
-                            YES_BTN
-                            )
+                    self.main_window,
+                    _("Update application?"),
+                    _("New version is available. Do you wish to update the "
+                      "application?"),
+                    YES_BTN | NO_BTN,
+                    YES_BTN
+                    )
 
                 if update_dialog == YES_BTN:
                     eskyapp.fetch_version(newver)
-                    # TODO: Show progress bar while installing (or relevant message)
+                    # TODO: Show progress bar while installing
+                    # (or relevant message)
                     eskyapp.install_version(newver)
 
                     QtGui.QMessageBox.information(
-                            self.main_window,
-                            _("Update complete"),
-                            _("Application updated from version {0} to version"\
-                            " {1}.\nYou should restart the application now"\
-                            " to apply changes".format(eskyapp.version, newver))
-                            )
+                        self.main_window,
+                        _("Update complete"),
+                        _("Application updated from version {0} to version"
+                          " {1}.\nYou should restart the application now"
+                          " to apply changes".format(eskyapp.version, newver))
+                        )
 
         eskyapp.cleanup()
 
     def after_splash(self):
-        from omni3dapp.util import resources, profile, version
+        from omni3dapp.util import resources, profile
         resources.setupLocalization(profile.getPreference('language'))
 
         # If we do not have preferences yet,
-        # try to load it from a previous Cura install
+        # try to load it from a previous app install
         if profile.getMachineSetting('machine_type') == 'unknown':
             try:
                 otherCuraInstalls = profile.getAlternativeBasePaths()
@@ -158,17 +168,3 @@ class OmniApp(object):
         # If we haven't run it before, run the configuration wizard.
         # if profile.getMachineSetting('machine_type') == 'unknown':
         #     self.run_config_wizard(resources.resourceBasePath)
-
-        if profile.getMachineSetting('machine_name') == '':
-            log.debug('Machine name not found')
-            return 
-
-        # self.mainWindow.OnDropFiles(self.loadFiles)
-        # TODO: load files on drop
-
-        # app_version = version.getVersion(False)
-        # if profile.getPreference('last_run_version') != app_version:
-        #     profile.putPreference('last_run_version', app_version)
-        #     newVersionDialog.newVersionDialog().Show()
-
-        # setFullScreenCapable(self.mainWindow)

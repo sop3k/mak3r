@@ -59,6 +59,7 @@ class setting(object):
         self._tooltip = ''
         self._default = unicode(default)
         self._values = []
+        self._options = None
         self._type = type
         self._category = category
         self._subcategory = subcategory
@@ -138,6 +139,12 @@ class setting(object):
         while index >= len(self._values):
             self._values.append(self._default)
         self._values[index] = unicode(value)
+
+    def setOptions(self, options):
+        self._options = options
+
+    def getOptions(self):
+        return self._options
 
     def getValueIndex(self):
         if self.isMachineSetting() or self.isProfile() or self.isAlteration():
@@ -478,6 +485,7 @@ setting('save_profile', 'False', bool, 'preference', 'hidden').setLabel(_("Save 
 setting('filament_cost_kg', '0', float, 'preference', 'hidden').setLabel(_("Cost (price/kg)"), _("Cost of your filament per kg, to estimate the cost of the final print."))
 setting('filament_cost_meter', '0', float, 'preference', 'hidden').setLabel(_("Cost (price/m)"), _("Cost of your filament per meter, to estimate the cost of the final print."))
 setting('auto_detect_sd', 'True', bool, 'preference', 'hidden').setLabel(_("Auto detect SD card drive"), _("Auto detect the SD card. You can disable this because on some systems external hard-drives or USB sticks are detected as SD card."))
+setting('auto_connect', 'True', bool, 'preference', 'hidden').setLabel(_("Auto connect printer"), _("Auto connect printer at the startup of the application"))
 setting('check_for_updates', 'True', bool, 'preference', 'hidden').setLabel(_("Check for updates"), _("Check for newer versions of Cura on startup"))
 setting('submit_slice_information', 'False', bool, 'preference', 'hidden').setLabel(_("Send usage statistics"), _("Submit anonymous usage information to improve future versions of Cura"))
 setting('youmagine_token', '', str, 'preference', 'hidden')
@@ -485,7 +493,7 @@ setting('filament_physical_density', '1240', float, 'preference', 'hidden').setR
 setting('language', 'English', str, 'preference', 'hidden').setLabel(_('Language'), _('Change the language in which Cura runs. Switching language requires a restart of Cura'))
 setting('active_machine', '0', int, 'preference', 'hidden')
 
-setting('model_colour', '#FFC924', str, 'preference', 'hidden').setLabel(_('Model colour'), _('Display color for first extruder'))
+setting('model_colour', '#FF5724', str, 'preference', 'hidden').setLabel(_('Model colour'), _('Display color for first extruder'))
 setting('model_colour2', '#CB3030', str, 'preference', 'hidden').setLabel(_('Model colour (2)'), _('Display color for second extruder'))
 setting('model_colour3', '#DDD93C', str, 'preference', 'hidden').setLabel(_('Model colour (3)'), _('Display color for third extruder'))
 setting('model_colour4', '#4550D3', str, 'preference', 'hidden').setLabel(_('Model colour (4)'), _('Display color for forth extruder'))
@@ -529,8 +537,7 @@ setting('extruder_offset_y3', '0.0', float, 'machine', 'hidden').setLabel(_("Off
 setting('steps_per_e', '103.888', float, 'machine', 'hidden').setLabel(_("E-Steps per 1mm filament"), _("Amount of steps per mm filament extrusion. If set to 0 then this value is ignored and the value in your firmware is used."))
 
 setting('port_type', '', [], 'machine', _('Printer connection')).setLabel(_("Serial port"), _("Port used to communicate with printer"))
-setting('port_baud_rate', '115200', ['2400', '9600', '19200', '38400', '57600', '115200', '250000'], 'machine', _('Printer connection')).setLabel('@', _("Select baud rate for printer communication"))
-
+setting('port_baud_rate', 250000, int, 'machine', _('Printer connection')).setLabel('@', _("Select baud rate for printer communication")).setOptions([2400, 9600, 19200, 38400, 57600, 115200, 250000])
 setting('extruder_head_size_min_x', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards X min (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 75mm for an Ultimaker if the fan is on the left side."))
 setting('extruder_head_size_min_y', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards Y min (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 18mm for an Ultimaker if the fan is on the left side."))
 setting('extruder_head_size_max_x', '0.0', float, 'machine', 'hidden').setLabel(_("Head size towards X max (mm)"), _("The head size when printing multiple objects, measured from the tip of the nozzle towards the outer part of the head. 18mm for an Ultimaker if the fan is on the left side."))
@@ -686,12 +693,14 @@ def loadProfile(filename, allMachines = False):
             if profileParser.has_option(section, set.getName()):
                 set.setValue(unicode(profileParser.get(section, set.getName()), 'utf-8', 'replace'))
 
-def saveProfile(filename, allMachines = False):
+def saveProfile(filename=None, allMachines=False):
     """
         Save the current profile to an ini file.
     :param filename:    The ini filename to save the profile in.
     :param allMachines: When False only the current active profile is saved. If True all profiles for all machines are saved.
     """
+    if not filename:
+        filename = getDefaultProfilePath()
     global settingsList
     profileParser = ConfigParser.ConfigParser()
     if allMachines:
@@ -860,7 +869,10 @@ def getPreferenceColour(name):
     Get a preference setting value as a color array. The color is stored as #RRGGBB hex string in the setting.
     """
     colorString = getPreference(name)
-    return [float(int(colorString[1:3], 16)) / 255, float(int(colorString[3:5], 16)) / 255, float(int(colorString[5:7], 16)) / 255, 1.0]
+    return [float(int(colorString[1:3], 16)) / 255,
+            float(int(colorString[3:5], 16)) / 255,
+            float(int(colorString[5:7], 16)) / 255,
+            1.0]
 
 def loadPreferences(filename):
     """
@@ -1111,29 +1123,65 @@ def getMachineCenterCoords():
         return [0, 0]
     return [getMachineSettingFloat('machine_width') / 2, getMachineSettingFloat('machine_depth') / 2]
 
-#Returns a list of convex polygons, first polygon is the allowed area of the machine,
-# the rest of the polygons are the dis-allowed areas of the machine.
+def getMachineSizeList():
+    return [
+        getMachineSettingFloat('machine_width'),
+        getMachineSettingFloat('machine_depth'),
+        getMachineSettingFloat('machine_height')
+        ]
+
 def getMachineSizePolygons():
-    size = numpy.array([getMachineSettingFloat('machine_width'), getMachineSettingFloat('machine_depth'), getMachineSettingFloat('machine_height')], numpy.float32)
+    """
+    Returns a list of convex polygons.
+    first polygon is the allowed area of the machine,
+    the rest of the polygons are the dis-allowed areas of the machine.
+    """
+    size = numpy.array(getMachineSizeList(), numpy.float32)
+
     ret = []
     if getMachineSetting('machine_shape') == 'Circular':
         # Circle platform for delta printers...
         circle = []
         steps = 32
         for n in xrange(0, steps):
-            circle.append([math.cos(float(n)/steps*2*math.pi) * size[0]/2, math.sin(float(n)/steps*2*math.pi) * size[1]/2])
+            circle.append([math.cos(float(n)/steps*2*math.pi) * size[0]/2,
+                           math.sin(float(n)/steps*2*math.pi) * size[1]/2])
         ret.append(numpy.array(circle, numpy.float32))
     else:
-        ret.append(numpy.array([[-size[0]/2,-size[1]/2],[size[0]/2,-size[1]/2],[size[0]/2, size[1]/2], [-size[0]/2, size[1]/2]], numpy.float32))
+        ret.append(numpy.array([
+            [-size[0]/2, -size[1]/2],
+            [size[0]/2, -size[1]/2],
+            [size[0]/2, size[1]/2],
+            [-size[0]/2, size[1]/2]], numpy.float32))
 
     if getMachineSetting('machine_type') == 'ultimaker2':
         #UM2 no-go zones
         w = 25
         h = 10
-        ret.append(numpy.array([[-size[0]/2,-size[1]/2],[-size[0]/2+w+2,-size[1]/2], [-size[0]/2+w,-size[1]/2+h], [-size[0]/2,-size[1]/2+h]], numpy.float32))
-        ret.append(numpy.array([[ size[0]/2-w-2,-size[1]/2],[ size[0]/2,-size[1]/2], [ size[0]/2,-size[1]/2+h],[ size[0]/2-w,-size[1]/2+h]], numpy.float32))
-        ret.append(numpy.array([[-size[0]/2+w+2, size[1]/2],[-size[0]/2, size[1]/2], [-size[0]/2, size[1]/2-h],[-size[0]/2+w, size[1]/2-h]], numpy.float32))
-        ret.append(numpy.array([[ size[0]/2, size[1]/2],[ size[0]/2-w-2, size[1]/2], [ size[0]/2-w, size[1]/2-h],[ size[0]/2, size[1]/2-h]], numpy.float32))
+        ret.append(numpy.array([
+            [-size[0]/2, -size[1]/2],
+            [-size[0]/2+w+2, -size[1]/2],
+            [-size[0]/2+w, -size[1]/2+h],
+            [-size[0]/2, -size[1]/2+h]
+            ], numpy.float32))
+        ret.append(numpy.array([
+            [size[0]/2-w-2, -size[1]/2],
+            [size[0]/2, -size[1]/2],
+            [size[0]/2, -size[1]/2+h],
+            [size[0]/2-w, -size[1]/2+h]
+            ], numpy.float32))
+        ret.append(numpy.array([
+            [-size[0]/2+w+2, size[1]/2],
+            [-size[0]/2, size[1]/2],
+            [-size[0]/2, size[1]/2-h],
+            [-size[0]/2+w, size[1]/2-h]
+            ], numpy.float32))
+        ret.append(numpy.array([
+            [size[0]/2, size[1]/2],
+            [size[0]/2-w-2, size[1]/2],
+            [size[0]/2-w, size[1]/2-h],
+            [size[0]/2, size[1]/2-h]
+            ], numpy.float32))
     return ret
 
 #returns the number of extruders minimal used. Normally this returns 1, but with dual-extrusion support material it returns 2

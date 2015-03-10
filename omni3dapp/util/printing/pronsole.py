@@ -19,7 +19,6 @@ import cmd
 import glob
 import os
 import time
-# import threading
 import sys
 import shutil
 import subprocess
@@ -248,12 +247,15 @@ class Pronsole(cmd.Cmd):
         return False
 
     def log(self, *msg):
-        print u"".join(unicode(i) for i in msg)
+        msg = u"".join(unicode(i) for i in msg)
+        log.debug(msg)
+        self.parent.set_statusbar(msg)
 
     def logError(self, *msg):
         msg = u"".join(unicode(i) for i in msg)
         log.error(msg)
         self.guisignals.addtext.emit(msg)
+        self.parent.set_statusbar(msg)
         # if not self.settings.error_command:
         #     return
         # output = get_command_output(self.settings.error_command, {"$m": msg})
@@ -756,7 +758,7 @@ class Pronsole(cmd.Cmd):
             # self.status_thread.finished.emit()
             self.status_thread.terminate()
         except Exception, e:
-            print e
+            log.error(e)
         finally:
             self.status_thread = None
 
@@ -1135,7 +1137,8 @@ class Pronsole(cmd.Cmd):
     #  Printcore callbacks
     #  --------------------------------------------------------------
 
-    def startcb(self, resuming = False):
+    @QtCore.Slot(bool)
+    def startcb(self, resuming=False):
         self.starttime = time.time()
         if resuming:
             print _("Print resumed at: %s") % format_time(self.starttime)
@@ -1589,7 +1592,7 @@ class Pronsole(cmd.Cmd):
 
     def off(self, ignore = None):
         if self.p.online:
-            if self.p.printing: self.pause(None)
+            if self.p.printing: self.pause()
             self.log(_("; Motors off"))
             self.onecmd("M84")
             self.log(_("; Extruder off"))
@@ -1602,6 +1605,8 @@ class Pronsole(cmd.Cmd):
             self.onecmd("M81")
         else:
             self.logError(_("Printer is not online. Unable to turn it off."))
+            return False
+        return True
 
     def help_off(self):
         self.log(_("Turns off everything on the printer"))

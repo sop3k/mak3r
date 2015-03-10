@@ -3,6 +3,23 @@ from esky import bdist_esky
 from distutils.core import setup
 
 
+def get_files(directory, destdir, files_list):
+    files = []
+    for f in os.listdir(directory):
+        path = "{0}/{1}".format(directory, f)
+        if os.path.isdir(path):
+            get_files(path, "{0}/{1}".format(destdir, f), files_list)
+        else:
+            files.append(path)
+    files_list.append((destdir, files))
+
+
+def get_data_files(directory, destdir):
+    all_files = []
+    get_files(directory, destdir, all_files)
+    return all_files
+
+
 openglimports = [
     'OpenGL.arrays.ctypesparameters',
 #     'OpenGL.arrays.numarrays',
@@ -32,9 +49,12 @@ ESKY_OPTIONS = {
     }
 
 
-IMAGES_PATH = 'resources/images/'
-IMAGES = [IMAGES_PATH + p for p in \
-            os.listdir(os.getcwd() + '/{0}'.format(IMAGES_PATH))]
+IMAGES_PATH = "resources/images"
+IMAGES = ["{0}/{1}".format(IMAGES_PATH, p) for p in \
+            os.listdir(os.getcwd() + "/{0}".format(IMAGES_PATH))]
+
+QML_PATH = "omni3dapp/gui/qml"
+QML_FILES = get_data_files(QML_PATH, "qml")
 
 
 setup(name="mak3r",
@@ -54,8 +74,9 @@ setup(name="mak3r",
           ],
       package_data={"omni3dapp": ["version"]},
       scripts=["omniapp.py"],
-      data_files = [("resources/images", IMAGES),
-                    ("CuraEngine", ["CuraEngine/CuraEngine"])
-                    ],
+      data_files = [
+          (IMAGES_PATH, IMAGES),
+          ("CuraEngine", ["CuraEngine/CuraEngine"])
+          ] + QML_FILES,
       options=dict(bdist_esky=ESKY_OPTIONS),
      )

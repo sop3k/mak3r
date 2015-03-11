@@ -34,11 +34,9 @@ from collections import deque
 from PySide import QtCore
 
 from . import gcoder
-from .utils import install_locale, decode_utf8, setup_logging
+from .utils import install_locale, decode_utf8
 
 from omni3dapp.logger import log
-
-setup_logging(sys.stderr)
 
 
 def control_ttyhup(port, disable_hup):
@@ -211,11 +209,13 @@ class Printcore(QtCore.QObject):
                 self.printer = Serial(port = self.port,
                                       baudrate = self.baud,
                                       timeout = 0.25)
-            except (SerialException, IOError) as e:
+            except Exception as e:
                 if type(e) == SerialException:
                     txt = _("Serial error: ")
-                else:
+                elif type(e) == IOError:
                     txt = _("IO error: ")
+                elif type(e) == ValueError:
+                    txt = _("ValueError: ")
                 self.logError(_("Could not connect to %s at baudrate %s:") % (self.port, self.baud) +
                         "\n" + txt + str(e))
                 self.parent.set_statusbar(_("Could not connet to printer."))

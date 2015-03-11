@@ -20,7 +20,7 @@ if os.name == "nt":
 from PySide import QtCore, QtGui
 
 from serial import SerialException
-from .utils import setup_logging, dosify, \
+from .utils import dosify, \
     iconfile, configfile, format_time, format_duration, \
     hexcolor_to_float, parse_temperature_report, \
     prepare_command, check_rgb_color, check_rgba_color

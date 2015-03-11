@@ -26,8 +26,6 @@ if sys.platform.startswith('darwin'):
             resourceBasePath = os.path.join(os.path.dirname(__file__), "../../../../../")
     else:
         resourceBasePath = os.path.join(os.path.dirname(__file__), "../../resources")
-elif platform.system() == "Windows" and hasattr(sys, 'frozen'):
-    resourceBasePath = os.path.join(os.path.dirname(__file__), "../../../resources")
 else:
     resourceBasePath = os.path.join(os.path.dirname(__file__), "../../resources")
 

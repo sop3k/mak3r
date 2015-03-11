@@ -119,7 +119,10 @@ class MainWindow(QtGui.QGraphicsView):
 
     def setup_qmlview(self):
         self.qmlview = QtDeclarative.QDeclarativeView()
-        self.qmlview.setSource(QtCore.QUrl(self.find_data_file("qml/main.qml")))
+        url = QtCore.QUrl()
+        url.setScheme("file")
+        url.setEncodedPath("omni3dapp/gui/qml/main.qml")
+        self.qmlview.setSource(url)
         self.qmlview.setMinimumWidth(1000)
         self.qmlview.setMinimumHeight(600)
         self.qmlview.setResizeMode(self.qmlview.SizeRootObjectToView)

@@ -492,7 +492,8 @@ class Engine(QtCore.QObject):
             self.engine_process.start(getEngineFilename(), command_list,
                                       QtCore.QIODevice.ReadOnly)
         except Exception, e:
-            log.error(e)
+            log.error("Error while starting process: {0}; " \
+                      "command_list: {1}".format(e, command_list))
             self.engine_process = None
 
     def watchProcess(self, command_list):

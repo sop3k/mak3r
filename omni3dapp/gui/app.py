@@ -19,7 +19,7 @@ from omni3dapp.util import profile
 YES_BTN = QtGui.QMessageBox.Yes
 NO_BTN = QtGui.QMessageBox.No
 
-UPDATES_URL = "http://localhost:8080/"
+UPDATES_URL = "http://omni3d.dev.neadoo.com/mak3r"
 
 
 class OmniApp(object):

@@ -861,11 +861,11 @@ class SceneView(QtGui.QGraphicsScene):
             self.shownError = True
 
     def drawBackground(self, painter, rect):
-        if painter.paintEngine().type() != QtGui.QPaintEngine.OpenGL2:
-            QtCore.qWarning('OpenGLScene: drawBackground needs a QGLWidget '
-                            + 'to be set as viewport on the '
-                            + 'graphics view')
-            return
+        # if painter.paintEngine().type() != QtGui.QPaintEngine.OpenGL2:
+        #     QtCore.qWarning('OpenGLScene: drawBackground needs a QGLWidget '
+        #                     + 'to be set as viewport on the '
+        #                     + 'graphics view')
+        #     return
 
         painter.beginNativePainting()
 

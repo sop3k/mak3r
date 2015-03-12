@@ -16,6 +16,8 @@ import cStringIO as StringIO
 
 from PySide import QtCore
 
+from omniapp import BASE_DIR 
+
 from omni3dapp.util import profile
 from omni3dapp.util import pluginInfo
 from omni3dapp.util import gcodeInterpreter
@@ -28,21 +30,12 @@ def getEngineFilename():
     This is OS depended.
     :return: The full path to the engine executable.
     """
-    if platform.system() == 'Windows':
-        return os.path.abspath(os.path.join(os.path.dirname(__file__),
-                               '../..', 'CuraEngine/CuraEngine.exe'))
-    if hasattr(sys, 'frozen'):
-        return os.path.abspath(os.path.join(os.path.dirname(__file__),
-                               '../../', 'CuraEngine/CuraEngine'))
-    if os.path.isfile('/usr/bin/CuraEngine'):
-        return '/usr/bin/CuraEngine'
-    if os.path.isfile('/usr/local/bin/CuraEngine'):
-        return '/usr/local/bin/CuraEngine'
-    tempPath = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                               '../..', 'CuraEngine'))
-    if os.path.isdir(tempPath):
-        tempPath = os.path.join(tempPath, 'CuraEngine')
-    return tempPath
+    if not (hasattr(sys, 'frozen')) and platform.system() == 'Windows':
+        executable = 'CuraEngine.exe'
+    else:
+        executable = 'CuraEngine'
+
+    return os.path.abspath(os.path.join(BASE_DIR, 'CuraEngine', executable))
 
 
 class EngineResult(object):
@@ -485,8 +478,9 @@ class Engine(QtCore.QObject):
 
     def start_process(self, command_list):
         try:
-            log.debug(_("Starting slicing process with command list: " \
-                "{}".format('\n'.join(command_list))))
+            engine_filename = getEngineFilename()
+            log.debug(_("Starting slicing process {0} with command list: " \
+                "{1}".format(engine_filename, '\n'.join(command_list))))
             self.engine_process = QtCore.QProcess(self._parent)
             self.engine_process.readyReadStandardOutput.connect(self.read_data)
             self.engine_process.readyReadStandardError.connect(self.read_err)
@@ -494,7 +488,7 @@ class Engine(QtCore.QObject):
                 lambda: self.slicing_started(command_list))
             self.engine_process.finished.connect(self.slicing_finished)
             self.engine_process.error.connect(self.slicing_error)
-            self.engine_process.start(getEngineFilename(), command_list,
+            self.engine_process.start(engine_filename, command_list,
                                       QtCore.QIODevice.ReadOnly)
         except Exception, e:
             log.error("Error while starting process: {0}".format(e))
@@ -524,7 +518,7 @@ class Engine(QtCore.QObject):
         self.callback(0.0)
 
     def slicing_error(self, error):
-        log.error("Slicer process returned error: {0}; error string: {1}".format(error, self.engine_process.errorString()))
+        log.error("Slicer process returned error: {0}; error string:{1}".format(error, self.engine_process.errorString()))
 
     def read_data(self):
         if not self.engine_process:

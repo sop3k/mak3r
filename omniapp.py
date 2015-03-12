@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import os
 from optparse import OptionParser
 
 from omni3dapp.util import profile
 from omni3dapp.logger import log
+
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 
 
 def parse_arguments():

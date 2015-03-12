@@ -485,30 +485,33 @@ class Engine(QtCore.QObject):
 
     def start_process(self, command_list):
         try:
+            log.debug(_("Starting slicing process with command list: " \
+                "{}".format(command_list)))
             self.engine_process = QtCore.QProcess(self._parent)
             self.engine_process.readyReadStandardOutput.connect(self.read_data)
             self.engine_process.readyReadStandardError.connect(self.read_err)
+            self.engine_process.started.connect(self.slicing_started)
             self.engine_process.finished.connect(self.slicing_finished)
             self.engine_process.start(getEngineFilename(), command_list,
                                       QtCore.QIODevice.ReadOnly)
         except Exception, e:
-            log.error("Error while starting process: {0}; " \
-                      "command_list: {1}".format(e, command_list))
+            log.error("Error while starting process: {0}".format(e))
             self.engine_process = None
 
     def watchProcess(self, command_list):
         self.callback(0.0)
-
         self.start_process(command_list)
-        if not self.engine_process:
-            return
-        if not self.engine_process.waitForStarted(2000):
-            # TODO: Add dialog or text warning that slicer process could not
-            # start
-            log.error("Process could not start: " +
-                      "{0}".format(self.engine_process.exitStatus()))
-            self.abortEngine()
-            return
+
+    def slicing_started(self):
+        # if not self.engine_process:
+        #     return
+        # if not self.engine_process.waitForStarted(2000):
+        #     # TODO: Add dialog or text warning that slicer process could not
+        #     # start
+        #     log.error("Process could not start: " +
+        #               "{0}".format(self.engine_process.exitStatus()))
+        #     self.abortEngine()
+        #     return
 
         self._result = EngineResult(self._sceneview)
         self._result.addLog('Running: %s' % (''.join(command_list)))
@@ -579,6 +582,7 @@ class Engine(QtCore.QObject):
 
     def slicing_finished(self):
         if self.engine_process is None:
+            log.error(_("Slicing process did not start"))
             return
 
         if self._result:
@@ -587,6 +591,8 @@ class Engine(QtCore.QObject):
             self.callback(1.0)
 
         return_code = self.engine_process.exitCode()
+        log.debug("Slicer finished with status code: {}".format(
+            self.engine_process.exitStatus()))
         if return_code == 0:
             pluginError = pluginInfo.runPostProcessingPlugins(self._result)
             if pluginError is not None:

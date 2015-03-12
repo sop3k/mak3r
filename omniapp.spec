@@ -12,7 +12,7 @@ exe = EXE(pyz,
           debug=False,
           strip=None,
           upx=True,
-          console=True )
+          console=False)
 
 data_files = Tree("resources/images", prefix="resources/images") + \
              Tree("omni3dapp/gui/qml", prefix="omni3dapp/gui/qml") + \

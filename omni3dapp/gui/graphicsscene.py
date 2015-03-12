@@ -1683,7 +1683,7 @@ class FilesLoader(QtCore.QObject):
                 scene.centerAll()
             self.sceneview.selectObject(obj)
             if obj.getScale()[0] < 1.0:
-                self.setInfoText(_("Warning: Object scaled down"))
+                self.sceneview.setInfoText(_("Warning: Object scaled down"))
 
 
 class SaveGCodeWorker(QtCore.QObject):

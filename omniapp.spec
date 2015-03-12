@@ -16,7 +16,7 @@ exe = EXE(pyz,
 
 data_files = Tree("resources/images", prefix="resources/images") + \
              Tree("omni3dapp/gui/qml", prefix="omni3dapp/gui/qml") + \
-             [("CuraEngine", "CuraEngine/CuraEngine.exe", "DATA")]
+             [("CuraEngine/CuraEngine", "CuraEngine/CuraEngine.exe", "DATA")]
 
 coll = COLLECT(exe,
                a.binaries,

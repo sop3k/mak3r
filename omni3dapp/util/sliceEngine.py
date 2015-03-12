@@ -493,6 +493,7 @@ class Engine(QtCore.QObject):
             self.engine_process.started.connect(
                 lambda: self.slicing_started(command_list))
             self.engine_process.finished.connect(self.slicing_finished)
+            self.engine_process.error.connect(self.slicing_error)
             self.engine_process.start(getEngineFilename(), command_list,
                                       QtCore.QIODevice.ReadOnly)
         except Exception, e:
@@ -515,10 +516,15 @@ class Engine(QtCore.QObject):
         #     self.abortEngine()
         #     return
 
+        log.debug(_("Slicing process started"))
         self._result = EngineResult(self._sceneview)
-        self._result.addLog('Running: %s' % ('\n'.join(command_list)))
+        # self._result.addLog('Running: %s' % ('\n'.join(command_list)))
+        self._result.addLog('Running')
         self._result.setHash(self.model_hash)
         self.callback(0.0)
+
+    def slicing_error(self, error):
+        log.error("Slicer process returned error: {0}; error string: {1}".format(error, self.engine_process.errorString()))
 
     def read_data(self):
         if not self.engine_process:

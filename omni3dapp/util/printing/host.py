@@ -181,37 +181,40 @@ class PrinterConnection(Pronsole):
     def terminate_printing_threads(self):
         pass
 
-    def connect_printer(self):
-        port_val = self.rescanports()
-        baud_set = profile.settingsDictionary.get('port_baud_rate')
-        baud_val = baud_set.getValue() or 250000
+    def connect_to_port(self):
+        # TODO: add handshake
+        if not hasattr(self, 'baud_set') or not self.baud_set:
+            self.port_val = self.ports.pop()
+            try:
+                self.baud_set = profile.settingsDictionary.get(
+                        'port_baud_rate').getOptions()
+            except Exception:
+                self.baud_set = [250000]
+
+        baud_val = self.baud_set.pop()
         try:
             baud_val = int(baud_val)
         except ValueError as e:
             log.error(_("Could not parse baud rate: {0}".format(e)))
-            baud_val = 115200
+            baud_val = 250000
 
-        if baud_val in self.checked_baudrate:
-            baud_val = None
-            for val in baud_set.getOptions():
-                val = int(val)
-                if val not in self.checked_baudrate:
-                    baud_val = val
-                    break
+        return self.connect(self.port_val, baud_val)
 
-        if not baud_val:
-            self.log(_("Checked all possible baud rates. Try setting custom one"))
-        else:
-            self.checked_baudrate.add(baud_val)
+    def connect_printer(self):
+        self.ports = self.rescanports()
+
+        self.connect_to_port()
         # try:
-        #     baud_val = int(self.ui.port_baud_rate.itemText(
-        #         self.ui.port_baud_rate.currentIndex()))
-        # except (TypeError, ValueError), e:
-        #     log.error(_("Could not parse baud rate: {0}".format(e)))
-        #     traceback.print_exc(file = sys.stdout)
-        return self.connect(port_val, baud_val)
+        #     port_val = profile.settingsDictionary.get('port_type').getValue()
+        #     baud_val = profile.settingsDictionary.get(
+        #         'port_baud_rate').getValue()
+        #     self.connect(port_val, int(baud_val))
+        # except Exception:
+        #     self.connect_to_port()
 
     def connect(self, port_val, baud_val):
+        log.debug("Connecting to port {0} at baudrate {1}".format(port_val,
+            baud_val))
         # self.guisignals.addtext.emit(_('Connecting...'))
         self.addtexttolog(_('Connecting...'))
         if not port_val:
@@ -257,23 +260,22 @@ class PrinterConnection(Pronsole):
     def rescanports(self):
         scanned = self.scanserial()
         portslist = list(scanned)
+        log.debug("Portlist: {}".format(portslist))
         port = profile.settingsDictionary.get('port_type') or ""
         if port:
             port = port.getValue()
         if port != "" and port not in portslist:
             portslist.append(port)
         if portslist:    
-            if not port:
-                port = portslist[0]
-            # TODO: set fields
-            # self.ui.port_type.clear()
-            # self.ui.port_type.addItems(portslist)
+            # if not port:
+            #     port = portslist[0]
+
             self.parent.set_statusbar(_("Found active ports."))
         else:
             self.parent.set_statusbar(_("Did not find any connected ports."))
-        # if os.path.exists(port) or port in scanned:
-        #     self.ui.port_type.setCurrentIndex(self.ui.port_type.findText(port))
-        return port
+
+        # return port
+        return portslist
 
     def store_predisconnect_state(self):
         self.predisconnect_mainqueue = self.p.mainqueue
@@ -332,7 +334,8 @@ class PrinterConnection(Pronsole):
             msg = _("Attempted to write invalid text to console, which could be due to an invalid baudrate. Reconnecting...")
             log.debug(msg)
             # self.parent.set_statusbar(msg)
-            self.connect_printer()
+            # self.connect_printer()
+            self.connect_to_port()
             # self.ui.logbox.appendPlainText(msg)
 
     def sentcb(self, line, gline):

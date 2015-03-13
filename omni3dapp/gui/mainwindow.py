@@ -180,19 +180,39 @@ class MainWindow(QtGui.QGraphicsView):
             else:
                 self.onFloatSettingChange(key, val)
 
+    def validateMachineSettings(self, field_vals):
+        empty = [key for key, val in field_vals.items() if \
+                    not isinstance(val, bool) and not val]
+        if empty:
+            self.wizard.validationError(
+                _("Value of field {} cannot be empty".format(empty[0])))
+            return False
+
+        for key in ['machine_width', 'machine_height', 'machine_depth',
+                'nozzle_size']:
+            try:
+                float(field_vals[key])
+            except ValueError:
+                msg = _("Incorrect value for field {}.\n" \
+                        "It needs to be a correct number".format(key))
+                self.wizard.validationError(msg)
+                return False
+        return True
+
     @QtCore.Slot()
     def saveMachineSettings(self):
         field_vals = self.wizard.getMachineSettings()
+        valid = self.validateMachineSettings(field_vals)
+        if not valid:
+            return
 
         for key, val in field_vals.iteritems():
             if not isinstance(val, bool) and key not in self.TEXT_SETTINGS:
-                try:
-                    val = float(val)
-                except ValueError:
-                    pass
+                val = float(val)
             profile.putMachineSetting(key, val)
 
         self.sceneview.resetMachineSize()
+        self.wizard.configFinished()
 
     def set_up_fields(self):
         for key, val in profile.settingsDictionary.iteritems():

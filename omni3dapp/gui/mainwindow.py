@@ -632,13 +632,6 @@ class MainWindow(QtGui.QGraphicsView):
         # self.ui.set_printtemp_btn.setEnabled(enable)
 
     def set_connected(self):
-        # self.enable_elements(True)
-
-        # self.ui.connect_btn.setText(_("Disconnect"))
-        # self.ui.connect_btn.setToolTip(_("Disconnect from the printer"))
-        # self.ui.connect_btn.clicked.disconnect(self.connect_printer)
-        # self.ui.connect_btn.clicked.connect(self.pc.disconnect)
-
         self.set_statusbar(_("Connected to printer."))
 
         if hasattr(self, 'pc') and self.pc.fgcode:

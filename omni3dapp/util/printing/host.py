@@ -182,12 +182,19 @@ class PrinterConnection(Pronsole):
         pass
 
     def connect_to_port(self):
-        # TODO: add handshake
+        if not hasattr(self, 'ports'):
+            return
+        if not self.ports:
+            msg = _("Could not connect to printer")
+            log.error("{}; scanned every port at every baudrate".format(msg))
+            self.parent.set_statusbar(msg)
+            return
+
         if not hasattr(self, 'baud_set') or not self.baud_set:
-            self.port_val = self.ports.pop()
+            port_val = self.ports.pop()
             try:
                 self.baud_set = profile.settingsDictionary.get(
-                        'port_baud_rate').getOptions()
+                    'port_baud_rate').getOptions()
             except Exception:
                 self.baud_set = [250000]
 
@@ -196,34 +203,34 @@ class PrinterConnection(Pronsole):
             baud_val = int(baud_val)
         except ValueError as e:
             log.error(_("Could not parse baud rate: {0}".format(e)))
-            baud_val = 250000
+            return self.connect_to_port()
 
-        return self.connect(self.port_val, baud_val)
+        return self.connect(port_val, baud_val)
 
     def connect_printer(self):
         self.ports = self.rescanports()
+        if not self.ports:
+            msg = _('Could not find active ports.')
+            log.debug(msg)
+            self.parent.set_statusbar(msg)
+            return
 
-        self.connect_to_port()
-        # try:
-        #     port_val = profile.settingsDictionary.get('port_type').getValue()
-        #     baud_val = profile.settingsDictionary.get(
-        #         'port_baud_rate').getValue()
-        #     self.connect(port_val, int(baud_val))
-        # except Exception:
-        #     self.connect_to_port()
+        try:
+            port_val = profile.settingsDictionary.get('port_type').getValue()
+            baud_val = profile.settingsDictionary.get(
+                'port_baud_rate').getValue()
+            if port_val and baud_val:
+                self.connect(port_val, int(baud_val))
+            else:
+                self.connect_to_port()
+        except Exception:
+            self.connect_to_port()
 
     def connect(self, port_val, baud_val):
-        log.debug("Connecting to port {0} at baudrate {1}".format(port_val,
-            baud_val))
-        # self.guisignals.addtext.emit(_('Connecting...'))
-        self.addtexttolog(_('Connecting...'))
-        if not port_val:
-            port_val = self.rescanports()
-            if not port_val:
-                msg = _('Could not find active ports.')
-                # self.guisignals.addtext.emit(msg)
-                self.addtexttolog(msg)
-                return
+        msg = "Connecting to port {0} at baudrate {1}".format(port_val,
+            baud_val)
+        log.debug(msg)
+        self.parent.set_statusbar(msg)
 
         if self.paused:
             self.p.paused = 0
@@ -231,19 +238,17 @@ class PrinterConnection(Pronsole):
             self.paused = 0
             if self.sdprinting:
                 self.p.send_now("M26 S0")
-        # if not self.connect_to_printer(port_val, baud_val):
         # TODO: change this to mutex as we need to know return status
         # self.p.signals.connect_sig.emit(port_val, baud_val)
-        self.p.connect(port_val, baud_val)
+        ret = self.p.connect(port_val, baud_val)
+        if not ret:
+            return self.connect_to_port()
 
-        #     self.parent.set_statusbar(_("Could not connect to printer."))
-        #     return
         try:
             settings_port = profile.settingsDictionary.get('port_type').getValue()
         except AttributeError:
             settings_port = ""
         if port_val != settings_port:
-            # profile.settingsDictionary['port_type'].setValue(port_val)
             profile.putMachineSetting('port_type', port_val)
 
         try:
@@ -251,8 +256,11 @@ class PrinterConnection(Pronsole):
         except AttributeError:
             settings_baud = ""
         if baud_val != settings_baud:
-            # profile.settingsDictionary['port_baud_rate'].setValue(baud_val)
             profile.putMachineSetting('port_baud_rate', baud_val)
+        msg = _("Connected to port {0} at baudrate {1}".format(
+            port_val, baud_val))
+        log.debug(msg)
+        self.parent.set_statusbar(msg)
 
         # if self.predisconnect_mainqueue:
         #     self.recoverbtn.Enable()

@@ -68,12 +68,11 @@ class Printcore(QtCore.QObject):
         super(Printcore, self).__init__()
         self.parent = parent
         self.host = host
-        self.baud = None
-        self.port = None
         self.analyzer = gcoder.GCode()
+        self.printer = None
+        self.printer_tcp = None
         # Serial instance connected to the printer, should be None when
         # disconnected
-        self.printer = None
         # clear to send, enabled after responses
         # FIXME: should probably be changed to a sliding window approach
         self.clear = 0
@@ -130,7 +129,7 @@ class Printcore(QtCore.QObject):
     def disconnect(self):
         """Disconnects from printer and pauses the print
         """
-        if self.printer:
+        if not self.printer:
             if self.read_thread:
                 self.stop_read_thread = True
                 try:
@@ -163,13 +162,8 @@ class Printcore(QtCore.QObject):
         """Set port and baudrate if given, then connect to printer
         """
         if self.printer:
-            # self.signals.disconnect_sig.emit()
             self.disconnect()
-        if port:
-            self.port = port
-        if baud:
-            self.baud = baud
-        if not (self.port and self.baud):
+        if not (port and baud):
             return
 
         # Connect to socket if "port" is an IP, device if not
@@ -189,30 +183,28 @@ class Printcore(QtCore.QObject):
         if not is_serial:
             self.printer_tcp = socket.socket(socket.AF_INET,
                                              socket.SOCK_STREAM)
-            self.timeout = 0.25
             self.printer_tcp.settimeout(1.0)
             try:
                 self.printer_tcp.connect((hostname, port))
-                self.printer_tcp.settimeout(self.timeout)
+                self.printer_tcp.settimeout(0.25)
                 self.printer = self.printer_tcp.makefile()
             except socket.error as e:
-                self.logError(_("Could not connect to %s:%s:") % (hostname, port) +
-                              "\n" + _("Socket error %s:") % e.errno +
-                              "\n" + e.strerror)
+                log.error(_("Could not connect to {0}:{1}: " \
+                          "\nSocket error {2}: \n{3}").format(
+                              hostname, port, e.errno, e.strerror))
                 self.printer = None
                 self.printer_tcp = None
                 return
         else:
-            disable_hup(self.port)
+            disable_hup(port)
             self.printer_tcp = None
             try:
-                self.printer = Serial(port = self.port,
-                                      baudrate = self.baud,
-                                      timeout = 0.25)
+                self.printer = Serial(port=port,
+                                      baudrate=baud,
+                                      timeout=0.25)
             except Exception as e:
-                self.logError(_("Could not connect to %s at baudrate %s:") % (self.port, self.baud) +
-                        "\n" + str(type(e)) + str(e))
-                self.parent.set_statusbar(_("Could not connet to printer."))
+                log.error(_("Could not connect to {0} at baudrate {1}: " \
+                    "\n{2} {3}").format(port, baud, type(e), e))
                 self.printer = None
                 return
 
@@ -236,6 +228,7 @@ class Printcore(QtCore.QObject):
         self.host.after_connect()
 
         self.parent.set_connected()
+        return True
 
     def reset(self):
         """Reset the printer
@@ -436,7 +429,7 @@ class Printcore(QtCore.QObject):
             else:
                 self.priqueue.put_nowait(command)
         else:
-            self.logError(_("Not connected to printer"))
+            log.error(_("Not connected to printer"))
 
     def send_now(self, command, wait=0):
         """Sends a command to the printer ahead of the command queue, without a
@@ -444,7 +437,7 @@ class Printcore(QtCore.QObject):
         if self.online:
             self.priqueue.put_nowait(command)
         else:
-            self.logError(_("Not connected to printer"))
+            log.error(_("Not connected to printer"))
 
     @QtCore.Slot(dict)
     def _send(self, args_dict):
@@ -484,10 +477,10 @@ class Printcore(QtCore.QObject):
                 self.writefailures = 0
             except socket.error as e:
                 if e.errno is None:
-                    self.logError(_(u"Can't write to printer (disconnected ?):") +
+                    log.error(_(u"Can't write to printer (disconnected ?):") +
                                   "\n" + traceback.format_exc())
                 else:
-                    self.logError(_(u"Can't write to printer (disconnected?) (Socket error {0}): {1}").format(e.errno, decode_utf8(e.strerror)))
+                    log.error(_(u"Can't write to printer (disconnected?) (Socket error {0}): {1}").format(e.errno, decode_utf8(e.strerror)))
                 self.writefailures += 1
             except SerialException as e:
                 self.logError(_(u"Can't write to printer (disconnected?) (SerialException): {0}").format(decode_utf8(str(e))))
@@ -617,7 +610,7 @@ class Listener(QtCore.QObject):
             if e.args[0] == 4:
                 return None
             if 'Bad file descriptor' in e.args[1]:
-                self.parent.logError(_(u"Can't read from printer " + \
+                log.error(_(u"Can't read from printer " + \
                         "(disconnected?) (SelectError {0}): {1}").format(e.args,
                         decode_utf8(e.message)))
                 return None
@@ -626,15 +619,15 @@ class Listener(QtCore.QObject):
                                         decode_utf8(e.message)))
                 raise
         except SerialException as e:
-            self.parent.logError(_(u"Can't read from printer (disconnected?) (SerialException): {0}").format(decode_utf8(str(e))))
+            log.error(_(u"Can't read from printer (disconnected?) (SerialException): {0}").format(decode_utf8(str(e))))
             return None
         except socket.error as e:
-            self.parent.logError(_(u"Can't read from printer (disconnected?) (Socket error {0}): {1}").format(e.errno, decode_utf8(e.strerror)))
+            log.error(_(u"Can't read from printer (disconnected?) (Socket error {0}): {1}").format(e.errno, decode_utf8(e.strerror)))
             return None
         except OSError as e:
             if e.errno == errno.EAGAIN:  # Not a real error, no data was available
                 return ""
-            self.parent.logError(_(u"Can't read from printer (disconnected?) (OS Error {0}): {1}").format(e.errno, e.strerror))
+            log.error(_(u"Can't read from printer (disconnected?) (OS Error {0}): {1}").format(e.errno, e.strerror))
             return None
 
 

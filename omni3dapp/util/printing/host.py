@@ -133,7 +133,7 @@ class PrinterConnection(Pronsole):
 
         # disable all printer controls until we connect to a printer
         # self.gui_set_disconnected()
-        self.parent.set_statusbar(_("Not connected to printer."))
+        self.parent.set_statusbar(_("Not connected to printer"))
         self.stdout = sys.stdout
         self.slicing = False
         self.loading_gcode = False
@@ -210,9 +210,7 @@ class PrinterConnection(Pronsole):
     def connect_printer(self):
         self.ports = self.rescanports()
         if not self.ports:
-            msg = _('Could not find active ports.')
-            log.debug(msg)
-            self.parent.set_statusbar(msg)
+            self.parent.set_statusbar(_('Could not find active ports'))
             return
 
         try:
@@ -229,7 +227,6 @@ class PrinterConnection(Pronsole):
     def connect(self, port_val, baud_val):
         msg = "Connecting to port {0} at baudrate {1}".format(port_val,
             baud_val)
-        log.debug(msg)
         self.parent.set_statusbar(msg)
 
         if self.paused:
@@ -259,8 +256,7 @@ class PrinterConnection(Pronsole):
             profile.putMachineSetting('port_baud_rate', baud_val)
         msg = _("Connected to port {0} at baudrate {1}".format(
             port_val, baud_val))
-        log.debug(msg)
-        self.parent.set_statusbar(msg)
+        self.parent.set_connected(msg)
 
         # if self.predisconnect_mainqueue:
         #     self.recoverbtn.Enable()
@@ -275,12 +271,9 @@ class PrinterConnection(Pronsole):
         if port != "" and port not in portslist:
             portslist.append(port)
         if portslist:    
-            # if not port:
-            #     port = portslist[0]
-
-            self.parent.set_statusbar(_("Found active ports."))
+            self.parent.set_statusbar(_("Found active ports"))
         else:
-            self.parent.set_statusbar(_("Did not find any connected ports."))
+            self.parent.set_statusbar(_("Did not find any connected ports"))
 
         # return port
         return portslist
@@ -493,10 +486,12 @@ class PrinterConnection(Pronsole):
 
     def pause(self):
         if self.paused:
-            self.log(_("Already paused"))
+            log.debug(_("Already paused"))
             return
 
-        self.log(_("Print paused at: %s") % format_time(time.time()))
+        msg =_("Pausing print at: {}".format(format_time(time.time())))
+        self.parent.set_statusbar(msg)
+
         if self.sdprinting:
             self.p.send_now("M25")
         else:
@@ -519,7 +514,7 @@ class PrinterConnection(Pronsole):
     def recover(self, event):
         self.extra_print_time = 0
         if not self.p.online:
-            self.parent.set_statusbar(_("Not connected to printer."))
+            self.parent.set_statusbar(_("Not connected to printer"))
             # wx.CallAfter(self.statusbar.SetStatusText, _("Not connected to printer."))
             return
         # Reset Z
@@ -706,15 +701,15 @@ class PrinterConnection(Pronsole):
                 return
 
         if not gcode:
-            self.parent.set_statusbar(_("No file loaded. Please use load first."))
+            self.parent.set_statusbar(_("No file loaded. Please use load first"))
             return
 
         if not self.p.online:
-            self.parent.set_statusbar(_("Not connected to printer."))
+            self.parent.set_statusbar(_("Not connected to printer"))
             return
 
         if not self.fgcode:
-            self.parent.set_statusbar(_("No file loaded. Please use load first."))
+            self.parent.set_statusbar(_("No file loaded. Please use load first"))
             return
 
         # Heat up the bed and extruders

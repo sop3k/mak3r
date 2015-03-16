@@ -546,35 +546,28 @@ class MainWindow(QtGui.QGraphicsView):
         return QtCore.QFileInfo(full_filename).fileName()
 
     def set_statusbar(self, msg):
+        log.debug(msg)
         self.sceneview.setInfoText(msg)
 
     @QtCore.Slot()
     def connectPrinter(self):
+        self.set_statusbar(_("Connecting..."))
         if not self.is_online():
             self.pc.connect_printer()
         else:
-            self.set_statusbar(_("Connected to printer."))
+            self.set_connected()
 
     @QtCore.Slot()
     def disconnectPrinter(self):
+        self.set_statusbar(_("Disconnecting..."))
         if not self.is_online():
-            self.set_statusbar(_("Printer disconnected."))
+            self.set_disconnected()
         else:
             self.pc.disconnect()
 
-    # def connect_printer(self):
-    #     port_val = self.ui.port_type.itemText(self.ui.port_type.currentIndex())
-    #     baud_val = 115200
-    #     try:
-    #         baud_val = int(self.ui.port_baud_rate.itemText(
-    #             self.ui.port_baud_rate.currentIndex()))
-    #     except (TypeError, ValueError), e:
-    #         log.error(_("Could not parse baud rate: {0}".format(e)))
-    #         traceback.print_exc(file = sys.stdout)
-    #     return self.pc.connect(port_val, baud_val)
-
     @QtCore.Slot()
     def pausePrinting(self):
+        self.set_statusbar(_("Pausing printing..."))
         self.pc.pause()
 
     @QtCore.Slot()
@@ -651,31 +644,24 @@ class MainWindow(QtGui.QGraphicsView):
         # self.ui.set_bedtemp_btn.setEnabled(enable)
         # self.ui.set_printtemp_btn.setEnabled(enable)
 
-    def set_connected(self):
-        self.set_statusbar(_("Connected to printer."))
-
-        if hasattr(self, 'pc') and self.pc.fgcode:
-            self.print_button.enable()
-
+    def set_connected(self, msg=None):
+        msg = msg or _("Connected to printer")
+        self.set_statusbar(msg)
+        self.enablePrintButton(True)
         self.connect_button.setState("ONLINE")
 
-    def set_disconnected(self):
-        # self.enable_elements(False)
-
-        # self.ui.connect_btn.setText(_("Connect"))
-        # self.ui.connect_btn.setToolTip(_("Connect with the printer"))
-        # self.ui.connect_btn.clicked.disconnect(self.pc.disconnect)
-        # self.ui.connect_btn.clicked.connect(self.connect_printer)
-
+    def set_disconnected(self, msg=None):
         self.connect_button.setState("OFFLINE")
-        self.set_statusbar(_("Disconnected."))
+        self.enablePrintButton(False)
+        msg = msg or _("Printer disconnected")
+        self.set_statusbar(msg)
 
     def setPrintButton(self, time_info, params_info):
         self.print_button.setPrintTime(time_info)
         self.print_button.setPrintParams(params_info)
 
     def enablePrintButton(self, enable):
-        if enable:
+        if enable and hasattr(self, 'pc') and self.pc.fgcode:
             self.print_button.enable()
         else:
             self.print_button.disable()

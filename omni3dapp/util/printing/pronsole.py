@@ -247,15 +247,15 @@ class Pronsole(cmd.Cmd):
         return False
 
     def log(self, *msg):
+        # TODO: log to pronterface console
         msg = u"".join(unicode(i) for i in msg)
         log.debug(msg)
-        self.parent.set_statusbar(msg)
 
     def logError(self, *msg):
+        # TODO: log to pronterface console
         msg = u"".join(unicode(i) for i in msg)
         log.error(msg)
         self.guisignals.addtext.emit(msg)
-        self.parent.set_statusbar(msg)
         # if not self.settings.error_command:
         #     return
         # output = get_command_output(self.settings.error_command, {"$m": msg})

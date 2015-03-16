@@ -812,16 +812,23 @@ class Pronsole(cmd.Cmd):
         baselist = []
         if os.name == "nt":
             try:
-                key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM")
+                log.debug("Getting registry key: {}".format(
+                    _winreg.HKEY_LOCAL_MACHINE))
+                key = _winreg.OpenKey(
+                    _winreg.HKEY_LOCAL_MACHINE,
+                    "HARDWARE\\DEVICEMAP\\SERIALCOMM")
+                log.debug("Got key: {}".format(key))
                 i = 0
                 while(1):
                     baselist += [_winreg.EnumValue(key, i)[1]]
                     i += 1
-            except:
-                pass
+                log.debug("Baselist is: {}".format(baselist))
+            except Exception as e:
+                log.error("Error opening windows registry key: {}".format(e))
 
         for g in ['/dev/ttyUSB*', '/dev/ttyACM*', "/dev/tty.*", "/dev/cu.*", "/dev/rfcomm*"]:
             baselist += glob.glob(g)
+        log.debug("Baselist is: {}".format(baselist))
         return filter(self._bluetoothSerialFilter, baselist)
 
     def _bluetoothSerialFilter(self, serial):

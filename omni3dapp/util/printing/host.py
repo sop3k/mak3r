@@ -275,7 +275,6 @@ class PrinterConnection(Pronsole):
         else:
             self.parent.set_statusbar(_("Did not find any connected ports"))
 
-        # return port
         return portslist
 
     def store_predisconnect_state(self):
@@ -303,23 +302,12 @@ class PrinterConnection(Pronsole):
                     log.error(e)
             self.status_thread = None
 
-        # wx.CallAfter(self.connectbtn.SetLabel, _("Connect"))
-        # wx.CallAfter(self.connectbtn.SetToolTip, wx.ToolTip(_("Connect to the printer")))
-        # wx.CallAfter(self.connectbtn.Bind, wx.EVT_BUTTON, self.connect)
-
-        # wx.CallAfter(self.gui_set_disconnected)
-
         if self.paused:
             self.p.paused = 0
             self.p.printing = 0
-            # wx.CallAfter(self.pausebtn.SetLabel, _("Pause"))
-            # wx.CallAfter(self.printbtn.SetLabel, _("Print"))
             self.paused = 0
             if self.sdprinting:
                 self.p.send_now("M26 S0")
-
-        # Relayout the toolbar to handle new buttons size
-        # wx.CallAfter(self.toolbarsizer.Layout)
 
         self.guisignals.setoffline.emit()
 

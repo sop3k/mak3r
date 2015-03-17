@@ -30,12 +30,7 @@ def getEngineFilename():
     This is OS depended.
     :return: The full path to the engine executable.
     """
-    if not (hasattr(sys, 'frozen')) and platform.system() == 'Windows':
-        executable = 'CuraEngine.exe'
-    else:
-        executable = 'CuraEngine'
-
-    return os.path.abspath(os.path.join(BASE_DIR, 'CuraEngine', executable))
+    return os.path.abspath(os.path.join(BASE_DIR, 'CuraEngine', 'CuraEngine'))
 
 
 class EngineResult(object):
@@ -519,6 +514,8 @@ class Engine(QtCore.QObject):
 
     def slicing_error(self, error):
         log.error("Slicer process returned error: {0}; error string:{1}".format(error, self.engine_process.errorString()))
+        print "about to call on stop engine"
+        self._sceneview.onStopEngine(_("Slicing aborted due to slicer process error"))
 
     def read_data(self):
         if not self.engine_process:

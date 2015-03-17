@@ -666,6 +666,9 @@ class MainWindow(QtGui.QGraphicsView):
         else:
             self.print_button.disable()
 
+    def setPrintState(self, state):
+        self.print_button.setState(state)
+
     def eventFilter(self, obj, evt):
         if obj == self.ui.commandbox:
             if evt.type() == QtCore.QEvent.KeyPress:

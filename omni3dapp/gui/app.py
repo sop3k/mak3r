@@ -2,7 +2,7 @@
 
 import os
 import sys
-import esky
+# import esky
 import platform
 import shutil
 import glob
@@ -52,13 +52,13 @@ class OmniApp(object):
         self.splash.finish(self.main_window)
         self.main_window.showMaximized()
 
-        if profile.getPreference('check_for_updates') == 'True' and \
-                hasattr(sys, 'frozen'):
-            try:
-                self.check_for_updates()
-            except Exception as e:
-                log.error("Something went wrong while fetching updates: "
-                          "{0}".format(e))
+        # if profile.getPreference('check_for_updates') == 'True' and \
+        #         hasattr(sys, 'frozen'):
+        #     try:
+        #         self.check_for_updates()
+        #     except Exception as e:
+        #         log.error("Something went wrong while fetching updates: "
+        #                   "{0}".format(e))
 
         sys.exit(app.exec_())
 

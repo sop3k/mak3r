@@ -744,10 +744,11 @@ class SceneView(QtGui.QGraphicsScene):
         self.engine.runEngine(self.scene)
 
     @QtCore.Slot()
-    def onStopEngine(self):
+    def onStopEngine(self, msg=None):
         self.engine.abortEngine()
-        # self.setInfoText(_("Slicing aborted"))
-        self.mainwindow.print_button.setState("IDLE")
+        if msg:
+            self.setInfoText(msg)
+        self.mainwindow.setPrintState("IDLE")
 
     def onIdle(self):
         self.idleCalled = True
@@ -920,7 +921,7 @@ class SceneView(QtGui.QGraphicsScene):
 
         if progressValue >= 1:
             self.setPrintingInfo()
-            self.mainwindow.print_button.setState("SLICED")
+            self.mainwindow.setPrintState("SLICED")
             if not self.mainwindow.is_online():
                 self.mainwindow.enablePrintButton(False)
                 self.setInfoText(_("Not connected to printer"))
@@ -1314,7 +1315,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.engine._result.setFinished(True)
         self.engineResultView.setResult(self.engine._result)
 
-        self.mainwindow.print_button.setState("SLICED")
+        self.mainwindow.setPrintState("SLICED")
         self.mainwindow.qmlobject.setPrintButtonVisible(1)
 
         self.showLayersButton()
@@ -1414,7 +1415,7 @@ class SceneView(QtGui.QGraphicsScene):
         pass
 
     def onEndprint(self):
-        self.mainwindow.print_button.setState("SLICED")
+        self.mainwindow.setPrintState("SLICED")
 
     @QtCore.Slot()
     def onPrintButton(self):
@@ -1483,7 +1484,7 @@ class SceneView(QtGui.QGraphicsScene):
     @QtCore.Slot()
     def afterObjectLoaded(self):
         self.viewSelect.setOptionEnabled(True)
-        self.mainwindow.print_button.setState("IDLE")
+        self.mainwindow.setPrintState("IDLE")
         self.mainwindow.qmlobject.setPrintButtonVisible(1)
 
     @QtCore.Slot(float)

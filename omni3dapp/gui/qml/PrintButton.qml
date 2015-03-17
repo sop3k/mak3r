@@ -183,8 +183,11 @@ Rectangle {
     }
 
     function disable() {
-        print_button.enabled = false;
-        button.color = "#b8b8b8";
+        // only disable if button is in any printing mode
+        if (!(print_button.state == "IDLE" || print_button.state == "SLICING")) {
+            print_button.enabled = false;
+            button.color = "#b8b8b8";
+        }
     }
 
     function enable() {

@@ -182,20 +182,21 @@ class PrinterConnection(Pronsole):
         pass
 
     def connect_to_port(self):
-        if not hasattr(self, 'ports'):
-            return
-        if not self.ports:
+        if not hasattr(self, 'ports') or not self.ports:
             msg = _("Could not connect to printer")
             log.error("{}; scanned every port at every baudrate".format(msg))
-            self.parent.set_statusbar(msg)
+            self.parent.set_disconnected(msg)
             return
 
         if not hasattr(self, 'baud_set') or not self.baud_set:
-            port_val = self.ports.pop()
+            self.port_val = self.ports.pop()
             try:
                 self.baud_set = profile.settingsDictionary.get(
                     'port_baud_rate').getOptions()
-            except Exception:
+            except Exception as e:
+                log.error(e)
+                self.baud_set = []
+            if not self.baud_set:
                 self.baud_set = [250000]
 
         baud_val = self.baud_set.pop()
@@ -205,7 +206,7 @@ class PrinterConnection(Pronsole):
             log.error(_("Could not parse baud rate: {0}".format(e)))
             return self.connect_to_port()
 
-        return self.connect(port_val, baud_val)
+        return self.connect(self.port_val, baud_val)
 
     def connect_printer(self):
         self.ports = self.rescanports()
@@ -221,7 +222,8 @@ class PrinterConnection(Pronsole):
                 self.connect(port_val, int(baud_val))
             else:
                 self.connect_to_port()
-        except Exception:
+        except Exception as e:
+            log.debug("Error getting port and baud settings from profile: {}".format(e))
             self.connect_to_port()
 
     def connect(self, port_val, baud_val):

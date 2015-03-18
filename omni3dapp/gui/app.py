@@ -24,9 +24,7 @@ UPDATES_URL = "http://omni3d.dev.neadoo.com/mak3r"
 
 class OmniApp(object):
 
-    def __init__(self, files):
-        app = QtGui.QApplication(sys.argv)
-
+    def __init__(self, app, files):
         self.main_window = None
         self.splash = None
         self.load_files = files
@@ -59,8 +57,6 @@ class OmniApp(object):
         #     except Exception as e:
         #         log.error("Something went wrong while fetching updates: "
         #                   "{0}".format(e))
-
-        sys.exit(app.exec_())
 
     def set_splash_screen(self):
         from omni3dapp.util.resources import getPathForImage

@@ -418,7 +418,8 @@ class MainWindow(QtGui.QGraphicsView):
         # TODO: check if needed
         # self.terminate_threads()
         profile.saveProfile(allMachines=True)
-        super(MainWindow, self).closeEvent(evt)
+        self.sceneview.clear()
+        evt.accept()
 
 
 class NormalModeValidator(QtGui.QValidator):

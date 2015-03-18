@@ -88,11 +88,7 @@ class PrinterConnection(Pronsole):
         self.current_pos = [0, 0, 0]
         self.uploading = False
         self.sentlines = Queue.Queue(0)
-        # self.cpbuttons = {
-        #     "motorsoff": SpecialButton(_("Motors off"), ("M84"), (250, 250, 250), _("Switch all motors off")),
-        #     "extrude": SpecialButton(_("Extrude"), ("pront_extrude"), (225, 200, 200), _("Advance extruder by set length")),
-        #     "reverse": SpecialButton(_("Reverse"), ("pront_reverse"), (225, 200, 200), _("Reverse extruder by set length")),
-        # }
+
         self.custombuttons = []
         self.btndict = {}
         self.filehistory = None
@@ -131,8 +127,6 @@ class PrinterConnection(Pronsole):
         #     pass
         # self.add_custom_buttons()
 
-        # disable all printer controls until we connect to a printer
-        # self.gui_set_disconnected()
         self.parent.set_statusbar(_("Not connected to printer"))
         self.stdout = sys.stdout
         self.slicing = False

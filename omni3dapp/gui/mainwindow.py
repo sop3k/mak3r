@@ -51,9 +51,6 @@ class MainWindow(QtGui.QGraphicsView):
                 QtCore.QSettings.IniFormat)
         self.model_files_history_actions = []
 
-        # self.ui = Ui_MainWindow()
-        # self.ui.setupUi(self)
-
         # Create a scene to present and modify 3d objects
         self.setup_qmlview()
 
@@ -75,30 +72,11 @@ class MainWindow(QtGui.QGraphicsView):
         if not profile.getMachineSetting('machine_name'):
             self.runConfigWizard()
 
-        # if profile.getMachineSetting('machine_name') == '':
-        #     log.debug('Machine name not found')
-        #     # Notify that we need to have at least one machine
-        #     return
 
         self.setUpFields()
 
         # Class that enables connecting to printer
         self.pc = host.PrinterConnection(self)
-
-        # self.connect_actions()
-        # self.connect_buttons()
-
-        # As a printer is not connected at the start of the app, set the gui
-        # disconnected
-        # self.enable_elements(False)
-
-        # self.timer = QtCore.QTimer(self)
-        # self.timer.timeout.connect(self.onTimer)
-        # self.timer.start(1000)
-
-        # self.lastTriedClipboard = profile.getProfileString()
-
-        # self.update_slice_mode()
 
     def resizeEvent(self, event):
         scene = self.scene()
@@ -214,237 +192,6 @@ class MainWindow(QtGui.QGraphicsView):
         self.sceneview.resetMachineSize()
         self.wizard.configFinished()
 
-    def set_up_fields(self):
-        for key, val in profile.settingsDictionary.iteritems():
-            elem = getattr(self.ui, key, None)
-            if not elem:
-                continue
-            try:
-                if isinstance(elem, (QtGui.QLineEdit, QtGui.QTextEdit)):
-                    # Add syntax styling to gcode fields
-                    if key.endswith('gcode'):
-                        GCodeSyntaxHighlighter(elem)
-                    elem.setText(val.getValue())
-                    # if elem._validators:
-                        # set validator    
-                elif isinstance(elem, QtGui.QCheckBox):
-                    elem.setChecked(val.getValue() == u'True')
-                elif isinstance(elem, QtGui.QComboBox):
-                    items = val.getType()
-                    elem.addItems(items)
-                    elem.setCurrentIndex(items.index(val.getValue()))
-                elif isinstance(elem, QtGui.QDoubleSpinBox):
-                    val_range = val.getRange()
-                    if val_range:
-                        if val_range[0] is not None:
-                            elem.setMinimum(float(val_range[0]))
-                        if val_range[1] is not None:
-                            elem.setMaximum(float(val_range[1]))
-                    elem.setValue(float(val.getValue()))
-                elem.setToolTip(val.getTooltip())
-            except Exception, e:
-                log.debug('Could not set value to field {0}: {1}'.format(key, e))
-
-            # Set recent MRU files list
-            for elem in xrange(self.MAX_MRU_FILES):
-                action = QtGui.QAction(self, visible=False,
-                    triggered=self.open_model_file)
-                action.setObjectName("recent_model_file_{0}".format(elem))
-                self.model_files_history_actions.append(action)
-                self.ui.menuRecent_Model_Files.addAction(action)
-            self.update_mru_files_actions()
-
-            # Create history for commandbox
-            self.ui.commandbox.history = [u""]
-            self.ui.commandbox.histindex = 1
-
-    # def connect_actions(self):
-    #     self.ui.actionSwitch_to_quickprint.triggered.connect(self.on_simple_switch)
-    #     self.ui.actionSwitch_to_expert_mode.triggered.connect(self.on_normal_switch)
-    #     self.ui.actionLoad_model_file_tCTRL_L.triggered.connect(self.scene.showLoadModel)
-    #     self.ui.actionSave_model.triggered.connect(self.scene.showSaveModel)
-    #     self.ui.actionReload_platform.triggered.connect(self.scene.reloadScene)
-    #     self.ui.actionClear_platform.triggered.connect(self.scene.onDeleteAll)
-    #     self.ui.actionPrint.triggered.connect(self.scene.onPrintButton)
-    #     self.ui.actionSave_GCode.triggered.connect(self.scene.showSaveGCode)
-
-    #     self.ui.commandbox.returnPressed.connect(self.pc.sendline)
-    #     self.ui.commandbox.installEventFilter(self)
-
-    #     for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
-    #         if elem.objectName().startswith('move'):
-    #             elem.clicked.connect(self.move_axis)
-    #         else:
-    #             elem.clicked.connect(self.home_pos)
-
-    #     # Simple panel actions
-    #     self.connect_actions_simple_mode()
-    #     # Normal panel actions
-    #     self.connect_actions_normal_mode()
-
-    # def connect_actions_simple_mode(self):
-    #     self.ui.high_quality.toggled.connect(self.scene.sceneUpdated)
-    #     self.ui.normal_quality.toggled.connect(self.scene.sceneUpdated)
-    #     self.ui.fast_low_quality.toggled.connect(self.scene.sceneUpdated)
-    #     self.ui.pla.toggled.connect(self.scene.sceneUpdated)
-    #     self.ui.abs.toggled.connect(self.scene.sceneUpdated)
-    #     self.ui.simple_filament_diameter.textChanged.connect(
-    #             self.scene.sceneUpdated)
-    #     self.ui.print_support_structure.stateChanged.connect(
-    #             self.scene.sceneUpdated)
-
-    # def connect_actions_normal_mode(self):
-    #     # For each element in self.normal or self.tabWidget
-    #     for elem in self.ui.normal.findChildren(QtGui.QWidget):
-    #         if elem.objectName() in self.SETTING_CHANGE_WHITELIST:
-    #             continue
-    #         if isinstance(elem, QtGui.QDoubleSpinBox):
-    #             elem.valueChanged.connect(self.on_value_changed)
-    #         elif isinstance(elem, QtGui.QCheckBox):
-    #             elem.stateChanged.connect(self.on_state_changed)
-    #         elif isinstance(elem, QtGui.QLineEdit):
-    #             elem.textChanged.connect(self.on_text_changed)
-    #         elif isinstance(elem, QtGui.QComboBox):
-    #             elem.currentIndexChanged.connect(self.on_index_changed)
-
-    # def connect_buttons(self):
-    #     self.ui.connect_btn.clicked.connect(self.connect_printer)
-    #     self.ui.port_btn.clicked.connect(self.pc.rescanports)
-    #     self.ui.send_btn.clicked.connect(self.pc.sendline)
-    #     self.ui.set_bedtemp_btn.clicked.connect(self.bedtemp)
-    #     self.ui.set_printtemp_btn.clicked.connect(self.settemp)
-
-    # def on_simple_switch(self, *args, **kwargs):
-    #     profile.putPreference('startMode', 'Simple')
-    #     self.update_slice_mode(is_simple=True)
-
-    # def on_normal_switch(self, *args, **kwargs):
-    #     profile.putPreference('startMode', 'Normal')
-    #     self.update_slice_mode(is_simple=False)
-
-    # def update_slice_mode(self, is_simple=None):
-    #     if not is_simple:
-    #         is_simple = profile.getPreference('startMode') == 'Simple'
-    #     self.ui.slice_modes.setCurrentIndex(int(is_simple))
-
-    #     for item in self.NORMAL_MODE_ONLY_ITEMS:
-    #         action = self.findChild(QtGui.QAction, 'action{0}'.format(item))
-    #         action.setEnabled(not is_simple)
-    #     if is_simple:
-    #         self.ui.actionSwitch_to_quickprint.setChecked(True)
-    #         self.ui.actionSwitch_to_expert_mode.setChecked(False)
-    #     else:
-    #         self.ui.actionSwitch_to_expert_mode.setChecked(True)
-    #         self.ui.actionSwitch_to_quickprint.setChecked(False)
-
-    #     self.scene.updateProfileToControls()
-    #     self.scene._scene.pushFree()
-
-    # def setupSlice(self):
-    #     put = profile.setTempOverride
-    #     get = profile.getProfileSetting
-    #     for setting in profile.settingsList:
-    #         if not setting.isProfile():
-    #             continue
-    #         profile.setTempOverride(setting.getName(), setting.getDefault())
-
-    #     if self.ui.print_support_structure.isChecked():
-    #         put('support', _("Exterior Only"))
-
-    #     nozzle_size = float(get('nozzle_size'))
-    #     if self.ui.normal_quality.isChecked():
-    #         put('layer_height', '0.2')
-    #         put('wall_thickness', nozzle_size * 2.0)
-    #         put('layer_height', '0.10')
-    #         put('fill_density', '20')
-    #     elif self.ui.fast_low_quality.isChecked():
-    #         put('wall_thickness', nozzle_size * 2.5)
-    #         put('layer_height', '0.20')
-    #         put('fill_density', '10')
-    #         put('print_speed', '60')
-    #         put('cool_min_layer_time', '3')
-    #         put('bottom_layer_speed', '30')
-    #     elif self.ui.high_quality.isChecked():
-    #         put('wall_thickness', nozzle_size * 2.0)
-    #         put('layer_height', '0.06')
-    #         put('fill_density', '20')
-    #         put('bottom_layer_speed', '15')
-    #     # elif self.printTypeJoris.GetValue():
-    #     #     put('wall_thickness', nozzle_size * 1.5)
-
-    #     put('filament_diameter', self.ui.filament_diameter.text())
-    #     if self.ui.abs.isChecked():
-    #         put('print_bed_temperature', '100')
-    #         put('platform_adhesion', 'Brim')
-    #         put('filament_flow', '107')
-    #         put('print_temperature', '245')
-    #     put('plugin_config', '')
-
-    # def onTimer(self, e):
-    #     # Check if there is something in the clipboard
-    #     profileString = ""
-    #     try:
-    #         if not wx.TheClipboard.IsOpened():
-    #             if not wx.TheClipboard.Open():
-    #                 return
-    #             do = wx.TextDataObject()
-    #             if wx.TheClipboard.GetData(do):
-    #                 profileString = do.GetText()
-    #             wx.TheClipboard.Close()
-
-    #             startTag = "CURA_PROFILE_STRING:"
-    #             if startTag in profileString:
-    #                 #print "Found correct syntax on clipboard"
-    #                 profileString = profileString.replace("\n","").strip()
-    #                 profileString = profileString[profileString.find(startTag)+len(startTag):]
-    #                 if profileString != self.lastTriedClipboard:
-    #                     print profileString
-    #                     self.lastTriedClipboard = profileString
-    #                     profile.setProfileFromString(profileString)
-    #                     self.scene.notification.message("Loaded new profile from clipboard.")
-    #                     self.updateProfileToAllControls()
-    #     except:
-    #         print "Unable to read from clipboard"
-
-    def update_profile_to_controls_normal_panel(self):
-        pass
-        # super(normalSettingsPanel, self).updateProfileToControls()
-
-        # TODO - loading files to start_end_gcode panel:
-        # if self.alterationPanel is not None:
-        #     self.alterationPanel.updateProfileToControls()
-
-        # TODO - loading plugins:
-        # self.pluginPanel.updateProfileToControls()
-
-    # def update_profile_to_controls_all(self):
-    #     self.scene.updateProfileToControls()
-    #     self.update_profile_to_controls_normal_panel()
-
-    # def on_value_changed(self):
-    #     elem = QtCore.QObject.sender(self)
-    #     self.on_setting_change(elem.objectName(), elem.value())
-
-    # def on_state_changed(self):
-    #     elem = QtCore.QObject.sender(self)
-    #     self.on_setting_change(elem.objectName(), elem.isChecked())
-
-    # def on_text_changed(self):
-    #     elem = QtCore.QObject.sender(self)
-    #     self.on_setting_change(elem.objectName(), elem.text())
-
-    # def on_index_changed(self):
-    #     elem = QtCore.QObject.sender(self)
-    #     self.on_setting_change(elem.objectName(),
-    #             elem.itemText(elem.currentIndex()))
-
-    # def on_setting_change(self, obj_name, value):
-    #     try:
-    #         profile.settingsDictionary[obj_name].setValue(value)
-    #     except KeyError as e:
-    #         log.error("Key not found in preferences: {0}".format(e))
-    #     self.validate_normal_mode()
-
     @QtCore.Slot(str, str)
     def onFloatSettingChange(self, obj_name, value):
         try:
@@ -479,12 +226,6 @@ class MainWindow(QtGui.QGraphicsView):
         # for elem in normal_mode_elems:
         #     elem.validate()
         self.sceneview.sceneUpdated()
-
-    # def _validate(self):
-    #     for setting in self.settingControlList:
-    #         setting._validate()
-    #     if self._callback is not None:
-    #         self._callback()
 
     def get_model_files_history(self):
         files = self.model_files_history.value('modelFilesHistory') or []
@@ -633,16 +374,6 @@ class MainWindow(QtGui.QGraphicsView):
                 {0}'.format(e))
             return
         return self.pc.home_position(axis)
-
-    def enable_elements(self, enable=True):
-        return
-        # self.ui.commandbox.setEnabled(enable)
-        # self.ui.send_btn.setEnabled(enable)
-        # for elem in self.ui.moveAxesBox.findChildren(QtGui.QPushButton):
-        #     elem.setEnabled(enable)
-
-        # self.ui.set_bedtemp_btn.setEnabled(enable)
-        # self.ui.set_printtemp_btn.setEnabled(enable)
 
     def set_connected(self, msg=None):
         msg = msg or _("Connected to printer")

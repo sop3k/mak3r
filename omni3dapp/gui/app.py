@@ -133,7 +133,5 @@ class OmniApp(object):
                         otherCuraInstalls[-1], 'preferences.ini'))
                     profile.loadProfile(os.path.join(
                         otherCuraInstalls[-1], 'current_profile.ini'))
-            except Exception, e:
-                import traceback
-                print traceback.print_exc()
+            except Exception as e:
                 log.error(e)

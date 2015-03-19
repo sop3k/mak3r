@@ -721,9 +721,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.setProgressBar(0.0)
         self.cleanEngine()
 
-        enable = self.engine.isSlicingEnabled(self.scene) and \
-                self.mainwindow.is_online
-        self.mainwindow.enablePrintButton(enable)
+        self.mainwindow.enablePrintButton(True)
         self.scene.updateSizeOffsets()
         self.queueRefresh()
 
@@ -737,6 +735,9 @@ class SceneView(QtGui.QGraphicsScene):
         self.startFilesLoader(fileList)
 
         self.bars.unsetActive()
+
+    def isSlicingEnabled(self):
+        return self.engine.isSlicingEnabled(self.scene)
 
     @QtCore.Slot()
     def onRunEngine(self):
@@ -922,7 +923,7 @@ class SceneView(QtGui.QGraphicsScene):
         if progressValue >= 1:
             self.setPrintingInfo()
             self.mainwindow.setPrintState("SLICED")
-            if not self.mainwindow.is_online():
+            if not self.mainwindow.isOnline():
                 self.mainwindow.enablePrintButton(False)
                 self.setInfoText(_("Not connected to printer"))
             else:
@@ -1320,7 +1321,7 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.showLayersButton()
         self.setViewMode('gcode')
-        if self.mainwindow.is_online():
+        if self.mainwindow.isOnline():
             self.mainwindow.enablePrintButton(True)
             self.queueRefresh()
 
@@ -1339,7 +1340,11 @@ class SceneView(QtGui.QGraphicsScene):
         self.queueRefresh()
 
     def setPrintingGcode(self, gcode):
-        self.mainwindow.pc.fgcode = gcode
+        self.mainwindow.setPrintingGcode(gcode)
+
+    def setSlicingFinished(self):
+        self.slicing_finished = True
+        self.showLayersButton()
 
     def loadLayers(self, printing=False):
         result = self.engine.getResult()
@@ -1350,7 +1355,7 @@ class SceneView(QtGui.QGraphicsScene):
         result.generateGCodeLayers(self.engineResultView, printing)
 
     def isPrintingEnabled(self):
-        return self.slicing_finished and self.mainwindow.is_online()
+        return self.slicing_finished and self.mainwindow.isOnline()
 
     @QtCore.Slot()
     def enablePrinting(self):
@@ -1373,8 +1378,9 @@ class SceneView(QtGui.QGraphicsScene):
         self._heating = False
         self.progressBar.setValue(0)
         self.setInfoText(_("Printing..."))
-        self.mainwindow.pc.heating_finished()
-        self.mainwindow.pc.startprint()
+        # self.mainwindow.pc.heating_finished()
+        self.mainwindow.setHeatingFinished()
+        # self.mainwindow.pc.startprint()
 
     def setHeatingStarted(self):
         self._heating = True
@@ -1383,6 +1389,10 @@ class SceneView(QtGui.QGraphicsScene):
     def setTempProgress(self, printtemp, bedtemp):
         if not (self._heating and (self._printtemp or self._bedtemp)):
             return
+
+        self.setInfoText(
+            _("Heating up... <Temperatures: extruder {0}/{1}, bed {2}/{3}>".format(
+              printtemp, self._printtemp, bedtemp, self._bedtemp)))
 
         if printtemp:
             printtemp /= self._printtemp

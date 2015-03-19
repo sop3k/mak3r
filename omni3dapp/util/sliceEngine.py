@@ -514,7 +514,6 @@ class Engine(QtCore.QObject):
 
     def slicing_error(self, error):
         log.error("Slicer process returned error: {0}; error string:{1}".format(error, self.engine_process.errorString()))
-        print "about to call on stop engine"
         self._sceneview.onStopEngine(_("Slicing aborted due to slicer process error"))
 
     def read_data(self):
@@ -587,7 +586,7 @@ class Engine(QtCore.QObject):
 
         if self._result:
             self._result.setFinished(True)
-            self._sceneview.showLayersButton()
+            self._sceneview.setSlicingFinished()
             self.callback(1.0)
 
         return_code = self.engine_process.exitCode()

@@ -127,7 +127,7 @@ class PrinterConnection(Pronsole):
         #     pass
         # self.add_custom_buttons()
 
-        self.parent.set_statusbar(_("Not connected to printer"))
+        self.parent.setStatusbar(_("Not connected to printer"))
         self.stdout = sys.stdout
         self.slicing = False
         self.loading_gcode = False
@@ -179,7 +179,7 @@ class PrinterConnection(Pronsole):
         if not hasattr(self, 'ports') or not self.ports:
             msg = _("Could not connect to printer")
             log.error("{}; scanned every port at every baudrate".format(msg))
-            self.parent.set_disconnected(msg)
+            self.parent.setDisconnected(msg)
             return
 
         if not hasattr(self, 'baud_set') or not self.baud_set:
@@ -205,7 +205,7 @@ class PrinterConnection(Pronsole):
     def connect_printer(self):
         self.ports = self.rescanports()
         if not self.ports:
-            self.parent.set_statusbar(_('Could not find active ports'))
+            self.parent.setStatusbar(_('Could not find active ports'))
             return
 
         try:
@@ -223,7 +223,7 @@ class PrinterConnection(Pronsole):
     def connect(self, port_val, baud_val):
         msg = "Connecting to port {0} at baudrate {1}".format(port_val,
             baud_val)
-        self.parent.set_statusbar(msg)
+        self.parent.setStatusbar(msg)
 
         if self.paused:
             self.p.paused = 0
@@ -252,7 +252,7 @@ class PrinterConnection(Pronsole):
             profile.putMachineSetting('port_baud_rate', baud_val)
         msg = _("Connected to port {0} at baudrate {1}".format(
             port_val, baud_val))
-        self.parent.set_connected(msg)
+        self.parent.setConnected(msg)
 
         # if self.predisconnect_mainqueue:
         #     self.recoverbtn.Enable()
@@ -267,9 +267,9 @@ class PrinterConnection(Pronsole):
         if port != "" and port not in portslist:
             portslist.append(port)
         if portslist:    
-            self.parent.set_statusbar(_("Found active ports"))
+            self.parent.setStatusbar(_("Found active ports"))
         else:
-            self.parent.set_statusbar(_("Did not find any connected ports"))
+            self.parent.setStatusbar(_("Did not find any connected ports"))
 
         return portslist
 
@@ -286,7 +286,7 @@ class PrinterConnection(Pronsole):
         self.guisignals.addtext.emit(msg)
 
     def disconnect(self):
-        self.parent.set_statusbar(_("Disconnecting from printer..."))
+        self.parent.setStatusbar(_("Disconnecting from printer..."))
         if self.p.printing or self.p.paused or self.paused:
             self.store_predisconnect_state()
         self.p.signals.disconnect_sig.emit()
@@ -310,7 +310,7 @@ class PrinterConnection(Pronsole):
     @QtCore.Slot(str)
     def addtexttolog(self, text):
         if self.is_printable(text):
-            # self.parent.set_statusbar(text)
+            # self.parent.setStatusbar(text)
             # self.ui.logbox.appendPlainText(text)
             # TODO: display messages from printer somewhere...
             log.debug(text)
@@ -318,7 +318,7 @@ class PrinterConnection(Pronsole):
         else:
             msg = _("Attempted to write invalid text to console, which could be due to an invalid baudrate. Reconnecting...")
             log.debug(msg)
-            # self.parent.set_statusbar(msg)
+            # self.parent.setStatusbar(msg)
             # self.connect_printer()
             self.connect_to_port()
             # self.ui.logbox.appendPlainText(msg)
@@ -466,7 +466,7 @@ class PrinterConnection(Pronsole):
 
     def statuschecker(self):
         Pronsole.statuschecker(self)
-        self.parent.set_statusbar(_("Not connected to printer"))
+        self.parent.setStatusbar(_("Not connected to printer"))
 
     def pause(self):
         if self.paused:
@@ -474,7 +474,7 @@ class PrinterConnection(Pronsole):
             return
 
         msg =_("Pausing print at: {}".format(format_time(time.time())))
-        self.parent.set_statusbar(msg)
+        self.parent.setStatusbar(msg)
 
         if self.sdprinting:
             self.p.send_now("M25")
@@ -498,7 +498,7 @@ class PrinterConnection(Pronsole):
     def recover(self, event):
         self.extra_print_time = 0
         if not self.p.online:
-            self.parent.set_statusbar(_("Not connected to printer"))
+            self.parent.setStatusbar(_("Not connected to printer"))
             # wx.CallAfter(self.statusbar.SetStatusText, _("Not connected to printer."))
             return
         # Reset Z
@@ -549,11 +549,11 @@ class PrinterConnection(Pronsole):
     @QtCore.Slot()
     def online_gui(self):
         """Callback when printer goes online (graphical bits)"""
-        self.parent.set_connected()
+        self.parent.setConnected()
 
     @QtCore.Slot()
     def offline_gui(self):
-        self.parent.set_disconnected()
+        self.parent.setDisconnected()
 
         msg = _("Disconnected.")
         self.logdisp(msg)
@@ -685,15 +685,15 @@ class PrinterConnection(Pronsole):
                 return
 
         if not gcode:
-            self.parent.set_statusbar(_("No file loaded. Please use load first"))
+            self.parent.setStatusbar(_("No file loaded. Please use load first"))
             return
 
         if not self.p.online:
-            self.parent.set_statusbar(_("Not connected to printer"))
+            self.parent.setStatusbar(_("Not connected to printer"))
             return
 
         if not self.fgcode:
-            self.parent.set_statusbar(_("No file loaded. Please use load first"))
+            self.parent.setStatusbar(_("No file loaded. Please use load first"))
             return
 
         # Heat up the bed and extruders
@@ -702,7 +702,7 @@ class PrinterConnection(Pronsole):
     def startprint(self):
         ret = self.p.startprint(self.fgcode)
         if not ret:
-            self.parent.set_statusbar(_("Printing failed to start"))
+            self.parent.setStatusbar(_("Printing failed to start"))
 
     def sethotendgui(self, f):
         self.hsetpoint = f
@@ -725,14 +725,12 @@ class PrinterConnection(Pronsole):
         #     wx.CallAfter(self.htemp.SetBackgroundColour, "white")
         #     wx.CallAfter(self.htemp.Refresh)
 
-    def is_online(self):
-        return self.p.online
-
     def set_heating_started(self):
         self.parent.sceneview.setHeatingStarted()
 
     def heating_finished(self):
         self.heater.finished.emit()
+        self.startprint()
 
     def stop_heating_thread(self):
         if not hasattr(self, 'heating_thread'):
@@ -755,12 +753,14 @@ class PrinterConnection(Pronsole):
 
         self.heating_thread.started.connect(self.heater.heat_up)
         self.heater.addtext.connect(self.addtexttolog)
+        self.heater.set_progress_sig.connect(self.parent.setProgress)
+        self.heater.set_statusbar_sig.connect(self.parent.setStatusbar)
 
         self.heater.finished.connect(self.heating_thread.quit)
         self.heater.finished.connect(self.heater.deleteLater)
         self.heating_thread.finished.connect(self.heating_thread.deleteLater)
 
-        self.parent.set_statusbar(_("Heating up..."))
+        self.parent.setStatusbar(_("Heating up..."))
         self.heating_thread.start()
 
         self.set_heating_started()
@@ -768,6 +768,8 @@ class PrinterConnection(Pronsole):
 
 class Heater(QtCore.QObject):
     addtext = QtCore.Signal(str)
+    set_progress_sig = QtCore.Signal(float)
+    set_statusbar_sig = QtCore.Signal(str)
     finished = QtCore.Signal()
 
     def __init__(self, printcore):
@@ -775,6 +777,7 @@ class Heater(QtCore.QObject):
         self.p = printcore
 
     def heat_up(self):
+        self.set_progress_sig.emit(0.01)
         printtemp = profile.settingsDictionary.get("print_temperature")
         if printtemp:
             self.set_printtemp(printtemp.getValue())
@@ -785,7 +788,7 @@ class Heater(QtCore.QObject):
 
     def set_printtemp(self, l):
         command = "M104 S" + l
-        msg = _("Setting hotend temperature to %f degrees Celsius.")
+        msg = _("Setting nozzle temperature to %f degrees Celsius.")
         self.do_settemp(l, command, msg)
 
     def set_bedtemp(self, l):
@@ -801,6 +804,7 @@ class Heater(QtCore.QObject):
             if self.p.online:
                 self.p.send_now(command)
                 self.addtext.emit(msg % f)
+                self.set_statusbar_sig.emit(msg % f)
                 # self.sethotendgui(f)
             else:
                 self.addtext.emit(_("Printer is not online."))

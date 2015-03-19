@@ -227,7 +227,7 @@ class Printcore(QtCore.QObject):
 
         self.host.after_connect()
 
-        self.parent.set_connected()
+        self.parent.setConnected()
         return True
 
     def reset(self):

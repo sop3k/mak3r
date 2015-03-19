@@ -182,17 +182,14 @@ Rectangle {
         print_button.state = state;
     }
 
-    function disable() {
-        // only disable if button is in any printing mode
-        if (!(print_button.state == "IDLE" || print_button.state == "SLICING")) {
-            print_button.enabled = false;
-            button.color = "#b8b8b8";
-        }
-    }
-
     function enable() {
         print_button.enabled = true;
         button.color = "#ff5724";
+    }
+
+    function disable() {
+        print_button.enabled = false;
+        button.color = "#b8b8b8";
     }
 
 }

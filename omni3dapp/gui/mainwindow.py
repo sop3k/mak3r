@@ -275,7 +275,7 @@ class MainWindow(QtGui.QGraphicsView):
         for i in xrange(recent_files_no):
             filename = files[i]
             action = self.model_files_history_actions[i]
-            text = "{0} {1}".format(i + 1, self.stripped_name(filename))
+            text = "{0} {1}".format(i + 1, self.strippedName(filename))
             action.setText(text)
             action.setData(filename)
             action.setVisible(True)
@@ -283,51 +283,56 @@ class MainWindow(QtGui.QGraphicsView):
         for j in range(recent_files_no, MainWindow.MAX_MRU_FILES):
             self.model_files_history_actions[j].setVisible(False)
 
-    def stripped_name(self, full_filename):
+    def strippedName(self, full_filename):
         return QtCore.QFileInfo(full_filename).fileName()
 
-    def set_statusbar(self, msg):
+    def setStatusbar(self, msg):
         log.debug(msg)
         self.sceneview.setInfoText(msg)
 
+    @QtCore.Slot(float)
+    def setProgress(self, value):
+        if not hasattr(self, 'sceneview'):
+            return
+        self.sceneview.setProgressBar(value)
+
+    def setHeatingFinished(self):
+        if not hasattr(self, 'pc'):
+            return
+        self.pc.heating_finished()
+
     @QtCore.Slot()
     def connectPrinter(self):
-        self.set_statusbar(_("Connecting..."))
-        if not self.is_online():
+        self.setStatusbar(_("Connecting..."))
+        if not self.isOnline():
             self.pc.connect_printer()
         else:
-            self.set_connected()
+            self.setConnected()
 
     @QtCore.Slot()
     def disconnectPrinter(self):
-        self.set_statusbar(_("Disconnecting..."))
-        if not self.is_online():
-            self.set_disconnected()
+        self.setStatusbar(_("Disconnecting..."))
+        if not self.isOnline():
+            self.setDisconnected()
         else:
             self.pc.disconnect()
 
     @QtCore.Slot()
     def pausePrinting(self):
-        self.set_statusbar(_("Pausing printing..."))
+        self.setStatusbar(_("Pausing printing..."))
         self.pc.pause()
 
     @QtCore.Slot()
     def turnOffPrinter(self):
         ret = self.pc.off()
         self.sceneview.setProgressBar(0.0)
-        self.set_statusbar(_("Printing cancelled"))
+        self.setStatusbar(_("Printing cancelled"))
         return ret
 
-    def settemp(self):
-        temp = self.ui.print_temperature.text()
-        self.pc.set_printtemp(temp)
-
-    def bedtemp(self):
-        temp = self.ui.print_bed_temperature.text()
-        self.pc.set_bedtemp(temp)
-
-    def is_online(self):
-        return self.pc.p.online
+    def isOnline(self):
+        if hasattr(self, 'pc'):
+            return self.pc.p.online
+        return False
 
     def terminate_thread(self, thread_name):
         try:
@@ -375,30 +380,47 @@ class MainWindow(QtGui.QGraphicsView):
             return
         return self.pc.home_position(axis)
 
-    def set_connected(self, msg=None):
+    def setConnected(self, msg=None):
         msg = msg or _("Connected to printer")
-        self.set_statusbar(msg)
+        self.setStatusbar(msg)
         self.enablePrintButton(True)
         self.connect_button.setState("ONLINE")
 
-    def set_disconnected(self, msg=None):
+    def setDisconnected(self, msg=None):
         self.connect_button.setState("OFFLINE")
         self.enablePrintButton(False)
         msg = msg or _("Printer disconnected")
-        self.set_statusbar(msg)
+        self.setStatusbar(msg)
 
     def setPrintButton(self, time_info, params_info):
         self.print_button.setPrintTime(time_info)
         self.print_button.setPrintParams(params_info)
 
     def enablePrintButton(self, enable):
-        if enable and hasattr(self, 'pc') and self.pc.fgcode:
-            self.print_button.enable()
-        else:
-            self.print_button.disable()
+        state = self.print_button.getState()
+        if state == "IDLE" and self.isSlicingEnabled() or state == "SLICING":
+            return self.print_button.enable()
+
+        if enable and self.isPrintingEnabled():
+            return self.print_button.enable()
+
+        self.print_button.disable()
 
     def setPrintState(self, state):
         self.print_button.setState(state)
+
+    def setPrintingGcode(self, gcode):
+        self.pc.fgcode = gcode
+
+    def isSlicingEnabled(self):
+        if not hasattr(self, 'sceneview'):
+            return False
+        return self.sceneview.isSlicingEnabled()
+
+    def isPrintingEnabled(self):
+        if not hasattr(self, 'sceneview'):
+            return False
+        return self.sceneview.isPrintingEnabled()
 
     def eventFilter(self, obj, evt):
         if obj == self.ui.commandbox:

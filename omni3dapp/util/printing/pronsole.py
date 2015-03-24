@@ -1148,9 +1148,9 @@ class Pronsole(cmd.Cmd):
     def startcb(self, resuming=False):
         self.starttime = time.time()
         if resuming:
-            print _("Print resumed at: %s") % format_time(self.starttime)
+            log.debug(_("Print resumed at: {}".format(format_time(self.starttime))))
         else:
-            print _("Print started at: %s") % format_time(self.starttime)
+            log.debug(_("Print started at: {}".format(format_time(self.starttime))))
             if not self.sdprinting:
                 self.compute_eta = RemainingTimeEstimator(self.fgcode)
             else:

@@ -136,7 +136,7 @@ class EngineResult(object):
         self._gcodeInterpreter.update_scene_sig.connect(self._parent.queueRefresh)
         self._gcodeInterpreter.set_progress_sig.connect(engine_results_view._gcodeLoadCallback)
 
-        self._gcodeInterpreter.finished.connect(lambda: self._parent.setProgressBar(0.0))
+        self._gcodeInterpreter.finished.connect(self.layersLoadingFinished)
 
         if printing:
             self._gcodeInterpreter.finished.connect(self.startPrinting)
@@ -146,6 +146,12 @@ class EngineResult(object):
         self.layers_loader_thread.finished.connect(self.layers_loader_thread.deleteLater)
 
         self.layers_loader_thread.start()
+
+    @QtCore.Slot()
+    def layersLoadingFinished(self):
+        self._parent.setProgressBar(0.0)
+        self._parent.setInfoText(_(u"Layers loaded"))
+        self._parent.loadingLayersFinished()
 
 
 class SocketListener(QtCore.QObject):

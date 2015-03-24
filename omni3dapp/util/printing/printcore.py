@@ -253,6 +253,7 @@ class Printcore(QtCore.QObject):
         self.send_thread.start()
 
     def _stop_sender(self):
+        log.debug("Stopping sender thread")
         if not self.send_thread:
             return
 
@@ -293,19 +294,15 @@ class Printcore(QtCore.QObject):
         self.printer_worker.moveToThread(self.printer_thread)
 
         self.printer_thread.started.connect(self.printer_worker._print)
-        self.printer_worker.send_command.connect(self._send,
-                QtCore.Qt.DirectConnection)
-        self.printer_worker.startcb_sig.connect(self.emit_startcb)
-        self.printer_worker.endcb_sig.connect(self.emit_endcb)
-        self.printer_worker.layerchangecb_sig.connect(self.emit_layerchangecb)
-        self.printer_worker.printsendcb_sig.connect(self.emit_printsendcb)
         self.printer_worker.pause_sig.connect(self.pause)
         self.printer_worker.finished.connect(self.finish_printer_thread)
+
         self.printer_worker.finished.connect(self.printer_thread.quit)
         self.printer_worker.finished.connect(self.printer_worker.deleteLater)
         self.printer_thread.finished.connect(self.printer_thread.deleteLater)
 
-        self._stop_sender()
+        # self._stop_sender()
+        log.debug("Starting print thread...")
         self.printer_thread.start()
 
     def startprint(self, gcode, startindex=0):
@@ -315,22 +312,30 @@ class Printcore(QtCore.QObject):
         the next line will be set to 0 and the firmware notified. Printing
         will then start in a parallel thread.
         """
+        log.debug("Starting print inside printcore")
         if self.printing or not self.online or not self.printer:
+            log.debug("Failed to start printing; exiting. "
+                      "Printing: {0}, online: {1}, printer: {2}".format(
+                        self.printing, self.online, self.printer))
             return False
         self.queueindex = startindex
         self.mainqueue = gcode
         self.printing = True
         self.lineno = 0
         self.resendfrom = -1
-        self._send({'command': 'M110', 'lineno': -1, 'calcchecksum': True})
+        self._send("M110", -1, True)
         if not gcode or not gcode.lines:
+            log.debug("Returning from startprint before starting print thread."
+                      "Gcode: {0}, no of gcode.lines: {1}".format(gcode, len(gcode.lines)))
             return True
         self.clear = False
         resuming = (startindex != 0)
+        log.debug("Starting print thread - resuming {0}".format(resuming))
         self.start_print_thread(resuming)
         return True
 
     def finish_printer_thread(self):
+        print "finishing printer thread"
         if not self.printer_thread:
             return
         try:
@@ -439,14 +444,7 @@ class Printcore(QtCore.QObject):
         else:
             log.error(_("Not connected to printer"))
 
-    @QtCore.Slot(dict)
-    def _send(self, args_dict):
-        command = args_dict.get('command')
-        if not command:
-            return
-        lineno = args_dict.get('lineno') or 0
-        calcchecksum = args_dict.get('calcchecksum') or False
-
+    def _send(self, command, lineno=0, calcchecksum=False):
         # Only add checksums if over serial (tcp does the flow control itself)
         if calcchecksum and not self.printer_tcp:
             prefix = "N" + str(lineno) + " " + command
@@ -466,7 +464,7 @@ class Printcore(QtCore.QObject):
                 log.info("SENT: %s" % command)
             if self.sendcb:
                 try: self.sendcb(command, gline)
-                except: traceback.print_exc()
+                except: log.error(traceback.print_exc())
             try:
                 self.printer.write(str(command + "\n"))
                 if self.printer_tcp:
@@ -511,7 +509,7 @@ class Listener(QtCore.QObject):
         while self._listen_can_continue():
             line = self._readline()
             if line is None:
-                continue
+                break
             if line.startswith('DEBUG_'):
                 continue
             if line.startswith(tuple(self.greetings)) or line.startswith('ok'):
@@ -521,12 +519,10 @@ class Listener(QtCore.QObject):
                 # TODO
                 try:
                     self.tempcb(line)
-                except Exception as e:
-                    # traceback.print_exc()
-                    log.error(e)
-                    self.finished.emit()
+                except:
+                    log.error(traceback.print_exc())
             elif line.startswith('Error'):
-                self.logError(line)
+                log.error(line)
             # Teststrings for resend parsing       # Firmware     exp. result
             # line="rs N2 Expected checksum 67"    # Teacup       2
             if line.lower().startswith("resend") or line.startswith("rs"):
@@ -546,9 +542,9 @@ class Listener(QtCore.QObject):
 
     def _listen_until_online(self):
         while not self.parent.online and self._listen_can_continue():
-            self.send_command.emit({'command': "M105"})
+            self.parent._send("M105")
             if self.parent.writefailures >= 4:
-                log.debug(
+                log.error(
                     _("Aborting connection attempt after 4 failed writes."))
                 return
             empty_lines = 0
@@ -577,15 +573,15 @@ class Listener(QtCore.QObject):
                             # self.parent.onlinecb()
                             self.set_online.emit()
                         except:
-                            traceback.print_exc()
+                            log.error(traceback.print_exc())
                     return
 
     def _listen_can_continue(self):
-        printer = self.parent.printer
-        stop_thread = self.parent.stop_read_thread
         if self.parent.printer_tcp:
-            return not stop_thread and printer
-        return (not stop_thread and printer and printer.isOpen())
+            return not self.parent.stop_read_thread and self.parent.printer
+        return (not self.parent.stop_read_thread
+                and self.parent.printer
+                and self.parent.printer.isOpen())
 
     def _readline(self):
         try:
@@ -600,9 +596,10 @@ class Listener(QtCore.QObject):
                 self.parent.log.append(line)
                 if self.parent.recvcb:
                     try: 
-                        self.recvcb_sig.emit(line)
+                        # self.recvcb_sig.emit(line)
+                        self.parent.recvcb(line)
                     except: 
-                        traceback.print_exc()
+                        log.error(traceback.print_exc())
                 if self.parent.loud:
                     log.info("RECV: %s" % line.rstrip())
             return line
@@ -615,7 +612,7 @@ class Listener(QtCore.QObject):
                         decode_utf8(e.message)))
                 return None
             else:
-                self.parent.logError(_(u"SelectError ({0}): {1}").format(e.args,
+                log.error(_(u"SelectError ({0}): {1}").format(e.args,
                                         decode_utf8(e.message)))
                 raise
         except SerialException as e:
@@ -648,7 +645,7 @@ class Sender(QtCore.QObject):
             while self.parent.printer and self.parent.printing and not \
                     self.parent.clear:
                 time.sleep(0.001)
-            self.send_command.emit({'command': command})
+            self.parent._send(command)
             while self.parent.printer and self.parent.printing and not \
                     self.parent.clear:
                 time.sleep(0.001)
@@ -657,11 +654,6 @@ class Sender(QtCore.QObject):
 
 
 class Printer(QtCore.QObject):
-    send_command = QtCore.Signal(tuple)
-    startcb_sig = QtCore.Signal(bool)
-    endcb_sig = QtCore.Signal()
-    layerchangecb_sig = QtCore.Signal(int)
-    printsendcb_sig = QtCore.Signal(str)
     pause_sig = QtCore.Signal()
     finished = QtCore.Signal()
 
@@ -671,40 +663,35 @@ class Printer(QtCore.QObject):
         self.resuming = resuming
 
     def _print(self):
+        self.parent._stop_sender()
         try:
-            self.startcb_sig.emit(self.resuming)
-            # if self.parent.startcb:
-            #     # callback for printing started
-            #     try: 
-            #         # self.parent.startcb(self.resuming)
-            #         self.startcb_sig.emit(self.resuming)
-            #     except:
-            #         self.parent.logError(_("Print start callback failed with:") +
-            #                       "\n" + traceback.format_exc())
-            #         self.finished.emit()
+            if self.parent.startcb:
+                try: 
+                    self.parent.startcb(self.resuming)
+                except:
+                    log.error(_("Print start callback failed with: {}".format(traceback.format_exc())))
+                    self.parent.parent.setStatusbar(_("Printing failed to start"))
             while self.parent.printing and self.parent.printer and self.parent.online:
                 self._sendnext()
             self.parent.sentlines = {}
             self.parent.log.clear()
             self.parent.sent = []
-            self.endcb_sig.emit()
-            # if self.parent.endcb:
-            #     # callback for printing done
-            #     try:
-            #         # self.parent.endcb()
-            #         self.endcb_sig.emit()
-            #     except:
-            #         self.parent.logError(_("Print end callback failed with:") +
-            #                       "\n" + traceback.format_exc())
+            if self.parent.endcb:
+                try:
+                    self.parent.endcb()
+                except:
+                    log.error(_("Print end callback failed with: {}".format(traceback.format_exc())))
         except Exception as e:
-            self.parent.logError(
-                _("Print thread died due to the following error: {}".format(e))
+            log.error(
+                _("Print thread died due to the following error: {0}; {1}".format(e, traceback.format_exc()))
                 )
+            self.parent.parent.setStatusbar(_("Printing aborted due to errors. See error log for details."))
         finally:
             self.finished.emit()
 
     def _sendnext(self):
         if not self.parent.printer:
+            log.debug("No printer; exiting")
             return
         while self.parent.printer and self.parent.printing and not self.parent.clear:
             time.sleep(0.001)
@@ -715,39 +702,33 @@ class Printer(QtCore.QObject):
         if not (self.parent.printing and self.parent.printer and self.parent.online):
             self.parent.clear = True
             return
-
         if self.parent.resendfrom < self.parent.lineno and self.parent.resendfrom > -1:
-            self.send_command.emit({'command': self.sentlines[self.resendfrom],
-                                    'lineno': self.resendfrom,
-                                    'calcchecksum': False})
+            self.parent._send(self.parent.sentlines[self.parent.resendfrom], self.parent.resendfrom, False)
             self.parent.resendfrom += 1
             return
         self.parent.resendfrom = -1
         if not self.parent.priqueue.empty():
-            self.send_command.emit({
-                'command': self.parent.priqueue.get_nowait()})
+            self.parent._send(self.parent.priqueue.get_nowait())
             self.parent.priqueue.task_done()
             return
-
         if self.parent.printing and self.parent.queueindex < len(self.parent.mainqueue):
-            try:
-                (layer, line) = self.parent.mainqueue.idxs(self.parent.queueindex)
-                gline = self.parent.mainqueue.all_layers[layer][line]
-                if self.parent.layerchangecb and self.parent.queueindex > 0:
-                    (prev_layer, prev_line) = self.parent.mainqueue.idxs(self.parent.queueindex - 1)
-                    if prev_layer != layer:
-                        # self.parent.layerchangecb(layer)
-                        self.layerchangecb_sig.emit(layer)
-            except Exception as e:
-                gline = None
-                log.error("Error occured during printing: {}".format(e))
-            # if self.parent.preprintsendcb:
-            #     if self.parent.queueindex + 1 < len(self.parent.mainqueue):
-            #         (next_layer, next_line) = self.parent.mainqueue.idxs(self.parent.queueindex + 1)
-            #         next_gline = self.parent.mainqueue.all_layers[next_layer][next_line]
-            #     else:
-            #         next_gline = None
-            #     gline = self.parent.preprintsendcb(gline, next_gline)
+            (layer, line) = self.parent.mainqueue.idxs(self.parent.queueindex)
+            gline = self.parent.mainqueue.all_layers[layer][line]
+            if self.parent.layerchangecb and self.parent.queueindex > 0:
+                (prev_layer, prev_line) = self.parent.mainqueue.idxs(self.parent.queueindex - 1)
+                if prev_layer != layer:
+                    try:
+                        self.parent.layerchangecb(layer)
+                    except:
+                        log.error(traceback.format_exc())
+                        self.parent.parent.setStatusbar(_("Error occured during printing"))
+            if self.parent.preprintsendcb:
+                if self.parent.queueindex + 1 < len(self.parent.mainqueue):
+                    (next_layer, next_line) = self.parent.mainqueue.idxs(self.parent.queueindex + 1)
+                    next_gline = self.parent.mainqueue.all_layers[next_layer][next_line]
+                else:
+                    next_gline = None
+                gline = self.parent.preprintsendcb(gline, next_gline)
             if gline is None:
                 self.parent.queueindex += 1
                 self.parent.clear = True
@@ -762,16 +743,11 @@ class Printer(QtCore.QObject):
             # Strip comments
             tline = gcoder.gcode_strip_comment_exp.sub("", tline).strip()
             if tline:
-                # self._send(tline, self.lineno, True)
-                self.send_command.emit({
-                    'command': tline,
-                    'lineno': self.parent.lineno,
-                    'calcchecksum': True})
+                self.parent._send(tline, self.parent.lineno, True)
                 self.parent.lineno += 1
-                self.printsendcb_sig.emit(gline)
-                # if self.parent.printsendcb:
-                #     try: self.parent.printsendcb(gline)
-                #     except: traceback.print_exc()
+                if self.parent.printsendcb:
+                    try: self.parent.printsendcb(gline)
+                    except: log.error(traceback.print_exc())
             else:
                 self.parent.clear = True
             self.parent.queueindex += 1
@@ -781,11 +757,7 @@ class Printer(QtCore.QObject):
             if not self.parent.paused:
                 self.parent.queueindex = 0
                 self.parent.lineno = 0
-                # self._send("M110", -1, True)
-                self.send_command.emit({
-                    'command': "M110",
-                    'lineno': -1,
-                    'calcchecksum': True})
+                self.parent._send("M110", -1, True)
 
     def process_host_command(self, command):
         """only ;@pause command is implemented as a host command in printcore, but hosts are free to reimplement this method"""

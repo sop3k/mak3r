@@ -923,11 +923,9 @@ class SceneView(QtGui.QGraphicsScene):
         if progressValue >= 1:
             self.setPrintingInfo()
             self.mainwindow.setPrintState("SLICED")
-            if not self.mainwindow.isOnline():
-                self.mainwindow.enablePrintButton(False)
-                self.setInfoText(_("Not connected to printer"))
-            else:
-                self.setInfoText("")
+            enablePrinting = self.mainwindow.isOnline()
+            self.mainwindow.enablePrintButton(enablePrinting)
+            self.setInfoText(enablePrinting and _("Not connected to printer") or "")
 
         self.queueRefresh()
 
@@ -1321,6 +1319,9 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.showLayersButton()
         self.setViewMode('gcode')
+
+    def loadingLayersFinished(self):
+        self.slicing_finished = True
         if self.mainwindow.isOnline():
             self.mainwindow.enablePrintButton(True)
             self.queueRefresh()

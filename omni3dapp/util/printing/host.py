@@ -531,7 +531,7 @@ class PrinterConnection(Pronsole):
         if command.startswith(";@pause"):
             self.pause(None)
         else:
-            pronsole.pronsole.process_host_command(self, command)
+            Pronsole.process_host_command(self, command)
 
     def online(self):
         """Callback when printer goes online"""
@@ -560,9 +560,9 @@ class PrinterConnection(Pronsole):
 
     def layer_change_cb(self, newlayer):
         """Callback when the printed layer changed"""
-        pronsole.pronsole.layer_change_cb(self, newlayer)
-        if self.settings.mainviz != "3D" or self.settings.trackcurrentlayer3d:
-            print "should set a layer in gviz here"
+        Pronsole.layer_change_cb(self, newlayer)
+        # if self.settings.mainviz != "3D" or self.settings.trackcurrentlayer3d:
+        print "should set a layer in gviz here"
             # wx.CallAfter(self.gviz.setlayer, newlayer)
 
     def update_tempdisplay(self):
@@ -684,7 +684,7 @@ class PrinterConnection(Pronsole):
                 self.p.send_now("M24")
                 return
 
-        if not gcode:
+        if not gcode or not (self.fgcode is not None and self.fgcode.lines):
             self.parent.setStatusbar(_("No file loaded. Please use load first"))
             return
 
@@ -692,14 +692,11 @@ class PrinterConnection(Pronsole):
             self.parent.setStatusbar(_("Not connected to printer"))
             return
 
-        if not self.fgcode:
-            self.parent.setStatusbar(_("No file loaded. Please use load first"))
-            return
-
         # Heat up the bed and extruders
         self.start_heating()
 
     def startprint(self):
+        log.debug("Starting print")
         ret = self.p.startprint(self.fgcode)
         if not ret:
             self.parent.setStatusbar(_("Printing failed to start"))
@@ -729,6 +726,7 @@ class PrinterConnection(Pronsole):
         self.parent.sceneview.setHeatingStarted()
 
     def heating_finished(self):
+        log.debug("Setting heating finished; about to start printing")
         self.heater.finished.emit()
         self.startprint()
 

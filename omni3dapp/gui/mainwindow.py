@@ -298,6 +298,7 @@ class MainWindow(QtGui.QGraphicsView):
 
     def setHeatingFinished(self):
         if not hasattr(self, 'pc'):
+            log.debug("Can't set heating finished - don't have pc object")
             return
         self.pc.heating_finished()
 

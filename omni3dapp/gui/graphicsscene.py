@@ -1427,6 +1427,7 @@ class SceneView(QtGui.QGraphicsScene):
 
     def onEndprint(self):
         self.mainwindow.setPrintState("SLICED")
+        self.setInfoText(_("Printing finished"))
 
     @QtCore.Slot()
     def onPrintButton(self):

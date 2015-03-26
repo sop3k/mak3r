@@ -239,6 +239,7 @@ class Printcore(QtCore.QObject):
             self.printer.setDTR(0)
 
     def _start_sender(self):
+        log.debug("Starting sender")
         self.stop_send_thread = False
         self.sender_worker = Sender(self)
         self.send_thread = QtCore.QThread(self.parent)
@@ -250,6 +251,7 @@ class Printcore(QtCore.QObject):
         self.sender_worker.finished.connect(self.sender_worker.deleteLater)
         self.send_thread.finished.connect(self.send_thread.deleteLater)
 
+        print "starting sender thread"
         self.send_thread.start()
 
     def _stop_sender(self):
@@ -336,14 +338,14 @@ class Printcore(QtCore.QObject):
 
     def finish_printer_thread(self):
         print "finishing printer thread"
-        if not self.printer_thread:
-            return
-        try:
-            self.printer_thread.terminate()
-        except Exception, e:
-            log.error(e)
-        finally:
-            self.printer_thread = None
+        # if not self.printer_thread:
+        #     return
+        # try:
+        #     self.printer_thread.terminate()
+        # except Exception, e:
+        #     log.error(e)
+        # finally:
+        #     self.printer_thread = None
         self._start_sender()
 
     def cancelprint(self):
@@ -378,11 +380,6 @@ class Printcore(QtCore.QObject):
         try:
             self.printer_thread.terminate()
         except RuntimeError, e:
-            if e.message == "cannot terminate current thread":
-                pass
-            else:
-                log.error(e)
-        except:
             log.error(e)
 
         self.printer_thread = None
@@ -594,12 +591,13 @@ class Listener(QtCore.QObject):
 
             if len(line) > 1:
                 self.parent.log.append(line)
-                if self.parent.recvcb:
-                    try: 
-                        # self.recvcb_sig.emit(line)
-                        self.parent.recvcb(line)
-                    except: 
-                        log.error(traceback.print_exc())
+                # if self.parent.recvcb:
+                #     try: 
+                #         # self.recvcb_sig.emit(line)
+                #         self.parent.recvcb(line)
+                #     except: 
+                #         log.error(traceback.print_exc())
+                self.recvcb_sig.emit(line)
                 if self.parent.loud:
                     log.info("RECV: %s" % line.rstrip())
             return line
@@ -637,6 +635,7 @@ class Sender(QtCore.QObject):
         self.parent = parent
 
     def sender(self):
+        print "inside sender method (running sender thread)"
         while not self.parent.stop_send_thread:
             try:
                 command = self.parent.priqueue.get(True, 0.1)
@@ -650,6 +649,7 @@ class Sender(QtCore.QObject):
                     self.parent.clear:
                 time.sleep(0.001)
 
+        print "finishing inside sender method"
         self.finished.emit()
 
 

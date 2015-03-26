@@ -42,7 +42,7 @@ class GuiSignals(QtCore.QObject):
     set_printtemp_value = QtCore.Signal(float)
     set_bedtemp_value = QtCore.Signal(float)
     set_extr0temp_target = QtCore.Signal(float)
-    set_tempprogress_value = QtCore.Signal(float, float)
+    # set_tempprogress_value = QtCore.Signal(float, float)
 
 
 class PrinterConnection(Pronsole):
@@ -166,8 +166,8 @@ class PrinterConnection(Pronsole):
             self.parent.sceneview.setBedtempValue)
         self.guisignals.set_extr0temp_target.connect(
             self.parent.sceneview.setExtr0TempTarget)
-        self.guisignals.set_tempprogress_value.connect(
-            self.parent.sceneview.setTempProgress)
+        # self.guisignals.set_tempprogress_value.connect(
+        #     self.parent.sceneview.setTempProgress)
 
         if self.autoconnect:
             self.connect_printer()
@@ -582,7 +582,8 @@ class PrinterConnection(Pronsole):
                 elif temps["T"][1]: setpoint = float(temps["T"][1])
                 if setpoint is not None:
                     if self.display_gauges:
-                        self.guisignals.set_printtemp_target.emit(setpoint)
+                        # self.guisignals.set_printtemp_target.emit(setpoint)
+                        self.parent.sceneview.setPrinttempTarget(setpoint)
             if "T1" in temps:
                 hotend_temp = float(temps["T1"][0])
                 # if self.display_graph: wx.CallAfter(self.graph.SetExtruder1Temperature, hotend_temp)
@@ -597,9 +598,11 @@ class PrinterConnection(Pronsole):
                 if setpoint:
                     setpoint = float(setpoint)
                     if self.display_gauges:
-                        self.guisignals.set_bedtemp_target.emit(setpoint)
+                        # self.guisignals.set_bedtemp_target.emit(setpoint)
+                        self.parent.sceneview.setBedtempTarget(setpoint)
 
-            self.guisignals.set_tempprogress_value.emit(hotend_temp, bed_temp)
+            # self.guisignals.set_tempprogress_value.emit(hotend_temp, bed_temp)
+            self.parent.sceneview.setTempProgress(hotend_temp, bed_temp)
         except:
             traceback.print_exc()
 
@@ -631,7 +634,8 @@ class PrinterConnection(Pronsole):
             self.update_tempdisplay()
         tstring = l.rstrip()
         if not self.p.loud and (tstring not in ["ok", "wait"] and not isreport):
-            self.guisignals.addtext.emit(tstring + "\n")
+            # self.guisignals.addtext.emit(tstring + "\n")
+            self.addtexttolog(tstring + "\n")
         for listener in self.recvlisteners:
             listener(l)
 

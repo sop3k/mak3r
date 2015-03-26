@@ -901,21 +901,9 @@ class SceneView(QtGui.QGraphicsScene):
             round(size[2], 2))
 
     def updateToolButtons(self):
-        if self.selectedObj is None:
-            enabled = False
-        else:
-            enabled = True
+        enabled = not (self.selectedObj is None)
 
         self.mainwindow.top_bar.enableObjectTools(enabled)
-        # self.rotateToolButton.setHidden(hidden)
-        # self.scaleToolButton.setHidden(hidden)
-        # self.mirrorToolButton.setHidden(hidden)
-        # if hidden:
-        #     self.rotateToolButton.setSelected(False)
-        #     self.scaleToolButton.setSelected(False)
-        #     self.scaleForm.setSelected(False)
-        #     self.mirrorToolButton.setSelected(False)
-        #     self.onToolSelect(0)
 
     def updateEngineProgress(self, progressValue):
         self.progressBar.setValue(progressValue)
@@ -925,7 +913,7 @@ class SceneView(QtGui.QGraphicsScene):
             self.mainwindow.setPrintState("SLICED")
             enablePrinting = self.mainwindow.isOnline()
             self.mainwindow.enablePrintButton(enablePrinting)
-            self.setInfoText(enablePrinting and _("Not connected to printer") or "")
+            self.setInfoText(enablePrinting and "" or _("Not connected to printer"))
 
         self.queueRefresh()
 

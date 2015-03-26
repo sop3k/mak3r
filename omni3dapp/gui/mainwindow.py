@@ -320,8 +320,11 @@ class MainWindow(QtGui.QGraphicsView):
 
     @QtCore.Slot()
     def pausePrinting(self):
-        self.setStatusbar(_("Pausing printing..."))
         self.pc.pause()
+
+    @QtCore.Slot()
+    def resumePrinting(self):
+        self.pc.resume()
 
     @QtCore.Slot()
     def turnOffPrinter(self):

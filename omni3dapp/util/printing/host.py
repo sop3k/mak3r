@@ -77,6 +77,8 @@ class PrinterConnection(Pronsole):
         self.parent = parent
         self.paused = False
         self.sdprinting = False
+        self.heating = False
+        self.heating_paused = False
         self.pauseScript = "pause.gcode"
         self.endScript = "end.gcode"
 
@@ -470,16 +472,27 @@ class PrinterConnection(Pronsole):
 
     def pause(self):
         if self.paused:
-            log.debug(_("Already paused"))
+            self.parent.setStatusbar(_("Already paused"))
             return
 
         msg =_("Pausing print at: {}".format(format_time(time.time())))
         self.parent.setStatusbar(msg)
 
+        if self.heating:
+            self.heater.finished.emit()
+            self.p.send_now("M104 S0")
+            self.p.send_now("M140 S0")
+            self.heating_paused = True
+            self.paused = True
+            self.heating_finished()
+            self.parent.setStatusbar(_("Heating paused"))
+            return
+
         if self.sdprinting:
             self.p.send_now("M25")
         else:
             if not self.p.printing:
+                self.parent.setStatusbar(_("Not printing"))
                 return
             self.p.pause()
             self.p.runSmallScript(self.pauseScript)
@@ -488,8 +501,14 @@ class PrinterConnection(Pronsole):
         self.extra_print_time += int(time.time() - self.starttime)
 
     def resume(self):
-        self.log(_("Resuming."))
+        self.log(_("Resuming"))
         self.paused = False
+
+        if self.heating_paused:
+            self.heating_paused = False
+            self.start_heating()
+            return
+
         if self.sdprinting:
             self.p.send_now("M24")
         else:
@@ -499,7 +518,6 @@ class PrinterConnection(Pronsole):
         self.extra_print_time = 0
         if not self.p.online:
             self.parent.setStatusbar(_("Not connected to printer"))
-            # wx.CallAfter(self.statusbar.SetStatusText, _("Not connected to printer."))
             return
         # Reset Z
         self.p.send_now("G92 Z%f" % self.predisconnect_layer)
@@ -727,28 +745,17 @@ class PrinterConnection(Pronsole):
         #     wx.CallAfter(self.htemp.Refresh)
 
     def set_heating_started(self):
+        self.heating = True
         self.parent.sceneview.setHeatingStarted()
 
     def heating_finished(self):
         log.debug("Setting heating finished; about to start printing")
         self.heater.finished.emit()
-        self.startprint()
-
-    def stop_heating_thread(self):
-        if not hasattr(self, 'heating_thread'):
-            return
-        
-        try:
-            self.heating_thread.terminate()
-        except Exception, e:
-            log.error(e)
-        finally:
-            del self.heating_thread
-            del self.heater
+        self.heating = False
+        if not self.paused:
+            self.startprint()
 
     def start_heating(self):
-        # self.stop_heating_thread()
-
         self.heating_thread = QtCore.QThread(self.parent)
         self.heater = Heater(self.p)
         self.heater.moveToThread(self.heating_thread)

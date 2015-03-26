@@ -251,7 +251,6 @@ class Printcore(QtCore.QObject):
         self.sender_worker.finished.connect(self.sender_worker.deleteLater)
         self.send_thread.finished.connect(self.send_thread.deleteLater)
 
-        print "starting sender thread"
         self.send_thread.start()
 
     def _stop_sender(self):
@@ -337,15 +336,6 @@ class Printcore(QtCore.QObject):
         return True
 
     def finish_printer_thread(self):
-        print "finishing printer thread"
-        # if not self.printer_thread:
-        #     return
-        # try:
-        #     self.printer_thread.terminate()
-        # except Exception, e:
-        #     log.error(e)
-        # finally:
-        #     self.printer_thread = None
         self._start_sender()
 
     def cancelprint(self):
@@ -375,8 +365,6 @@ class Printcore(QtCore.QObject):
         self.paused = True
         self.printing = False
 
-        # try joining the print thread: enclose it in try/except because we
-        # might be calling it from the thread itself
         try:
             self.printer_thread.terminate()
         except RuntimeError, e:
@@ -635,7 +623,6 @@ class Sender(QtCore.QObject):
         self.parent = parent
 
     def sender(self):
-        print "inside sender method (running sender thread)"
         while not self.parent.stop_send_thread:
             try:
                 command = self.parent.priqueue.get(True, 0.1)
@@ -649,7 +636,6 @@ class Sender(QtCore.QObject):
                     self.parent.clear:
                 time.sleep(0.001)
 
-        print "finishing inside sender method"
         self.finished.emit()
 
 

@@ -46,6 +46,7 @@ Rectangle {
                     print_button.state = "PAUSED";
                 } else if (print_button.state == "PAUSED") {
                     // resume printing
+                    mainwindow.resumePrinting();
                     print_button.state = "PRINTING";
                 }
             }

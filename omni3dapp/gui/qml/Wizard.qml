@@ -1,6 +1,4 @@
-// import QtQuick 1.0 // to target S60 5th Edition or Maemo 5
 import QtQuick 1.1
-import QtQuick 1.0
 
 Rectangle {
     id: wizard
@@ -47,8 +45,6 @@ Rectangle {
             anchors.fill: parent
             onClicked: {
                 hideLayer();
-                // wizard.enabled = false;
-                // wizard.opacity = 0;
             }
 
             Image {
@@ -89,7 +85,6 @@ Rectangle {
 
             Text {
                 id: text3
-                // color: "#ffffff"
                 color: "#d1d1d2"
                 font.pixelSize: 26
                 font.bold: false
@@ -113,7 +108,6 @@ Rectangle {
 
             Text {
                 id: text1
-                // color: "#ffffff"
                 color: "#d1d1d2"
                 font.bold: false
                 font.pixelSize: 26
@@ -168,11 +162,31 @@ Rectangle {
             }
 
             Rectangle {
-                id: rect_machine_name
+                id: messages
                 width: options_layer.line_width
                 height: options_layer.line_height
                 color: "#00000000"
                 anchors.top: settings_panel_text3.bottom
+                anchors.topMargin: options_layer.row_spacing*3
+
+                Text {
+                    id: text_messages
+                    color: "#ff5724"
+                    text: qsTr("")
+                    anchors.fill: parent
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 11
+                    font.family: lato_font.name
+                }
+
+            }
+
+            Rectangle {
+                id: rect_machine_name
+                width: options_layer.line_width
+                height: options_layer.line_height
+                color: "#00000000"
+                anchors.top: messages.bottom
                 anchors.topMargin: options_layer.row_spacing*3
 
                 Text {
@@ -215,11 +229,6 @@ Rectangle {
                         validator: RegExpValidator { regExp: /\w{1,30}/ }
                         readOnly: false
                         cursorVisible: settings_panel.current_input == text_input_machine_name
-                        // Keys.onPressed: {
-                        //     if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
-                        //         mainwindow.onFloatSettingChange(text_input_machine_name.objectName, text)
-                        //     }
-                        // }
                     }
 
                     MouseArea {
@@ -280,11 +289,6 @@ Rectangle {
                         validator: DoubleValidator{bottom: 0; top: 10;}
                         readOnly: false
                         cursorVisible: settings_panel.current_input == text_input_machine_width
-                        // Keys.onPressed: {
-                        //     if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
-                        //         mainwindow.onFloatSettingChange(text_input_machine_width.objectName, text)
-                        //     }
-                        // }
                     }
 
                     Text {
@@ -360,11 +364,6 @@ Rectangle {
                         validator: DoubleValidator{bottom: 0; top: 10;}
                         readOnly: false
                         cursorVisible: settings_panel.current_input == text_input_machine_depth
-                        // Keys.onPressed: {
-                        //     if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
-                        //         mainwindow.onFloatSettingChange(text_input_machine_depth.objectName, text)
-                        //     }
-                        // }
                     }
 
                     Text {
@@ -440,11 +439,6 @@ Rectangle {
                         validator: DoubleValidator{bottom: 0; top: 10;}
                         readOnly: false
                         cursorVisible: settings_panel.current_input == text_input_machine_height
-                        // Keys.onPressed: {
-                        //     if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
-                        //         mainwindow.onFloatSettingChange(text_input_machine_height.objectName, text)
-                        //     }
-                        // }
                     }
 
                     Text {
@@ -520,11 +514,6 @@ Rectangle {
                         validator: DoubleValidator{bottom: 0; top: 10;}
                         readOnly: false
                         cursorVisible: settings_panel.current_input == text_input_nozzle_size
-                        // Keys.onPressed: {
-                        //     if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
-                        //         mainwindow.onFloatSettingChange(text_input_nozzle_size.objectName, text)
-                        //     }
-                        // }
                     }
 
                     Text {
@@ -590,7 +579,6 @@ Rectangle {
                         anchors.fill: parent
                         onClicked: {
                             heated_bed.isActive = !heated_bed.isActive
-                            // mainwindow.onBoolSettingChange(heated_bed.objectName, heated_bed.isActive)
                         }
 
                         Image {
@@ -642,7 +630,6 @@ Rectangle {
                         anchors.fill: parent
                         onClicked: {
                             bed_center.isActive = !bed_center.isActive
-                            // mainwindow.onBoolSettingChange(bed_center.objectName, bed_center.isActive)
                         }
 
                         Image {
@@ -721,8 +708,6 @@ Rectangle {
                 onClicked: {
                     if (wizard.state == "SETTINGS") {
                         mainwindow.saveMachineSettings();
-                        wizard.hideLayer()
-                        wizard.state = "WELCOME";
                     } else if (wizard.state == "WELCOME") {
                         wizard.state = "SETTINGS";
                     }
@@ -788,6 +773,15 @@ Rectangle {
             'has_heated_bed': heated_bed.isActive,
             'machine_center_is_zero': bed_center.isActive
         }
+    }
+
+    function configFinished() {
+        wizard.hideLayer()
+        wizard.state = "WELCOME";
+    }
+
+    function validationError(msg) {
+        text_messages.text = qsTr(msg)
     }
 
 }

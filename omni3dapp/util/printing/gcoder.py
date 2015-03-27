@@ -234,6 +234,11 @@ class GCode(object):
             self.layer_idxs = array('I', [])
             self.line_idxs = array('I', [])
 
+    def add_line(self, line):
+        if not line:
+            return
+        self.lines.append(self.line_class(line.strip()))
+
     def __len__(self):
         return len(self.line_idxs)
 

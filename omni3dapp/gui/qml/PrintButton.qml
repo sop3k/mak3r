@@ -1,4 +1,3 @@
-// import QtQuick 1.0 // to target S60 5th Edition or Maemo 5
 import QtQuick 1.1
 
 Rectangle {
@@ -47,6 +46,7 @@ Rectangle {
                     print_button.state = "PAUSED";
                 } else if (print_button.state == "PAUSED") {
                     // resume printing
+                    mainwindow.resumePrinting();
                     print_button.state = "PRINTING";
                 }
             }
@@ -183,14 +183,14 @@ Rectangle {
         print_button.state = state;
     }
 
-    function disable() {
-        print_button.enabled = false;
-        button.color = "#b8b8b8";
-    }
-
     function enable() {
         print_button.enabled = true;
         button.color = "#ff5724";
+    }
+
+    function disable() {
+        print_button.enabled = false;
+        button.color = "#b8b8b8";
     }
 
 }

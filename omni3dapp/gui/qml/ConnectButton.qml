@@ -29,7 +29,6 @@ Rectangle {
                 mainwindow.connectPrinter();
             } else if (connect_button.state == "ONLINE") {
                 mainwindow.disconnectPrinter();
-                print_button.disable();
             }
         }
     }

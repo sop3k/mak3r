@@ -2,7 +2,7 @@
 
 import os
 import sys
-import esky
+# import esky
 import platform
 import shutil
 import glob
@@ -19,14 +19,12 @@ from omni3dapp.util import profile
 YES_BTN = QtGui.QMessageBox.Yes
 NO_BTN = QtGui.QMessageBox.No
 
-UPDATES_URL = "http://localhost:8080/"
+UPDATES_URL = "http://omni3d.dev.neadoo.com/mak3r"
 
 
 class OmniApp(object):
 
-    def __init__(self, files):
-        app = QtGui.QApplication(sys.argv)
-
+    def __init__(self, app, files):
         self.main_window = None
         self.splash = None
         self.load_files = files
@@ -52,44 +50,19 @@ class OmniApp(object):
         self.splash.finish(self.main_window)
         self.main_window.showMaximized()
 
-        if profile.getPreference('check_for_updates') == 'True' and \
-                hasattr(sys, 'frozen'):
-            try:
-                self.check_for_updates()
-            except Exception as e:
-                log.error("Something went wrong while fetching updates: "
-                          "{0}".format(e))
-
-        sys.exit(app.exec_())
+        # if profile.getPreference('check_for_updates') == 'True' and \
+        #         hasattr(sys, 'frozen'):
+        #     try:
+        #         self.check_for_updates()
+        #     except Exception as e:
+        #         log.error("Something went wrong while fetching updates: "
+        #                   "{0}".format(e))
 
     def set_splash_screen(self):
         from omni3dapp.util.resources import getPathForImage
         pixmap = QtGui.QPixmap(getPathForImage('splashimage.png'))
         self.splash = QtGui.QSplashScreen(
             pixmap, QtCore.Qt.WindowStaysOnTopHint)
-
-    def run_config_wizard(self, resource_base_path):
-        # if platform.system() == "Windows":
-        #     exampleFile = os.path.normpath(os.path.join(
-        #         resource_base_path, 'example', 'UltimakerRobot_support.stl'))
-        # else:
-        #     # Check if we need to copy our examples
-        #     exampleFile = os.path.expanduser(
-        #         '~/CuraExamples/UltimakerRobot_support.stl')
-        #     if not os.path.isfile(exampleFile):
-        #         try:
-        #             os.makedirs(os.path.dirname(exampleFile))
-        #         except Exception, e:
-        #             log.error(e)
-        #         for filename in glob.glob(os.path.normpath(os.path.join(
-        #                 resource_base_path, 'example', '*.*'))):
-        #             shutil.copy(filename, os.path.join(os.path.dirname(
-        #                 exampleFile), os.path.basename(filename)))
-        # self.loadFiles = [exampleFile]
-        if self.splash is not None:
-            self.splash.finish(self.main_window)
-        # Run config wizard
-        pass
 
     def get_executable(self):
         executable = sys.executable
@@ -160,11 +133,5 @@ class OmniApp(object):
                         otherCuraInstalls[-1], 'preferences.ini'))
                     profile.loadProfile(os.path.join(
                         otherCuraInstalls[-1], 'current_profile.ini'))
-            except Exception, e:
-                import traceback
-                print traceback.print_exc()
+            except Exception as e:
                 log.error(e)
-
-        # If we haven't run it before, run the configuration wizard.
-        # if profile.getMachineSetting('machine_type') == 'unknown':
-        #     self.run_config_wizard(resources.resourceBasePath)

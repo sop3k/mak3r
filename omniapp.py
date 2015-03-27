@@ -1,9 +1,15 @@
 # -*- coding: utf-8 -*-
 
+import os
 from optparse import OptionParser
+
+from PySide import QtGui
 
 from omni3dapp.util import profile
 from omni3dapp.logger import log
+
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 
 
 def parse_arguments():
@@ -24,17 +30,11 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def main():
+def setUp(app):
     """
     Main entry point. Parses arguments, and starts GUI or slicing process depending on the arguments.
     """
     (options, args) = parse_arguments()
-
-    #if options.serialCommunication:
-    #    from Cura import serialCommunication
-    #    port, baud = options.serialCommunication.split(':')
-    #    serialCommunication.startMonitor(port, baud)
-    #    return
 
     preference_path = profile.getPreferencePath()
     profile.loadPreferences(preference_path)
@@ -46,41 +46,15 @@ def main():
     else:
         profile.loadProfile(profile.getDefaultProfilePath(), True)
 
-    #if options.printfile is not None:
-    #    from Cura.gui import printWindow
-    #    printWindow.startPrintInterface(options.printfile)
-    #elif options.slice is not None:
-    #    from Cura.util import sliceEngine
-    #    from Cura.util import objectScene
-    #    from Cura.util import meshLoader
-    #    import shutil
-
-    #    def commandlineProgressCallback(progress):
-    #        if progress >= 0:
-    #            #print 'Preparing: %d%%' % (progress * 100)
-    #            pass
-    #    scene = objectScene.Scene()
-    #    scene.updateMachineDimensions()
-    #    engine = sliceEngine.Engine(commandlineProgressCallback)
-    #    for m in meshLoader.loadMeshes(args[0]):
-    #        scene.add(m)
-    #    engine.runEngine(scene)
-    #    engine.wait()
-
-    #    if not options.output:
-    #        options.output = args[0] + profile.getGCodeExtension()
-    #    with open(options.output, "wb") as f:
-    #        f.write(engine.getResult().getGCode())
-    #    print 'GCode file saved : %s' % options.output
-
-    #    engine.cleanup()
-    #else:
-    #    from Cura.gui import app
-    #    app.CuraApp(args).MainLoop()
-
-    from omni3dapp.gui import app
-    app.OmniApp(args)
+    from omni3dapp.gui.app import OmniApp
+    OmniApp(app, args)
 
 
 if __name__ == "__main__":
-    main()
+
+    import sys
+
+    app = QtGui.QApplication(sys.argv)
+    setUp(app)
+
+    sys.exit(app.exec_())

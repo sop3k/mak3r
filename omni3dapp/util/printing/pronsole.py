@@ -247,15 +247,15 @@ class Pronsole(cmd.Cmd):
         return False
 
     def log(self, *msg):
+        # TODO: log to pronterface console
         msg = u"".join(unicode(i) for i in msg)
         log.debug(msg)
-        self.parent.set_statusbar(msg)
 
     def logError(self, *msg):
+        # TODO: log to pronterface console
         msg = u"".join(unicode(i) for i in msg)
         log.error(msg)
         self.guisignals.addtext.emit(msg)
-        self.parent.set_statusbar(msg)
         # if not self.settings.error_command:
         #     return
         # output = get_command_output(self.settings.error_command, {"$m": msg})
@@ -812,16 +812,23 @@ class Pronsole(cmd.Cmd):
         baselist = []
         if os.name == "nt":
             try:
-                key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM")
+                log.debug("Getting registry key: {}".format(
+                    _winreg.HKEY_LOCAL_MACHINE))
+                key = _winreg.OpenKey(
+                    _winreg.HKEY_LOCAL_MACHINE,
+                    "HARDWARE\\DEVICEMAP\\SERIALCOMM")
+                log.debug("Got key: {}".format(key))
                 i = 0
                 while(1):
                     baselist += [_winreg.EnumValue(key, i)[1]]
                     i += 1
-            except:
-                pass
+                log.debug("Baselist is: {}".format(baselist))
+            except Exception as e:
+                log.error("Error opening windows registry key: {}".format(e))
 
         for g in ['/dev/ttyUSB*', '/dev/ttyACM*', "/dev/tty.*", "/dev/cu.*", "/dev/rfcomm*"]:
             baselist += glob.glob(g)
+        log.debug("Baselist is: {}".format(baselist))
         return filter(self._bluetoothSerialFilter, baselist)
 
     def _bluetoothSerialFilter(self, serial):
@@ -1141,9 +1148,9 @@ class Pronsole(cmd.Cmd):
     def startcb(self, resuming=False):
         self.starttime = time.time()
         if resuming:
-            print _("Print resumed at: %s") % format_time(self.starttime)
+            log.debug(_("Print resumed at: {}".format(format_time(self.starttime))))
         else:
-            print _("Print started at: %s") % format_time(self.starttime)
+            log.debug(_("Print started at: {}".format(format_time(self.starttime))))
             if not self.sdprinting:
                 self.compute_eta = RemainingTimeEstimator(self.fgcode)
             else:

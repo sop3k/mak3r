@@ -52,7 +52,7 @@ class GCode(QtCore.QObject):
         self.layerList = []
         self.extrusionAmount = 0
         self.filename = None
-        self.printing_gcode = None
+        self.printing_gcode = gcoder.GCode(deferred=False)
         self.result = result
 
     def progressCallback(self, progress):
@@ -64,19 +64,20 @@ class GCode(QtCore.QObject):
 
     def load(self, data):
         self.filename = None
-        self.printing_gcode = gcoder.GCode(home_pos=profile.get_home_pos(),
-                                           deferred=False)
         if type(data) in types.StringTypes and os.path.isfile(data):
             self.filename = data
             self._fileSize = os.stat(data).st_size
             with open(data, 'r') as gcodeFile:
-                self._load(gcodeFile)
+                loaded_data = gcodeFile
+                self._load(loaded_data)
         elif type(data) is list:
+            loaded_data = data
             self._load(data)
         else:
             data = data.getvalue()
             self._fileSize = len(data)
-            self._load(StringIO.StringIO(data))
+            loaded_data = StringIO.StringIO(data)
+            self._load(loaded_data)
 
     def calculateWeight(self):
         """Calculates the weight of the filament in kg"""
@@ -125,6 +126,8 @@ class GCode(QtCore.QObject):
     def parse_lines(self):
         for ix, line in enumerate(self.gcodeFile):
             self._parse_line(ix, line)
+            # self.printing_gcode.append(line.strip())
+            self.printing_gcode.add_line(line.strip())
         self._after_line_parsing()
 
     def _parse_line(self, ix, line):
@@ -164,6 +167,7 @@ class GCode(QtCore.QObject):
                             # Abort the loading, we can safely return
                             # as the results here will be discarded
                             self.gcodeFile.close()
+                            log.debug("Aborting loading as the results will be discarded")
                             return
                 self.currentLayer = [self.currentPath]
             line = line[0:line.find(';')]
@@ -341,14 +345,14 @@ class GCode(QtCore.QObject):
                         self.extrudeAmountMultiply = s / 100.0
                 # else:
                 #     print "Unknown M code:" + str(M)
-        self.printing_gcode.append(line.strip())
 
     def _after_line_parsing(self):
         for path in self.currentLayer:
             path['points'] = numpy.array(path['points'], numpy.float32)
             path['extrusion'] = numpy.array(path['extrusion'], numpy.float32)
         self.layerList.append(self.currentLayer)
-        # TODO: mozna zrobic to sygnalem
+
+        self.printing_gcode._preprocess(build_layers=True)
         self._sceneview.setPrintingGcode(self.printing_gcode)
         if self.progressCallback is not None and self._fileSize > 0:
             self.progressCallback(

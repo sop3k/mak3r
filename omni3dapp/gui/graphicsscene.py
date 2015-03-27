@@ -721,9 +721,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.setProgressBar(0.0)
         self.cleanEngine()
 
-        enable = self.engine.isSlicingEnabled(self.scene) and \
-                self.mainwindow.is_online
-        self.mainwindow.enablePrintButton(enable)
+        self.mainwindow.enablePrintButton(True)
         self.scene.updateSizeOffsets()
         self.queueRefresh()
 
@@ -738,16 +736,20 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.bars.unsetActive()
 
+    def isSlicingEnabled(self):
+        return self.engine.isSlicingEnabled(self.scene)
+
     @QtCore.Slot()
     def onRunEngine(self):
         self.setInfoText(_("Slicing scene..."))
         self.engine.runEngine(self.scene)
 
     @QtCore.Slot()
-    def onStopEngine(self):
+    def onStopEngine(self, msg=None):
         self.engine.abortEngine()
-        # self.setInfoText(_("Slicing aborted"))
-        self.mainwindow.print_button.setState("IDLE")
+        if msg:
+            self.setInfoText(msg)
+        self.mainwindow.setPrintState("IDLE")
 
     def onIdle(self):
         self.idleCalled = True
@@ -861,11 +863,11 @@ class SceneView(QtGui.QGraphicsScene):
             self.shownError = True
 
     def drawBackground(self, painter, rect):
-        if painter.paintEngine().type() != QtGui.QPaintEngine.OpenGL2:
-            QtCore.qWarning('OpenGLScene: drawBackground needs a QGLWidget '
-                            + 'to be set as viewport on the '
-                            + 'graphics view')
-            return
+        # if painter.paintEngine().type() != QtGui.QPaintEngine.OpenGL2:
+        #     QtCore.qWarning('OpenGLScene: drawBackground needs a QGLWidget '
+        #                     + 'to be set as viewport on the '
+        #                     + 'graphics view')
+        #     return
 
         painter.beginNativePainting()
 
@@ -899,33 +901,22 @@ class SceneView(QtGui.QGraphicsScene):
             round(size[2], 2))
 
     def updateToolButtons(self):
-        if self.selectedObj is None:
-            enabled = False
-        else:
-            enabled = True
+        enabled = not (self.selectedObj is None)
 
         self.mainwindow.top_bar.enableObjectTools(enabled)
-        # self.rotateToolButton.setHidden(hidden)
-        # self.scaleToolButton.setHidden(hidden)
-        # self.mirrorToolButton.setHidden(hidden)
-        # if hidden:
-        #     self.rotateToolButton.setSelected(False)
-        #     self.scaleToolButton.setSelected(False)
-        #     self.scaleForm.setSelected(False)
-        #     self.mirrorToolButton.setSelected(False)
-        #     self.onToolSelect(0)
 
     def updateEngineProgress(self, progressValue):
         self.progressBar.setValue(progressValue)
 
         if progressValue >= 1:
             self.setPrintingInfo()
-            self.mainwindow.print_button.setState("SLICED")
-            if not self.mainwindow.is_online():
-                self.mainwindow.enablePrintButton(False)
-                self.setInfoText(_("Not connected to printer"))
-            else:
+            self.mainwindow.setPrintState("SLICED")
+            enablePrinting = self.mainwindow.isOnline()
+            self.mainwindow.enablePrintButton(enablePrinting)
+            if enablePrinting:
                 self.setInfoText("")
+            else:
+                self.setIfoText(_("Not connected to printer"))
 
         self.queueRefresh()
 
@@ -1314,12 +1305,15 @@ class SceneView(QtGui.QGraphicsScene):
         self.engine._result.setFinished(True)
         self.engineResultView.setResult(self.engine._result)
 
-        self.mainwindow.print_button.setState("SLICED")
+        self.mainwindow.setPrintState("SLICED")
         self.mainwindow.qmlobject.setPrintButtonVisible(1)
 
         self.showLayersButton()
         self.setViewMode('gcode')
-        if self.mainwindow.is_online():
+
+    def loadingLayersFinished(self):
+        self.slicing_finished = True
+        if self.mainwindow.isOnline():
             self.mainwindow.enablePrintButton(True)
             self.queueRefresh()
 
@@ -1338,7 +1332,11 @@ class SceneView(QtGui.QGraphicsScene):
         self.queueRefresh()
 
     def setPrintingGcode(self, gcode):
-        self.mainwindow.pc.fgcode = gcode
+        self.mainwindow.setPrintingGcode(gcode)
+
+    def setSlicingFinished(self):
+        self.slicing_finished = True
+        self.showLayersButton()
 
     def loadLayers(self, printing=False):
         result = self.engine.getResult()
@@ -1349,7 +1347,7 @@ class SceneView(QtGui.QGraphicsScene):
         result.generateGCodeLayers(self.engineResultView, printing)
 
     def isPrintingEnabled(self):
-        return self.slicing_finished and self.mainwindow.is_online()
+        return self.slicing_finished and self.mainwindow.isOnline()
 
     @QtCore.Slot()
     def enablePrinting(self):
@@ -1372,8 +1370,9 @@ class SceneView(QtGui.QGraphicsScene):
         self._heating = False
         self.progressBar.setValue(0)
         self.setInfoText(_("Printing..."))
-        self.mainwindow.pc.heating_finished()
-        self.mainwindow.pc.startprint()
+        # self.mainwindow.pc.heating_finished()
+        self.mainwindow.setHeatingFinished()
+        # self.mainwindow.pc.startprint()
 
     def setHeatingStarted(self):
         self._heating = True
@@ -1382,6 +1381,10 @@ class SceneView(QtGui.QGraphicsScene):
     def setTempProgress(self, printtemp, bedtemp):
         if not (self._heating and (self._printtemp or self._bedtemp)):
             return
+
+        self.setInfoText(
+            _("Heating up... <Temperatures: extruder {0}/{1}, bed {2}/{3}>".format(
+              printtemp, self._printtemp, bedtemp, self._bedtemp)))
 
         if printtemp:
             printtemp /= self._printtemp
@@ -1414,7 +1417,8 @@ class SceneView(QtGui.QGraphicsScene):
         pass
 
     def onEndprint(self):
-        self.mainwindow.print_button.setState("SLICED")
+        self.mainwindow.setPrintState("SLICED")
+        self.setInfoText(_("Printing finished"))
 
     @QtCore.Slot()
     def onPrintButton(self):
@@ -1483,7 +1487,7 @@ class SceneView(QtGui.QGraphicsScene):
     @QtCore.Slot()
     def afterObjectLoaded(self):
         self.viewSelect.setOptionEnabled(True)
-        self.mainwindow.print_button.setState("IDLE")
+        self.mainwindow.setPrintState("IDLE")
         self.mainwindow.qmlobject.setPrintButtonVisible(1)
 
     @QtCore.Slot(float)
@@ -1683,7 +1687,7 @@ class FilesLoader(QtCore.QObject):
                 scene.centerAll()
             self.sceneview.selectObject(obj)
             if obj.getScale()[0] < 1.0:
-                self.setInfoText(_("Warning: Object scaled down"))
+                self.sceneview.setInfoText(_("Warning: Object scaled down"))
 
 
 class SaveGCodeWorker(QtCore.QObject):

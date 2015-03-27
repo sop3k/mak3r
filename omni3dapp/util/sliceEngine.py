@@ -16,6 +16,8 @@ import cStringIO as StringIO
 
 from PySide import QtCore
 
+from omniapp import BASE_DIR 
+
 from omni3dapp.util import profile
 from omni3dapp.util import pluginInfo
 from omni3dapp.util import gcodeInterpreter
@@ -28,21 +30,7 @@ def getEngineFilename():
     This is OS depended.
     :return: The full path to the engine executable.
     """
-    if platform.system() == 'Windows':
-        return os.path.abspath(os.path.join(os.path.dirname(__file__),
-                               '../..', 'CuraEngine/CuraEngine.exe'))
-    if hasattr(sys, 'frozen'):
-        return os.path.abspath(os.path.join(os.path.dirname(__file__),
-                               '../../', 'CuraEngine/CuraEngine'))
-    if os.path.isfile('/usr/bin/CuraEngine'):
-        return '/usr/bin/CuraEngine'
-    if os.path.isfile('/usr/local/bin/CuraEngine'):
-        return '/usr/local/bin/CuraEngine'
-    tempPath = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                               '../..', 'CuraEngine'))
-    if os.path.isdir(tempPath):
-        tempPath = os.path.join(tempPath, 'CuraEngine')
-    return tempPath
+    return os.path.abspath(os.path.join(BASE_DIR, 'CuraEngine', 'CuraEngine'))
 
 
 class EngineResult(object):
@@ -148,7 +136,7 @@ class EngineResult(object):
         self._gcodeInterpreter.update_scene_sig.connect(self._parent.queueRefresh)
         self._gcodeInterpreter.set_progress_sig.connect(engine_results_view._gcodeLoadCallback)
 
-        self._gcodeInterpreter.finished.connect(lambda: self._parent.setProgressBar(0.0))
+        self._gcodeInterpreter.finished.connect(self.layersLoadingFinished)
 
         if printing:
             self._gcodeInterpreter.finished.connect(self.startPrinting)
@@ -158,6 +146,12 @@ class EngineResult(object):
         self.layers_loader_thread.finished.connect(self.layers_loader_thread.deleteLater)
 
         self.layers_loader_thread.start()
+
+    @QtCore.Slot()
+    def layersLoadingFinished(self):
+        self._parent.setProgressBar(0.0)
+        self._parent.setInfoText(_(u"Layers loaded"))
+        self._parent.loadingLayersFinished()
 
 
 class SocketListener(QtCore.QObject):
@@ -485,34 +479,48 @@ class Engine(QtCore.QObject):
 
     def start_process(self, command_list):
         try:
+            engine_filename = getEngineFilename()
+            log.debug(_("Starting slicing process {0} with command list: " \
+                "{1}".format(engine_filename, '\n'.join(command_list))))
             self.engine_process = QtCore.QProcess(self._parent)
             self.engine_process.readyReadStandardOutput.connect(self.read_data)
             self.engine_process.readyReadStandardError.connect(self.read_err)
+            self.engine_process.started.connect(
+                lambda: self.slicing_started(command_list))
             self.engine_process.finished.connect(self.slicing_finished)
-            self.engine_process.start(getEngineFilename(), command_list,
+            self.engine_process.error.connect(self.slicing_error)
+            self.engine_process.start(engine_filename, command_list,
                                       QtCore.QIODevice.ReadOnly)
         except Exception, e:
-            log.error(e)
+            log.error("Error while starting process: {0}".format(e))
             self.engine_process = None
 
     def watchProcess(self, command_list):
         self.callback(0.0)
-
         self.start_process(command_list)
-        if not self.engine_process:
-            return
-        if not self.engine_process.waitForStarted(2000):
-            # TODO: Add dialog or text warning that slicer process could not
-            # start
-            log.error("Process could not start: " +
-                      "{0}".format(self.engine_process.exitStatus()))
-            self.abortEngine()
-            return
 
+    @QtCore.Slot(list)
+    def slicing_started(self, command_list):
+        # if not self.engine_process:
+        #     return
+        # if not self.engine_process.waitForStarted(2000):
+        #     # TODO: Add dialog or text warning that slicer process could not
+        #     # start
+        #     log.error("Process could not start: " +
+        #               "{0}".format(self.engine_process.exitStatus()))
+        #     self.abortEngine()
+        #     return
+
+        log.debug(_("Slicing process started"))
         self._result = EngineResult(self._sceneview)
-        self._result.addLog('Running: %s' % (''.join(command_list)))
+        # self._result.addLog('Running: %s' % ('\n'.join(command_list)))
+        self._result.addLog('Running')
         self._result.setHash(self.model_hash)
         self.callback(0.0)
+
+    def slicing_error(self, error):
+        log.error("Slicer process returned error: {0}; error string:{1}".format(error, self.engine_process.errorString()))
+        self._sceneview.onStopEngine(_("Slicing aborted due to slicer process error"))
 
     def read_data(self):
         if not self.engine_process:
@@ -572,20 +580,24 @@ class Engine(QtCore.QObject):
             elif line.startswith('Replace:'):
                 self._result._replaceInfo[line.split(':')[1].strip()] = \
                     line.split(':')[2].strip()
-            else:
+            elif self._result is not None:
                 self._result.addLog(line)
             line = self.engine_process.readLine()
 
+    @QtCore.Slot()
     def slicing_finished(self):
         if self.engine_process is None:
+            log.error(_("Slicing process did not start"))
             return
 
         if self._result:
             self._result.setFinished(True)
-            self._sceneview.showLayersButton()
+            self._sceneview.setSlicingFinished()
             self.callback(1.0)
 
         return_code = self.engine_process.exitCode()
+        log.debug("Slicer finished with status code: {}".format(
+            self.engine_process.exitStatus()))
         if return_code == 0:
             pluginError = pluginInfo.runPostProcessingPlugins(self._result)
             if pluginError is not None:

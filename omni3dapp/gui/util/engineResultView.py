@@ -80,6 +80,7 @@ class EngineResultView(object):
         self.layerSelect.setValue(layers_no)
         if len(layers) % 5 == 0:
             self._parent.setProgressBar(progress)
+            self._parent.setInfoText(u"Loaded {0} layers".format(layers_no))
         return False
 
     def setLayerSelectRange(self, layers=None):

@@ -289,7 +289,11 @@ class PrinterConnection(Pronsole):
 
     def disconnect(self):
         self.parent.setStatusbar(_("Disconnecting from printer..."))
+        if self.heating:
+            self.pause()
+
         if self.p.printing or self.p.paused or self.paused:
+            log.debug("Disconnecting while printing")
             self.store_predisconnect_state()
         self.p.signals.disconnect_sig.emit()
         self.statuscheck = False

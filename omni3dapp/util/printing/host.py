@@ -318,6 +318,7 @@ class PrinterConnection(Pronsole):
         if self.is_printable(text):
             # self.parent.setStatusbar(text)
             # self.ui.logbox.appendPlainText(text)
+            self.parent.addToLogbox(text)
             # TODO: display messages from printer somewhere...
             log.debug(text)
             pass
@@ -667,16 +668,17 @@ class PrinterConnection(Pronsole):
         elif line.upper().startswith("M105"):
             self.userm105 += 1
 
-    def sendline(self):
-        command = self.ui.commandbox.text()
+    def sendline(self, command):
+        # command = self.ui.commandbox.text()
         if not len(command):
             return
-        self.guisignals.addtext.emit(">>> " + command + "\n")
+        self.addtexttolog(">>> {0}\n".format(command))
         self.parseusercmd(str(command))
         self.onecmd(str(command))
-        self.ui.commandbox.setText(u'')
-        self.ui.commandbox.history.append(command)
-        self.ui.commandbox.histindex = len(self.ui.commandbox.history)
+
+        # self.ui.commandbox.setText(u'')
+        # self.ui.commandbox.history.append(command)
+        # self.ui.commandbox.histindex = len(self.ui.commandbox.history)
 
     def cbkey_action(self, val):
         hist_len = len(self.ui.commandbox.history)

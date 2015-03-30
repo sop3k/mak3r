@@ -102,10 +102,8 @@ class SceneView(QtGui.QGraphicsScene):
 
         self.slicing_finished = False
 
-        self.progressBar = self.mainwindow.qmlobject.findChild(
-            QtCore.QObject, "loader")
-        self.bars = self.mainwindow.qmlobject.findChild(
-            QtCore.QObject, "bars")
+        self.progressBar  = self.mainwindow.findQmlObject("loader")
+        self.bars  = self.mainwindow.findQmlObject("bars")
         self.bars.scaled.connect(self.onScaleEntry)
 
         self.idleTimer = QtCore.QTimer(self)
@@ -1225,6 +1223,9 @@ class SceneView(QtGui.QGraphicsScene):
 
     def keyPressEvent(self, evt):
         if self.topContainer.keyPressEvent() or self._layerOn:
+            if evt.key() == QtCore.Qt.Key_Escape:
+                self.mainwindow.gconsole.hideGConsole()
+                return
             super(SceneView, self).keyPressEvent(evt)
             return
 
@@ -1279,11 +1280,8 @@ class SceneView(QtGui.QGraphicsScene):
             self.changeCamera(yaw=0, pitch=90)
         elif code == QtCore.Qt.Key_End:
             self.changeCamera(yaw=90, pitch=90)
-
-        # if code == QtCore.Qt.Key_F3 and modifiers == SHIFT_KEY:
-        #     ShaderEditor(self, self.shaderUpdate,
-        #             self.objectLoadShader.getVertexShader(),
-        #             self.objectLoadShader.getFragmentShader())
+        elif code == QtCore.Qt.Key_Escape:
+            self.mainwindow.gconsole.showGConsole()
 
     def changeCamera(self, yaw=None, pitch=None):
         if yaw is not None:

@@ -90,4 +90,13 @@ Rectangle {
     //     anchors.top: bars.bottom
     //     anchors.topMargin: 55
     // }
+
+    GConsole {
+        id: gconsole
+        objectName: "gconsole"
+        anchors.top: parent.top
+        anchors.topMargin: 0
+        anchors.left: parent.left
+        anchors.leftMargin: 0
+    }
 }

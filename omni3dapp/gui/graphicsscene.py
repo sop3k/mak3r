@@ -1223,7 +1223,7 @@ class SceneView(QtGui.QGraphicsScene):
 
     def keyPressEvent(self, evt):
         if self.topContainer.keyPressEvent() or self._layerOn:
-            if evt.key() == QtCore.Qt.Key_Escape:
+            if evt.key() == QtCore.Qt.Key_Tab:
                 self.mainwindow.gconsole.hideGConsole()
                 return
             super(SceneView, self).keyPressEvent(evt)
@@ -1280,7 +1280,7 @@ class SceneView(QtGui.QGraphicsScene):
             self.changeCamera(yaw=0, pitch=90)
         elif code == QtCore.Qt.Key_End:
             self.changeCamera(yaw=90, pitch=90)
-        elif code == QtCore.Qt.Key_Escape:
+        elif code == QtCore.Qt.Key_Tab:
             self.mainwindow.gconsole.showGConsole()
 
     def changeCamera(self, yaw=None, pitch=None):

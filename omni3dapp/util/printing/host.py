@@ -314,14 +314,13 @@ class PrinterConnection(Pronsole):
         self.guisignals.setoffline.emit()
 
     @QtCore.Slot(str)
-    def addtexttolog(self, text):
+    def addtexttolog(self, text, command=False):
         if self.is_printable(text):
-            # self.parent.setStatusbar(text)
-            # self.ui.logbox.appendPlainText(text)
+            if not text.endswith("\n"):
+                text += "\n"
             self.parent.addToLogbox(text)
-            # TODO: display messages from printer somewhere...
-            log.debug(text)
-            pass
+            if not command:
+                log.debug(text)
         else:
             msg = _("Attempted to write invalid text to console, which could be due to an invalid baudrate. Reconnecting...")
             log.debug(msg)
@@ -669,10 +668,9 @@ class PrinterConnection(Pronsole):
             self.userm105 += 1
 
     def sendline(self, command):
-        # command = self.ui.commandbox.text()
         if not len(command):
             return
-        self.addtexttolog(">>> {0}\n".format(command))
+        self.addtexttolog(">>> {0}\n".format(command), command=True)
         self.parseusercmd(str(command))
         self.onecmd(str(command))
 

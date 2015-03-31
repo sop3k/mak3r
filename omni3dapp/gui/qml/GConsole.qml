@@ -10,11 +10,26 @@ Rectangle {
 
     Keys.onPressed: {
         if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
-            mainwindow.sendCommand(textinput.text)
+            mainwindow.sendCommand(textinput.text);
+            appendToHistory(textinput.text);
+            textinput.text = qsTr("");
+            textinput.histindex = -1;
+        } else if (event.key == Qt.Key_Up) {
+            textinput.histindex = (textinput.histindex + 1) % textinput.history.length;
+            textinput.text = textinput.history[textinput.histindex]
+        } else if (event.key == Qt.Key_Down) {
+            var len = textinput.history.length;
+            var newindex = textinput.histindex > 0 ? textinput.histindex : 0;
+            newindex = (textinput.histindex - 1) % len;
+            if (newindex < 0) {
+                newindex = (len + newindex) % len;
+            }
+            textinput.histindex = newindex;
+            textinput.text = textinput.history[textinput.histindex]
         }
     }
 
-    Keys.onEscapePressed: {
+    Keys.onTabPressed: {
         hideGConsole();
     }
 
@@ -54,6 +69,9 @@ Rectangle {
             font.pixelSize: 12
             font.family: lato_font.name
             horizontalAlignment: TextInput.AlignLeft
+
+            property variant history: []
+            property int histindex: -1
         }
 
         Text {
@@ -70,18 +88,30 @@ Rectangle {
         }
     }
 
-    Text {
-        id: logbox
-        objectName: "logbox"
-        width: parent.width
-        text: qsTr("text")
+    Flickable {
+        id: flickable_area
+        // contentWidth: logbox.width
+        // contentHeight: logbox.height
         anchors.bottom: textline.top
         anchors.bottomMargin: 0
         anchors.left: parent.left
-        anchors.leftMargin: 0
-        font.pixelSize: 12
-        color: "#d1d1d2"
-        font.family: lato_font.name
+        anchors.leftMargin: 5
+        width: parent.width
+        height: parent.height - textline.height
+        flickableDirection: Flickable.VerticalFlick
+        clip: true
+
+        Text {
+            id: logbox
+            objectName: "logbox"
+            width: gconsole.width
+            font.pixelSize: 12
+            color: "#d1d1d2"
+            font.family: lato_font.name
+            wrapMode: Text.Wrap
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 0
+        }
     }
 
     states: [
@@ -114,6 +144,7 @@ Rectangle {
     function showGConsole() {
         gconsole.state = "DROPDOWN";
         graphicsscene.setLayerOn();
+        textinput.forceActiveFocus();
     }
 
     function hideGConsole() {
@@ -122,6 +153,15 @@ Rectangle {
     }
 
     function appendToLogbox(log) {
-        // logbox
+        logbox.text += log;
+    }
+
+    function appendToHistory(text) {
+        var newhistory = [text],
+            elems = Math.min(textinput.history.length, 9);
+        for (var i = 0; i < elems; i++) {
+            newhistory.push(textinput.history[i]);
+        }
+        textinput.history = newhistory;
     }
 }

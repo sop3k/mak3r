@@ -54,17 +54,10 @@ class MainWindow(QtGui.QGraphicsView):
         # Create a scene to present and modify 3d objects
         self.setup_qmlview()
 
-        self.print_button = self.qmlobject.findChild(
-            QtCore.QObject, "print_button")
-
-        self.connect_button = self.qmlobject.findChild(
-            QtCore.QObject, "connect_button")
-
-        self.top_bar = self.qmlobject.findChild(
-            QtCore.QObject, "bars")
-
-        self.advanced_options = self.qmlobject.findChild(
-            QtCore.QObject, "options_layer")
+        self.print_button = self.findQmlObject("print_button")
+        self.connect_button = self.findQmlObject("connect_button")
+        self.top_bar = self.findQmlObject("bars")
+        self.advanced_options = self.findQmlObject("options_layer")
 
         self.setup_scene()
 
@@ -77,6 +70,16 @@ class MainWindow(QtGui.QGraphicsView):
 
         # Class that enables connecting to printer
         self.pc = host.PrinterConnection(self)
+
+    def findQmlObject(self, objectname):
+        return self.qmlobject.findChild(QtCore.QObject, objectname)
+
+    @property
+    def gconsole(self):
+        if not hasattr(self, '_gconsole'):
+            self._gconsole = self.findQmlObject("gconsole")
+        return self._gconsole
+
 
     def resizeEvent(self, event):
         scene = self.scene()
@@ -126,8 +129,7 @@ class MainWindow(QtGui.QGraphicsView):
         self.setScene(self.sceneview)
 
     def runConfigWizard(self):
-        self.wizard = self.qmlobject.findChild(
-            QtCore.QObject, "wizard")
+        self.wizard = self.findQmlObject("wizard")
         self.wizard.showLayer()
 
     def setUpFields(self):
@@ -425,6 +427,13 @@ class MainWindow(QtGui.QGraphicsView):
         if not hasattr(self, 'sceneview'):
             return False
         return self.sceneview.isPrintingEnabled()
+
+    @QtCore.Slot(str)
+    def sendCommand(self, command):
+        self.pc.sendline(command)
+
+    def addToLogbox(self, text):
+        self.gconsole.appendToLogbox(text)
 
     def eventFilter(self, obj, evt):
         if obj == self.ui.commandbox:

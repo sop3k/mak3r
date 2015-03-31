@@ -289,7 +289,11 @@ class PrinterConnection(Pronsole):
 
     def disconnect(self):
         self.parent.setStatusbar(_("Disconnecting from printer..."))
+        if self.heating:
+            self.pause()
+
         if self.p.printing or self.p.paused or self.paused:
+            log.debug("Disconnecting while printing")
             self.store_predisconnect_state()
         self.p.signals.disconnect_sig.emit()
         self.statuscheck = False
@@ -310,13 +314,13 @@ class PrinterConnection(Pronsole):
         self.guisignals.setoffline.emit()
 
     @QtCore.Slot(str)
-    def addtexttolog(self, text):
+    def addtexttolog(self, text, command=False):
         if self.is_printable(text):
-            # self.parent.setStatusbar(text)
-            # self.ui.logbox.appendPlainText(text)
-            # TODO: display messages from printer somewhere...
-            log.debug(text)
-            pass
+            if not text.endswith("\n"):
+                text += "\n"
+            self.parent.addToLogbox(text)
+            if not command:
+                log.debug(text)
         else:
             msg = _("Attempted to write invalid text to console, which could be due to an invalid baudrate. Reconnecting...")
             log.debug(msg)
@@ -663,16 +667,16 @@ class PrinterConnection(Pronsole):
         elif line.upper().startswith("M105"):
             self.userm105 += 1
 
-    def sendline(self):
-        command = self.ui.commandbox.text()
+    def sendline(self, command):
         if not len(command):
             return
-        self.guisignals.addtext.emit(">>> " + command + "\n")
+        self.addtexttolog(">>> {0}\n".format(command), command=True)
         self.parseusercmd(str(command))
         self.onecmd(str(command))
-        self.ui.commandbox.setText(u'')
-        self.ui.commandbox.history.append(command)
-        self.ui.commandbox.histindex = len(self.ui.commandbox.history)
+
+        # self.ui.commandbox.setText(u'')
+        # self.ui.commandbox.history.append(command)
+        # self.ui.commandbox.histindex = len(self.ui.commandbox.history)
 
     def cbkey_action(self, val):
         hist_len = len(self.ui.commandbox.history)

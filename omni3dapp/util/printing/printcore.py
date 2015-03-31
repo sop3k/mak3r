@@ -425,12 +425,14 @@ class Printcore(QtCore.QObject):
         """Sends a command to the printer ahead of the command queue, without a
         checksum"""
         if self.online:
+            log.debug("Sending now command: {0}".format(command))
             self.priqueue.put_nowait(command)
         else:
             log.error(_("Not connected to printer"))
 
     def _send(self, command, lineno=0, calcchecksum=False):
         # Only add checksums if over serial (tcp does the flow control itself)
+        log.debug("Sending command: {0}".format(command))
         if calcchecksum and not self.printer_tcp:
             prefix = "N" + str(lineno) + " " + command
             command = prefix + "*" + str(self._checksum(prefix))

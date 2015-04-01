@@ -208,11 +208,16 @@ Rectangle {
                 }
 
                 onClicked: {
-                    var tg = (image_left.width - mouseX) / (image_left.height/2 - mouseY);
-                    if (mouseX > 39 && mouseY < image_left.height/2 && tg < 1) {
-                        topClicked();
+                    var tg = Math.abs((image_left.width - mouseX) / (image_left.height/2 - mouseY));
+                    // Could be +/- y
+                    if (mouseX > 39 && tg < 1) {
+                        if (mouseY < image_left.height/2) {
+                            topClicked();
+                        } else {
+                            bottomClicked();
+                        }
                     } else {
-                        console.log("minus x");
+                        console.log("minus x")
                     }
                 }
             }
@@ -252,7 +257,17 @@ Rectangle {
                 }
 
                 onClicked: {
-                    console.log("plus x")
+                    var tg = Math.abs(mouseX / (image_right.height/2 - mouseY));
+                    // Could be +/- y
+                    if (mouseX < (image_right.width - 39) && tg < 1) {
+                        if (mouseY < image_right.height/2) {
+                            topClicked();
+                        } else {
+                            bottomClicked();
+                        }
+                    } else {
+                        console.log("plus x")
+                    }
                 }
             }
         }
@@ -387,5 +402,9 @@ Rectangle {
 
     function topClicked() {
         console.log("plus y")
+    }
+
+    function bottomClicked() {
+        console.log("minus y")
     }
 }

@@ -18,26 +18,6 @@ from omni3dapp.logger import log
 class MainWindow(QtGui.QGraphicsView):
 
     MAX_MRU_FILES = 5
-    NORMAL_MODE_ONLY_ITEMS = [
-            'Open_Profile',
-            'Save_Profile',
-            'Load_Profile_from_GCode',
-            'Reset_Profile_to_default',
-            'Open_expert_settings',
-            ]
-    THREADS = [
-            '_thread',
-            'socket_listener_thread',
-            'socket_connector_thread',
-            'log_thread'
-            ]
-    SETTING_CHANGE_WHITELIST = [
-            'commandbox',
-            'logbox',
-            'port_type',
-            'port_baud_rate',
-            'qt_spinbox_lineedit',
-            ]
     TEXT_SETTINGS = [
             'startgcode',
             'endgcode',
@@ -80,6 +60,26 @@ class MainWindow(QtGui.QGraphicsView):
             self._gconsole = self.findQmlObject("gconsole")
         return self._gconsole
 
+    @property
+    def machine_width(self):
+        if not hasattr(self, '_machine_width'):
+            self._machine_width = profile.getMachineSettingFloat(
+                'machine_width') 
+        return self._machine_width
+
+    @property
+    def machine_height(self):
+        if not hasattr(self, '_machine_height'):
+            self._machine_height = profile.getMachineSettingFloat(
+                'machine_height') 
+        return self._machine_height
+
+    @property
+    def machine_depth(self):
+        if not hasattr(self, '_machine_depth'):
+            self._machine_depth = profile.getMachineSettingFloat(
+                'machine_depth') 
+        return self._machine_depth
 
     def resizeEvent(self, event):
         scene = self.scene()
@@ -350,10 +350,6 @@ class MainWindow(QtGui.QGraphicsView):
         except Exception, e:
             log.debug("Error terminating thread: {0}".format(e))
 
-    def terminate_threads(self):
-        for thread_name in self.THREADS:
-            self.terminate_thread(thread_name)
-
     def move_axis(self):
         elem = QtCore.QObject.sender(self)
         try:
@@ -375,16 +371,6 @@ class MainWindow(QtGui.QGraphicsView):
         if step == 0:
             return
         return func(step * multip)
-
-    def home_pos(self):
-        elem = QtCore.QObject.sender(self)
-        try:
-            axis = re.match('home_([xyz]+)', elem.objectName()).group(1)
-        except AttributeError, e:
-            log.error('Clicked button does not have an expected name: \
-                {0}'.format(e))
-            return
-        return self.pc.home_position(axis)
 
     def setConnected(self, msg=None):
         msg = msg or _("Connected to printer")
@@ -432,26 +418,28 @@ class MainWindow(QtGui.QGraphicsView):
     def sendCommand(self, command):
         self.pc.sendline(command)
 
+    @QtCore.Slot(str)
+    def homeAxis(self, axis):
+        self.pc.home_position(axis)
+
+    @QtCore.Slot(float)
+    def moveX(self, step):
+        self.pc.move_x(step, self.machine_width)
+
+    @QtCore.Slot(float)
+    def moveY(self, step):
+        self.pc.move_y(step, self.machine_depth)
+
+    @QtCore.Slot(float)
+    def moveZ(self, step):
+        self.pc.move_z(step, self.machine_height)
+
     def addToLogbox(self, text):
         self.gconsole.appendToLogbox(text)
-
-    def eventFilter(self, obj, evt):
-        if obj == self.ui.commandbox:
-            if evt.type() == QtCore.QEvent.KeyPress:
-                code = evt.key()
-                if code == QtCore.Qt.Key_Up:
-                    self.pc.cbkey_action(-1)
-                    return True
-                elif code == QtCore.Qt.Key_Down:
-                    self.pc.cbkey_action(1)
-                    return True
-            return False
-        return super(MainWindow, self).eventFilter(obj, evt)
 
     def closeEvent(self, evt):
         # terminate all slicer-related threads
         # TODO: check if needed
-        # self.terminate_threads()
         profile.saveProfile(allMachines=True)
         self.sceneview.clear()
         evt.accept()

@@ -914,7 +914,7 @@ class SceneView(QtGui.QGraphicsScene):
             if enablePrinting:
                 self.setInfoText("")
             else:
-                self.setIfoText(_("Not connected to printer"))
+                self.setInfoText(_("Not connected to printer"))
 
         self.queueRefresh()
 

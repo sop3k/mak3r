@@ -324,10 +324,7 @@ class PrinterConnection(Pronsole):
         else:
             msg = _("Attempted to write invalid text to console, which could be due to an invalid baudrate. Reconnecting...")
             log.debug(msg)
-            # self.parent.setStatusbar(msg)
-            # self.connect_printer()
             self.connect_to_port()
-            # self.ui.logbox.appendPlainText(msg)
 
     def sentcb(self, line, gline):
         """Callback when a printer gcode has been sent"""
@@ -450,19 +447,14 @@ class PrinterConnection(Pronsole):
         self.onecmd('move {0} {1}'.format(axis.upper(), step))
         self.p.send_now('M114')
 
-    def move_x(self, step):
-        mach_width = profile.getMachineSettingFloat('machine_width') 
+    def move_x(self, step, mach_width):
         self.move_axis('x', self.current_pos[0], step, mach_width)
 
-    def move_y(self, step):
-        mach_depth = profile.getMachineSettingFloat('machine_depth')
+    def move_y(self, step, mach_depth):
         self.move_axis('y', self.current_pos[1], step, mach_depth)
 
-    def move_z(self, step):
-        mach_height = profile.getMachineSettingFloat('machine_height')
+    def move_z(self, step, mach_height):
         self.move_axis('z', self.current_pos[2], step, mach_height)
-        # When user clicks on the Z control, the XY control no longer gets spacebar/repeat signals
-        # self.xyb.clearRepeat()
 
     def home_position(self, axis):
         if axis == 'all':

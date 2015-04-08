@@ -666,29 +666,6 @@ class PrinterConnection(Pronsole):
         self.parseusercmd(str(command))
         self.onecmd(str(command))
 
-        # self.ui.commandbox.setText(u'')
-        # self.ui.commandbox.history.append(command)
-        # self.ui.commandbox.histindex = len(self.ui.commandbox.history)
-
-    def cbkey_action(self, val):
-        hist_len = len(self.ui.commandbox.history)
-        # if self.ui.commandbox.text():
-        #     # save current command
-        #     self.ui.commandbox.history.append(self.ui.commandbox.text())
-        if hist_len:
-            self.ui.commandbox.histindex = (self.ui.commandbox.histindex + \
-                    val) % hist_len
-            self.ui.commandbox.setText(
-                    self.ui.commandbox.history[self.ui.commandbox.histindex]
-                    )
-            self.ui.commandbox.selectAll()
-        
-    def cbkey(self, code):
-        if code == QtCore.Qt.Key_Up:
-            self.cbkey_action(-1)
-        elif code == QtCore.Qt.Key_Down:
-            self.cbkey_action(1)
-
     def clamped_move_message(self):
         self.logdisp(_("Manual move outside of the build volume prevented (see the \"Clamp manual moves\" option)."))
 

@@ -1603,7 +1603,7 @@ class FilesLoader(QtCore.QObject):
             filename = self.filenames[0]
             ext = os.path.splitext(filename)[1].lower()
             if ext in ['.g', '.gcode']:
-                # main_window.add_to_model_mru(filename)
+                # main_window.addToModelMRU(filename)
                 self.load_gcode_file_sig.emit(filename)
                 self.finished.emit()
                 return
@@ -1632,7 +1632,7 @@ class FilesLoader(QtCore.QObject):
                 elif ext in meshLoader.loadSupportedExtensions() or \
                         ext in imageToMesh.supportedExtensions():
                     scene_filenames.append(filename)
-                    # main_window.add_to_model_mru(filename)
+                    # main_window.addToModelMRU(filename)
                 else:
                     ignored_types[ext] = 1
         if ignored_types:

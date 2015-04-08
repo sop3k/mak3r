@@ -97,6 +97,7 @@ Rectangle {
         anchors.rightMargin: 24
         anchors.top: parent.top
         anchors.topMargin: 124
+        opacity: 0
     }
 
     GConsole {

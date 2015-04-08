@@ -61,21 +61,21 @@ class MainWindow(QtGui.QGraphicsView):
     def machineWidth(self):
         if not hasattr(self, '_machineWidth'):
             self._machineWidth = profile.getMachineSettingFloat(
-                'machineWidth')
+                'machine_width')
         return self._machineWidth
 
     @property
     def machineHeight(self):
         if not hasattr(self, '_machineHeight'):
             self._machineHeight = profile.getMachineSettingFloat(
-                'machineHeight')
+                'machine_height')
         return self._machineHeight
 
     @property
     def machineDepth(self):
         if not hasattr(self, '_machineDepth'):
             self._machineDepth = profile.getMachineSettingFloat(
-                'machineDepth')
+                'machine_depth')
         return self._machineDepth
 
     def resizeEvent(self, event):

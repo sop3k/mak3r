@@ -136,7 +136,7 @@ Rectangle {
                 }
 
                 onClicked: {
-                    console.log("plus y");
+                    topClicked(mouseX, mouseY);
                 }
             }
         }
@@ -171,7 +171,7 @@ Rectangle {
                 }
 
                 onClicked: {
-                    console.log("minus y")
+                    bottomClicked(mouseX, mouseY);
                 }
             }
         }
@@ -212,12 +212,12 @@ Rectangle {
                     // Could be +/- y
                     if (mouseX > 39 && tg < 1) {
                         if (mouseY < image_left.height/2) {
-                            topClicked();
+                            topClicked(mouseX - 49 + 4, mouseY + 50 - 4);
                         } else {
-                            bottomClicked();
+                            bottomClicked(mouseX - 49 + 4, mouseY - image_left.height/2 - 8);
                         }
                     } else {
-                        console.log("minus x")
+                        leftClicked(mouseX, mouseY);
                     }
                 }
             }
@@ -261,12 +261,12 @@ Rectangle {
                     // Could be +/- y
                     if (mouseX < (image_right.width - 39) && tg < 1) {
                         if (mouseY < image_right.height/2) {
-                            topClicked();
+                            topClicked(mouseX + image_top.width/2 - 4, mouseY + 50 - 4);
                         } else {
-                            bottomClicked();
+                            bottomClicked(mouseX + image_bottom.width/2 - 4, mouseY - image_right.height/2 - 8);
                         }
                     } else {
-                        console.log("plus x")
+                        rightClicked(mouseX, mouseY);
                     }
                 }
             }
@@ -400,11 +400,67 @@ Rectangle {
         }
     }
 
-    function topClicked() {
-        console.log("plus y")
+    function topClicked(mouseX, mouseY) {
+        // vector length
+        var vec = Math.sqrt(Math.pow(mouseX - image_top.width/2, 2) +
+                            Math.pow(mouseY - image_top.height, 2));
+
+        if (vec <= 47) {
+            mainwindow.moveY(0.1);
+        } else if (vec <= 76) {
+            mainwindow.moveY(1.0);
+        } else if (vec <= 107) {
+            mainwindow.moveY(10.0);
+        } else {
+            mainwindow.moveY(100.0);
+        }
     }
 
-    function bottomClicked() {
-        console.log("minus y")
+    function bottomClicked(mouseX, mouseY) {
+        // vector length
+        var vec = Math.sqrt(Math.pow(mouseX - image_bottom.width/2, 2) +
+                            Math.pow(mouseY, 2));
+
+        if (vec <= 56) {
+            mainwindow.moveY(-0.1);
+        } else if (vec <= 85) {
+            mainwindow.moveY(-1.0);
+        } else if (vec <= 110) {
+            mainwindow.moveY(-10.0);
+        } else {
+            mainwindow.moveY(-100.0);
+        }
+    }
+
+    function leftClicked(mouseX, mouseY) {
+        // vector length
+        var vec = Math.sqrt(Math.pow(mouseX - image_left.width, 2) +
+                            Math.pow(mouseY - image_left.height/2, 2));
+
+        if (vec <= 47) {
+            mainwindow.moveX(-0.1);
+        } else if (vec <= 76) {
+            mainwindow.moveX(-1.0);
+        } else if (vec <= 107) {
+            mainwindow.moveX(-10.0);
+        } else {
+            mainwindow.moveX(-100.0);
+        }
+    }
+
+    function rightClicked(mouseX, mouseY) {
+        // vector length
+        var vec = Math.sqrt(Math.pow(mouseX, 2) +
+                            Math.pow(mouseY - image_right.height/2, 2));
+
+        if (vec <= 58) {
+            mainwindow.moveX(0.1);
+        } else if (vec <= 87) {
+            mainwindow.moveX(1.0);
+        } else if (vec <= 118) {
+            mainwindow.moveX(10.0);
+        } else {
+            mainwindow.moveX(100.0);
+        }
     }
 }

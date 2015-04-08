@@ -78,6 +78,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.idleCalled = False
 
         self._layerOn = False
+        self._consoleOn = False
 
         self.platformMesh = {}
 
@@ -133,6 +134,12 @@ class SceneView(QtGui.QGraphicsScene):
             self._topContainer = containers.Container(
                 self, 0, 0, dims.get('width') or 0, dims.get('height') or 0)
         return self._topContainer
+
+    def isSceneCovered(self):
+        """
+        Returns true if graphicsscene should handle events
+        """
+        return self._layerOn or self._consoleOn
 
     def hasFocusTopBar(self):
         inputs = self.mainwindow.top_bar.findChildren(
@@ -633,16 +640,6 @@ class SceneView(QtGui.QGraphicsScene):
             glVertex3f(polys[n-1][0], polys[n-1][1], height)
         glEnd()
 
-        # # Draw no-go zones. (clips in case of UM2)
-        # glDisable(GL_TEXTURE_2D)
-        # glColor4ub(127, 127, 127, 200)
-        # for poly in polys[1:]:
-        #     glBegin(GL_TRIANGLE_FAN)
-        #     for p in poly:
-        #         glTexCoord2f(p[0]/20, p[1]/20)
-        #         glVertex3f(p[0], p[1], 0)
-        #     glEnd()
-
         glDepthMask(True)
         glDisable(GL_BLEND)
         glDisable(GL_CULL_FACE)
@@ -1072,7 +1069,7 @@ class SceneView(QtGui.QGraphicsScene):
     def wheelEvent(self, evt):
         pos = evt.scenePos()
         if self.topContainer.mousePressEvent(pos.x(), pos.y()) or \
-                self._layerOn:
+                self.isSceneCovered():
                     return
 
         delta = evt.delta()
@@ -1095,7 +1092,7 @@ class SceneView(QtGui.QGraphicsScene):
         pos = evt.scenePos()
 
         if not self.topContainer.mousePressEvent(pos.x(), pos.y()) and not \
-                self._layerOn:
+                self.isSceneCovered():
             self.onMouseDown(evt)
 
         super(SceneView, self).mousePressEvent(evt)
@@ -1106,7 +1103,7 @@ class SceneView(QtGui.QGraphicsScene):
     def mouseReleaseEvent(self, evt):
         pos = evt.scenePos()
         if not self.topContainer.mouseReleaseEvent(pos.x(), pos.y()) and not \
-                self._layerOn:
+                self.isSceneCovered():
             self.onMouseUp(evt)
 
         super(SceneView, self).mouseReleaseEvent(evt)
@@ -1160,7 +1157,7 @@ class SceneView(QtGui.QGraphicsScene):
     def mouseMoveEvent(self, evt):
         pos = evt.scenePos()
         x, y = pos.x(), pos.y()
-        if self.topContainer.mouseMoveEvent(x, y) or self._layerOn:
+        if self.topContainer.mouseMoveEvent(x, y) or self.isSceneCovered():
             super(SceneView, self).mouseMoveEvent(evt)
             return
 
@@ -1222,8 +1219,8 @@ class SceneView(QtGui.QGraphicsScene):
         super(SceneView, self).mouseMoveEvent(evt)
 
     def keyPressEvent(self, evt):
-        if self.topContainer.keyPressEvent() or self._layerOn:
-            if evt.key() == QtCore.Qt.Key_Tab:
+        if self.topContainer.keyPressEvent() or self.isSceneCovered():
+            if self._consoleOn and evt.key() == 0x60:
                 self.mainwindow.gconsole.hideGConsole()
                 return
             super(SceneView, self).keyPressEvent(evt)
@@ -1280,7 +1277,7 @@ class SceneView(QtGui.QGraphicsScene):
             self.changeCamera(yaw=0, pitch=90)
         elif code == QtCore.Qt.Key_End:
             self.changeCamera(yaw=90, pitch=90)
-        elif code == QtCore.Qt.Key_Tab:
+        elif code == 0x60:
             self.mainwindow.gconsole.showGConsole()
 
     def changeCamera(self, yaw=None, pitch=None):
@@ -1573,6 +1570,14 @@ class SceneView(QtGui.QGraphicsScene):
     @QtCore.Slot()
     def setLayerOff(self):
         self._layerOn = False
+
+    @QtCore.Slot()
+    def setConsoleOn(self):
+        self._consoleOn = True
+
+    @QtCore.Slot()
+    def setConsoleOff(self):
+        self._consoleOn = False
 
 
 class FilesLoader(QtCore.QObject):

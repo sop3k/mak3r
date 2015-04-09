@@ -41,6 +41,11 @@ Rectangle {
                 target: button_text
                 text: qsTr("Connect")
             }
+
+            PropertyChanges {
+                target: axescontroller
+                opacity: 0
+            }
         },
         State {
             name: "ONLINE"
@@ -48,6 +53,11 @@ Rectangle {
             PropertyChanges {
                 target: button_text
                 text: qsTr("Disconnect")
+            }
+
+            PropertyChanges {
+                target: axescontroller
+                opacity: 1
             }
         }
     ]

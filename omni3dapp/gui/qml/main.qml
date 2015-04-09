@@ -91,6 +91,15 @@ Rectangle {
     //     anchors.topMargin: 55
     // }
 
+    AxesController {
+        id: axescontroller
+        anchors.right: parent.right
+        anchors.rightMargin: 24
+        anchors.top: parent.top
+        anchors.topMargin: 124
+        opacity: 0
+    }
+
     GConsole {
         id: gconsole
         objectName: "gconsole"

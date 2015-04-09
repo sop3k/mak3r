@@ -26,11 +26,9 @@ Rectangle {
             }
             textinput.histindex = newindex;
             textinput.text = textinput.history[textinput.histindex]
+        } else if (event.key == 0x60) {
+            hideGConsole();
         }
-    }
-
-    Keys.onTabPressed: {
-        hideGConsole();
     }
 
     MouseArea {
@@ -143,13 +141,13 @@ Rectangle {
 
     function showGConsole() {
         gconsole.state = "DROPDOWN";
-        graphicsscene.setLayerOn();
+        graphicsscene.setConsoleOn();
         textinput.forceActiveFocus();
     }
 
     function hideGConsole() {
         gconsole.state = "";
-        graphicsscene.setLayerOff();
+        graphicsscene.setConsoleOff();
     }
 
     function appendToLogbox(log) {

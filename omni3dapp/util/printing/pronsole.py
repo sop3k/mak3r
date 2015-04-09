@@ -363,6 +363,7 @@ class Pronsole(cmd.Cmd):
             return
         else:
             cmd.Cmd.default(self, l)
+            self.logError(_("Unknown syntax"))
 
     def do_exit(self, l):
         if self.status.extruder_temp_target != 0:

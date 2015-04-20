@@ -148,9 +148,7 @@ class Printcore(QtCore.QObject):
             self._stop_sender()
             try:
                 self.printer.close()
-            except socket.error, e:
-                log.error(e)
-            except OSError, e:
+            except (socket.error, OSError, AttributeError) as e:
                 log.error(e)
 
         self.printer = None

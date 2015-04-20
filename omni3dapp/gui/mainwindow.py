@@ -158,7 +158,7 @@ class MainWindow(QtGui.QGraphicsView):
                 _("Value of field {} cannot be empty".format(empty[0])))
             return False
 
-        for key in ['machineWidth', 'machineHeight', 'machineDepth',
+        for key in ['machine_width', 'machine_height', 'machine_depth',
                     'nozzle_size']:
             try:
                 float(field_vals[key])

@@ -78,6 +78,7 @@ class SceneView(QtGui.QGraphicsScene):
         self.idleCalled = False
 
         self._layerOn = False
+        self._consoleOn = False
 
         self.platformMesh = {}
 
@@ -133,6 +134,12 @@ class SceneView(QtGui.QGraphicsScene):
             self._topContainer = containers.Container(
                 self, 0, 0, dims.get('width') or 0, dims.get('height') or 0)
         return self._topContainer
+
+    def isSceneCovered(self):
+        """
+        Returns true if graphicsscene should handle events
+        """
+        return self._layerOn or self._consoleOn
 
     def hasFocusTopBar(self):
         inputs = self.mainwindow.top_bar.findChildren(
@@ -633,16 +640,6 @@ class SceneView(QtGui.QGraphicsScene):
             glVertex3f(polys[n-1][0], polys[n-1][1], height)
         glEnd()
 
-        # # Draw no-go zones. (clips in case of UM2)
-        # glDisable(GL_TEXTURE_2D)
-        # glColor4ub(127, 127, 127, 200)
-        # for poly in polys[1:]:
-        #     glBegin(GL_TRIANGLE_FAN)
-        #     for p in poly:
-        #         glTexCoord2f(p[0]/20, p[1]/20)
-        #         glVertex3f(p[0], p[1], 0)
-        #     glEnd()
-
         glDepthMask(True)
         glDisable(GL_BLEND)
         glDisable(GL_CULL_FACE)
@@ -837,7 +834,7 @@ class SceneView(QtGui.QGraphicsScene):
                 glTranslated(10.0, self.height() - 30.0, -1.0)
                 glColor4f(0.2, 0.2, 0.2, 0.5)
                 openglHelpers.glDrawStringLeft("fps:%d" % (1 / renderTime))
-        except:
+        except Exception as e:
             # When an exception happens, catch it and show a message box.
             # If the exception is not caught the draw function bugs out.
             # Only show this exception once so we do not overload the user
@@ -853,8 +850,7 @@ class SceneView(QtGui.QGraphicsScene):
                 errStr += "\n @ %s:%s:%d" % (os.path.basename(locationInfo[0]),
                                              locationInfo[2], locationInfo[1])
 
-            traceback.print_exc()
-            log.error(errStr)
+            log.error("{0}; {1}".format(errStr, e))
             # TODO: show modal box with error message
             # wx.CallAfter(wx.MessageBox, errStr, _("3D window error"),
             # wx.OK | wx.ICON_EXCLAMATION)
@@ -914,7 +910,7 @@ class SceneView(QtGui.QGraphicsScene):
             if enablePrinting:
                 self.setInfoText("")
             else:
-                self.setIfoText(_("Not connected to printer"))
+                self.setInfoText(_("Not connected to printer"))
 
         self.queueRefresh()
 
@@ -1072,7 +1068,7 @@ class SceneView(QtGui.QGraphicsScene):
     def wheelEvent(self, evt):
         pos = evt.scenePos()
         if self.topContainer.mousePressEvent(pos.x(), pos.y()) or \
-                self._layerOn:
+                self.isSceneCovered():
                     return
 
         delta = evt.delta()
@@ -1095,7 +1091,7 @@ class SceneView(QtGui.QGraphicsScene):
         pos = evt.scenePos()
 
         if not self.topContainer.mousePressEvent(pos.x(), pos.y()) and not \
-                self._layerOn:
+                self.isSceneCovered():
             self.onMouseDown(evt)
 
         super(SceneView, self).mousePressEvent(evt)
@@ -1106,7 +1102,7 @@ class SceneView(QtGui.QGraphicsScene):
     def mouseReleaseEvent(self, evt):
         pos = evt.scenePos()
         if not self.topContainer.mouseReleaseEvent(pos.x(), pos.y()) and not \
-                self._layerOn:
+                self.isSceneCovered():
             self.onMouseUp(evt)
 
         super(SceneView, self).mouseReleaseEvent(evt)
@@ -1160,7 +1156,7 @@ class SceneView(QtGui.QGraphicsScene):
     def mouseMoveEvent(self, evt):
         pos = evt.scenePos()
         x, y = pos.x(), pos.y()
-        if self.topContainer.mouseMoveEvent(x, y) or self._layerOn:
+        if self.topContainer.mouseMoveEvent(x, y) or self.isSceneCovered():
             super(SceneView, self).mouseMoveEvent(evt)
             return
 
@@ -1222,8 +1218,8 @@ class SceneView(QtGui.QGraphicsScene):
         super(SceneView, self).mouseMoveEvent(evt)
 
     def keyPressEvent(self, evt):
-        if self.topContainer.keyPressEvent() or self._layerOn:
-            if evt.key() == QtCore.Qt.Key_Tab:
+        if self.topContainer.keyPressEvent() or self.isSceneCovered():
+            if self._consoleOn and evt.key() == 0x60:
                 self.mainwindow.gconsole.hideGConsole()
                 return
             super(SceneView, self).keyPressEvent(evt)
@@ -1280,7 +1276,7 @@ class SceneView(QtGui.QGraphicsScene):
             self.changeCamera(yaw=0, pitch=90)
         elif code == QtCore.Qt.Key_End:
             self.changeCamera(yaw=90, pitch=90)
-        elif code == QtCore.Qt.Key_Tab:
+        elif code == 0x60:
             self.mainwindow.gconsole.showGConsole()
 
     def changeCamera(self, yaw=None, pitch=None):
@@ -1574,6 +1570,14 @@ class SceneView(QtGui.QGraphicsScene):
     def setLayerOff(self):
         self._layerOn = False
 
+    @QtCore.Slot()
+    def setConsoleOn(self):
+        self._consoleOn = True
+
+    @QtCore.Slot()
+    def setConsoleOff(self):
+        self._consoleOn = False
+
 
 class FilesLoader(QtCore.QObject):
     load_gcode_file_sig = QtCore.Signal(str)
@@ -1598,7 +1602,7 @@ class FilesLoader(QtCore.QObject):
             filename = self.filenames[0]
             ext = os.path.splitext(filename)[1].lower()
             if ext in ['.g', '.gcode']:
-                # main_window.add_to_model_mru(filename)
+                # main_window.addToModelMRU(filename)
                 self.load_gcode_file_sig.emit(filename)
                 self.finished.emit()
                 return
@@ -1627,7 +1631,7 @@ class FilesLoader(QtCore.QObject):
                 elif ext in meshLoader.loadSupportedExtensions() or \
                         ext in imageToMesh.supportedExtensions():
                     scene_filenames.append(filename)
-                    # main_window.add_to_model_mru(filename)
+                    # main_window.addToModelMRU(filename)
                 else:
                     ignored_types[ext] = 1
         if ignored_types:

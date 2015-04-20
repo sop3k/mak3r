@@ -135,7 +135,8 @@ class Printcore(QtCore.QObject):
                 try:
                     self.read_thread.terminate()
                 except Exception as e:
-                    log.error(e)
+                    log.error("Error while terminating read thread "
+                              "(disconnecting printer): ".format(e))
                 self.read_thread = None
 
             if self.print_thread:
@@ -143,15 +144,15 @@ class Printcore(QtCore.QObject):
                 try:
                     self.print_thread.terminate()
                 except Exception as e:
-                    log.error(e)
+                    log.error("Error while temrinating print thread "
+                              "(disconnecting printer): ".format(e))
                 self.print_thread = None
             self._stop_sender()
             try:
                 self.printer.close()
-            except socket.error, e:
-                log.error(e)
-            except OSError, e:
-                log.error(e)
+            except (socket.error, OSError, AttributeError) as e:
+                log.error("Error closing printer connection while "
+                          "disconnecting printer: ".format(e))
 
         self.printer = None
         self.online = False
@@ -203,7 +204,7 @@ class Printcore(QtCore.QObject):
                                       baudrate=baud,
                                       timeout=0.25)
             except Exception as e:
-                log.error(_("Could not connect to {0} at baudrate {1}: " \
+                log.debug(_("Could not connect to {0} at baudrate {1}: " \
                     "\n{2} {3}").format(port, baud, type(e), e))
                 self.printer = None
                 return
@@ -262,7 +263,7 @@ class Printcore(QtCore.QObject):
         try:
             self.send_thread.terminate()
         except RuntimeError as e:
-            log.error(e)
+            log.error("Error terminating send thread: ".format(e))
         finally:
             self.send_thread = None
 
@@ -368,7 +369,8 @@ class Printcore(QtCore.QObject):
         try:
             self.printer_thread.terminate()
         except RuntimeError, e:
-            log.error(e)
+            log.error("Error terminating printer thread "
+                      "while pausing print: ".format(e))
 
         self.printer_thread = None
 
@@ -419,7 +421,7 @@ class Printcore(QtCore.QObject):
             else:
                 self.priqueue.put_nowait(command)
         else:
-            log.error(_("Not connected to printer"))
+            log.error(_("Can't send command. Not connected to printer"))
 
     def send_now(self, command, wait=0):
         """Sends a command to the printer ahead of the command queue, without a
@@ -428,7 +430,7 @@ class Printcore(QtCore.QObject):
             log.debug("Sending now command: {0}".format(command))
             self.priqueue.put_nowait(command)
         else:
-            log.error(_("Not connected to printer"))
+            log.error(_("Can't send command. Not connected to printer"))
 
     def _send(self, command, lineno=0, calcchecksum=False):
         # Only add checksums if over serial (tcp does the flow control itself)
@@ -465,13 +467,19 @@ class Printcore(QtCore.QObject):
                     log.error(_(u"Can't write to printer (disconnected ?):") +
                                   "\n" + traceback.format_exc())
                 else:
-                    log.error(_(u"Can't write to printer (disconnected?) (Socket error {0}): {1}").format(e.errno, decode_utf8(e.strerror)))
+                    log.error(_(u"Can't write to printer (disconnected?) "
+                              "(Socket error {0}): {1}").format(
+                              e.errno, decode_utf8(e.strerror)))
                 self.writefailures += 1
             except SerialException as e:
-                self.logError(_(u"Can't write to printer (disconnected?) (SerialException): {0}").format(decode_utf8(str(e))))
+                self.logError(_(u"Can't write to printer (disconnected?) "
+                              "(SerialException): {0}").format(
+                              decode_utf8(str(e))))
                 self.writefailures += 1
             except RuntimeError as e:
-                self.logError(_(u"Socket connection broken, disconnected. ({0}): {1}").format(e.errno, decode_utf8(e.strerror)))
+                self.logError(_(u"Socket connection broken, disconnected. "
+                              "({0}): {1}").format(
+                              e.errno, decode_utf8(e.strerror)))
                 self.writefailures += 1
 
 
@@ -657,8 +665,10 @@ class Printer(QtCore.QObject):
                 try: 
                     self.parent.startcb(self.resuming)
                 except:
-                    log.error(_("Print start callback failed with: {}".format(traceback.format_exc())))
-                    self.parent.parent.setStatusbar(_("Printing failed to start"))
+                    log.error(_("Print start callback failed with: {}".format(
+                        traceback.format_exc())))
+                    self.parent.parent.setStatusbar(
+                        _("Printing failed to start"))
             while self.parent.printing and self.parent.printer and self.parent.online:
                 self._sendnext()
             self.parent.sentlines = {}
@@ -668,12 +678,16 @@ class Printer(QtCore.QObject):
                 try:
                     self.parent.endcb()
                 except:
-                    log.error(_("Print end callback failed with: {}".format(traceback.format_exc())))
+                    log.error(_("Print end callback failed with: {}".format(
+                        traceback.format_exc())))
         except Exception as e:
             log.error(
-                _("Print thread died due to the following error: {0}; {1}".format(e, traceback.format_exc()))
+                _("Print thread died due to the following error: "
+                  "{0}; {1}".format(e, traceback.format_exc()))
                 )
-            self.parent.parent.setStatusbar(_("Printing aborted due to errors. See error log for details."))
+            self.parent.parent.setStatusbar(
+                _("Printing aborted due to errors. See error log for details.")
+                )
         finally:
             self.finished.emit()
 

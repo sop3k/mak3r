@@ -3,8 +3,6 @@
 import re
 import os
 import sys
-import subprocess
-import traceback
 
 from PySide import QtCore, QtGui, QtDeclarative
 
@@ -18,53 +16,32 @@ from omni3dapp.logger import log
 class MainWindow(QtGui.QGraphicsView):
 
     MAX_MRU_FILES = 5
-    NORMAL_MODE_ONLY_ITEMS = [
-            'Open_Profile',
-            'Save_Profile',
-            'Load_Profile_from_GCode',
-            'Reset_Profile_to_default',
-            'Open_expert_settings',
-            ]
-    THREADS = [
-            '_thread',
-            'socket_listener_thread',
-            'socket_connector_thread',
-            'log_thread'
-            ]
-    SETTING_CHANGE_WHITELIST = [
-            'commandbox',
-            'logbox',
-            'port_type',
-            'port_baud_rate',
-            'qt_spinbox_lineedit',
-            ]
     TEXT_SETTINGS = [
-            'startgcode',
-            'endgcode',
-            'machine_name'
-            ]
+        'startgcode',
+        'endgcode',
+        'machine_name'
+        ]
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.model_files_history = QtCore.QSettings(
-                '/'.join([profile.getBasePath(), 'mru_filelist.ini']),
-                QtCore.QSettings.IniFormat)
+            '/'.join([profile.getBasePath(), 'mru_filelist.ini']),
+            QtCore.QSettings.IniFormat)
         self.model_files_history_actions = []
 
         # Create a scene to present and modify 3d objects
-        self.setup_qmlview()
+        self.setupQmlView()
 
         self.print_button = self.findQmlObject("print_button")
         self.connect_button = self.findQmlObject("connect_button")
         self.top_bar = self.findQmlObject("bars")
         self.advanced_options = self.findQmlObject("options_layer")
 
-        self.setup_scene()
+        self.setupScene()
 
         # If we haven't run it before, run the configuration wizard.
         if not profile.getMachineSetting('machine_name'):
             self.runConfigWizard()
-
 
         self.setUpFields()
 
@@ -80,6 +57,26 @@ class MainWindow(QtGui.QGraphicsView):
             self._gconsole = self.findQmlObject("gconsole")
         return self._gconsole
 
+    @property
+    def machineWidth(self):
+        if not hasattr(self, '_machineWidth'):
+            self._machineWidth = profile.getMachineSettingFloat(
+                'machine_width')
+        return self._machineWidth
+
+    @property
+    def machineHeight(self):
+        if not hasattr(self, '_machineHeight'):
+            self._machineHeight = profile.getMachineSettingFloat(
+                'machine_height')
+        return self._machineHeight
+
+    @property
+    def machineDepth(self):
+        if not hasattr(self, '_machineDepth'):
+            self._machineDepth = profile.getMachineSettingFloat(
+                'machine_depth')
+        return self._machineDepth
 
     def resizeEvent(self, event):
         scene = self.scene()
@@ -91,14 +88,7 @@ class MainWindow(QtGui.QGraphicsView):
 
         super(MainWindow, self).resizeEvent(event)
 
-    def find_data_file(self, filename):
-        if hasattr(sys, 'frozen'):
-            datadir = os.path.dirname(sys.executable)
-        else:
-            datadir = os.path.dirname(__file__)
-        return os.path.join(datadir, filename)
-
-    def setup_qmlview(self):
+    def setupQmlView(self):
         self.qmlview = QtDeclarative.QDeclarativeView()
         url = QtCore.QUrl()
         url.setScheme("file")
@@ -110,7 +100,7 @@ class MainWindow(QtGui.QGraphicsView):
 
         self.qmlobject = self.qmlview.rootObject()
 
-    def setup_scene(self):
+    def setupScene(self):
         self.sceneview = SceneView(self)
 
         self.qmlview.rootContext().setContextProperty(
@@ -123,7 +113,7 @@ class MainWindow(QtGui.QGraphicsView):
         self.qmlview.setPalette(palette)
 
         self.sceneview.addWidget(self.qmlview)
-        self.qmlview.move(QtCore.QPoint(0,0))
+        self.qmlview.move(QtCore.QPoint(0, 0))
         self.qmlview.setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
         self.setScene(self.sceneview)
@@ -161,19 +151,19 @@ class MainWindow(QtGui.QGraphicsView):
                 self.onFloatSettingChange(key, val)
 
     def validateMachineSettings(self, field_vals):
-        empty = [key for key, val in field_vals.items() if \
-                    not isinstance(val, bool) and not val]
+        empty = [key for key, val in field_vals.items() if
+                 not isinstance(val, bool) and not val]
         if empty:
             self.wizard.validationError(
                 _("Value of field {} cannot be empty".format(empty[0])))
             return False
 
         for key in ['machine_width', 'machine_height', 'machine_depth',
-                'nozzle_size']:
+                    'nozzle_size']:
             try:
                 float(field_vals[key])
             except ValueError:
-                msg = _("Incorrect value for field {}.\n" \
+                msg = _("Incorrect value for field {}.\n"
                         "It needs to be a correct number".format(key))
                 self.wizard.validationError(msg)
                 return False
@@ -229,35 +219,14 @@ class MainWindow(QtGui.QGraphicsView):
         #     elem.validate()
         self.sceneview.sceneUpdated()
 
-    def get_model_files_history(self):
+    def getModelFilesHistory(self):
         files = self.model_files_history.value('modelFilesHistory') or []
         if not isinstance(files, list):
             files = [files]
         return files
 
-    def open_model_file(self):
-        sender = QtCore.QObject.sender(self)
-        try:
-            file_ix = re.match('recent_model_file_(\d)',
-                    sender.objectName()).group(1)
-        except AttributeError, e:
-            log.error('Failed to open model file: {0}'.format(e))
-            return
-
-        files = self.get_model_files_history()
-        try:
-            filename = files[int(file_ix)]
-        except (IndexError, ValueError), e:
-            log.error("Failed to open model file: {0}".format(e))
-            return
-        self.add_to_model_mru(filename)
-
-        # load model
-        profile.putPreference('lastFile', filename)
-        self.sceneview.loadFiles([filename])
-
-    def add_to_model_mru(self, filename):
-        files = self.get_model_files_history()
+    def addToModelMRU(self, filename):
+        files = self.getModelFilesHistory()
         try:
             files.remove(filename)
         except ValueError:
@@ -265,10 +234,10 @@ class MainWindow(QtGui.QGraphicsView):
         files.insert(0, filename)
         del files[MainWindow.MAX_MRU_FILES:]
         self.model_files_history.setValue('modelFilesHistory', files)
-        self.update_mru_files_actions()
+        self.updateMRUFilesActions()
 
-    def update_mru_files_actions(self):
-        files = self.get_model_files_history()
+    def updateMRUFilesActions(self):
+        files = self.getModelFilesHistory()
         files_no = len(files) or 0
         recent_files_no = min(files_no, MainWindow.MAX_MRU_FILES)
         if recent_files_no < 1:
@@ -340,52 +309,6 @@ class MainWindow(QtGui.QGraphicsView):
             return self.pc.p.online
         return False
 
-    def terminate_thread(self, thread_name):
-        try:
-            thread = getattr(self.sceneview.engine, thread_name, None)
-            if not thread:
-                return None
-            thread.terminate()
-            del thread
-        except Exception, e:
-            log.debug("Error terminating thread: {0}".format(e))
-
-    def terminate_threads(self):
-        for thread_name in self.THREADS:
-            self.terminate_thread(thread_name)
-
-    def move_axis(self):
-        elem = QtCore.QObject.sender(self)
-        try:
-            axis, direction, step = re.match('move_([xyz])_(down|up)(\d{1,2})',
-                elem.objectName()).groups()
-        except AttributeError, e:
-            log.error("Clicked button does not have an expected name: \
-                {0}".format(e))
-            return
-        func = getattr(self.pc, 'move_{0}'.format(axis), None)
-        if not func:
-            log.error("Did not find method move_{0} of the class {1}".format(axis,
-                self.pc.__class__))
-            return 
-        multip = int(direction == 'up') or -1
-        if step.startswith('0'):
-            step = re.sub(r'(0*)(\d+)', r'\1.\2', step)
-        step = float(step)
-        if step == 0:
-            return
-        return func(step * multip)
-
-    def home_pos(self):
-        elem = QtCore.QObject.sender(self)
-        try:
-            axis = re.match('home_([xyz]+)', elem.objectName()).group(1)
-        except AttributeError, e:
-            log.error('Clicked button does not have an expected name: \
-                {0}'.format(e))
-            return
-        return self.pc.home_position(axis)
-
     def setConnected(self, msg=None):
         msg = msg or _("Connected to printer")
         self.setStatusbar(msg)
@@ -432,26 +355,28 @@ class MainWindow(QtGui.QGraphicsView):
     def sendCommand(self, command):
         self.pc.sendline(command)
 
+    @QtCore.Slot(str)
+    def homeAxis(self, axis):
+        self.pc.home_position(axis)
+
+    @QtCore.Slot(float)
+    def moveX(self, step):
+        self.pc.move_x(step, self.machineWidth)
+
+    @QtCore.Slot(float)
+    def moveY(self, step):
+        self.pc.move_y(step, self.machineDepth)
+
+    @QtCore.Slot(float)
+    def moveZ(self, step):
+        self.pc.move_z(step, self.machineHeight)
+
     def addToLogbox(self, text):
         self.gconsole.appendToLogbox(text)
-
-    def eventFilter(self, obj, evt):
-        if obj == self.ui.commandbox:
-            if evt.type() == QtCore.QEvent.KeyPress:
-                code = evt.key()
-                if code == QtCore.Qt.Key_Up:
-                    self.pc.cbkey_action(-1)
-                    return True
-                elif code == QtCore.Qt.Key_Down:
-                    self.pc.cbkey_action(1)
-                    return True
-            return False
-        return super(MainWindow, self).eventFilter(obj, evt)
 
     def closeEvent(self, evt):
         # terminate all slicer-related threads
         # TODO: check if needed
-        # self.terminate_threads()
         profile.saveProfile(allMachines=True)
         self.sceneview.clear()
         evt.accept()

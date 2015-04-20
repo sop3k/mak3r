@@ -4,8 +4,6 @@ import os
 import sys
 # import esky
 import platform
-import shutil
-import glob
 from urllib2 import URLError
 
 from PySide import QtCore, QtGui, QtOpenGL
@@ -13,8 +11,6 @@ from PySide import QtCore, QtGui, QtOpenGL
 from mainwindow import MainWindow
 
 from omni3dapp.logger import log
-from omni3dapp.util import profile
-
 
 YES_BTN = QtGui.QMessageBox.Yes
 NO_BTN = QtGui.QMessageBox.No
@@ -126,12 +122,12 @@ class OmniApp(object):
         # try to load it from a previous app install
         if profile.getMachineSetting('machine_type') == 'unknown':
             try:
-                otherCuraInstalls = profile.getAlternativeBasePaths()
-                otherCuraInstalls.sort()
-                if len(otherCuraInstalls) > 0:
+                otherInstalls = profile.getAlternativeBasePaths()
+                otherInstalls.sort()
+                if len(otherInstalls) > 0:
                     profile.loadPreferences(os.path.join(
-                        otherCuraInstalls[-1], 'preferences.ini'))
+                        otherInstalls[-1], 'preferences.ini'))
                     profile.loadProfile(os.path.join(
-                        otherCuraInstalls[-1], 'current_profile.ini'))
+                        otherInstalls[-1], 'current_profile.ini'))
             except Exception as e:
                 log.error(e)

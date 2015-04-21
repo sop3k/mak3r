@@ -225,27 +225,6 @@ class MainWindow(QtGui.QGraphicsView):
             files = [files]
         return files
 
-    def openModelFile(self):
-        sender = QtCore.QObject.sender(self)
-        try:
-            file_ix = re.match('recent_model_file_(\d)',
-                               sender.objectName()).group(1)
-        except AttributeError, e:
-            log.error('Failed to open model file: {0}'.format(e))
-            return
-
-        files = self.getModelFilesHistory()
-        try:
-            filename = files[int(file_ix)]
-        except (IndexError, ValueError), e:
-            log.error("Failed to open model file: {0}".format(e))
-            return
-        self.addToModelMRU(filename)
-
-        # load model
-        profile.putPreference('lastFile', filename)
-        self.sceneview.loadFiles([filename])
-
     def addToModelMRU(self, filename):
         files = self.getModelFilesHistory()
         try:
@@ -329,28 +308,6 @@ class MainWindow(QtGui.QGraphicsView):
         if hasattr(self, 'pc'):
             return self.pc.p.online
         return False
-
-    def move_axis(self):
-        elem = QtCore.QObject.sender(self)
-        try:
-            axis, direction, step = re.match('move_([xyz])_(down|up)(\d{1,2})',
-                                             elem.objectName()).groups()
-        except AttributeError, e:
-            log.error("Clicked button does not have an expected name: \
-                {0}".format(e))
-            return
-        func = getattr(self.pc, 'move_{0}'.format(axis), None)
-        if not func:
-            log.error("Did not find method move_{0} of the class {1}".format(
-                axis, self.pc.__class__))
-            return
-        multip = int(direction == 'up') or -1
-        if step.startswith('0'):
-            step = re.sub(r'(0*)(\d+)', r'\1.\2', step)
-        step = float(step)
-        if step == 0:
-            return
-        return func(step * multip)
 
     def setConnected(self, msg=None):
         msg = msg or _("Connected to printer")

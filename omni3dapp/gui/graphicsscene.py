@@ -834,7 +834,7 @@ class SceneView(QtGui.QGraphicsScene):
                 glTranslated(10.0, self.height() - 30.0, -1.0)
                 glColor4f(0.2, 0.2, 0.2, 0.5)
                 openglHelpers.glDrawStringLeft("fps:%d" % (1 / renderTime))
-        except:
+        except Exception as e:
             # When an exception happens, catch it and show a message box.
             # If the exception is not caught the draw function bugs out.
             # Only show this exception once so we do not overload the user
@@ -850,8 +850,7 @@ class SceneView(QtGui.QGraphicsScene):
                 errStr += "\n @ %s:%s:%d" % (os.path.basename(locationInfo[0]),
                                              locationInfo[2], locationInfo[1])
 
-            traceback.print_exc()
-            log.error(errStr)
+            log.error("{0}; {1}".format(errStr, e))
             # TODO: show modal box with error message
             # wx.CallAfter(wx.MessageBox, errStr, _("3D window error"),
             # wx.OK | wx.ICON_EXCLAMATION)

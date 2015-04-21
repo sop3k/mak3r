@@ -34,3 +34,6 @@ class Container(object):
         if self.sceneview.hasFocusTopBar():
             return True
         return False
+
+    def setHeight(self, height):
+        self.height = height

@@ -36,6 +36,7 @@ class MainWindow(QtGui.QGraphicsView):
         self.connect_button = self.findQmlObject("connect_button")
         self.top_bar = self.findQmlObject("bars")
         self.advanced_options = self.findQmlObject("options_layer")
+        self.temp_gauges = self.findQmlObject("tempgauges")
 
         self.setupScene()
 

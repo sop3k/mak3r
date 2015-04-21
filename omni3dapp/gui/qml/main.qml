@@ -91,12 +91,22 @@ Rectangle {
     //     anchors.topMargin: 55
     // }
 
+    TempGauges {
+        id: tempgauges
+        objectName: "tempgauges"
+        anchors.right: parent.right
+        anchors.rightMargin: 24
+        anchors.top: bars.bottom
+        anchors.topMargin: 24
+        opacity: 1
+    }
+
     AxesController {
         id: axescontroller
         anchors.right: parent.right
         anchors.rightMargin: 24
-        anchors.top: parent.top
-        anchors.topMargin: 124
+        anchors.top: tempgauges.bottom
+        anchors.topMargin: 24
         opacity: 0
     }
 

@@ -135,18 +135,37 @@ class SceneView(QtGui.QGraphicsScene):
                 self, 0, 0, dims.get('width') or 0, dims.get('height') or 0)
         return self._topContainer
 
+    @QtCore.Slot(int)
+    def setTopContainerHeight(self, height):
+        self._topContainer.setHeight(height)
+
     def isSceneCovered(self):
         """
         Returns true if graphicsscene should handle events
         """
         return self._layerOn or self._consoleOn
 
-    def hasFocusTopBar(self):
-        inputs = self.mainwindow.top_bar.findChildren(
+    def getTopBarInputs(self):
+        return self.mainwindow.top_bar.findChildren(
             QtCore.QObject, QtCore.QRegExp(r'^text_input_\S+'))
+
+    def hasFocusTopBar(self):
+        inputs = self.getTopBarInputs()
         if any((inp.hasFocus() for inp in inputs)):
             return True
         return False
+
+    def focusBeyondScene(self):
+        # Check if any of TextInputs of top bar or temperature gauges has
+        # active focus
+        inputs = self.getTopBarInputs()
+        inputs.extend(self.mainwindow.temp_gauges.findChildren(
+            QtCore.QObject, QtCore.QRegExp(r'^temp\S*val$')))
+
+        if any((inp.hasFocus() for inp in inputs)):
+            return True
+        return False
+        
 
     def getObjectCenterPos(self):
         if self.selectedObj is None:
@@ -1218,7 +1237,7 @@ class SceneView(QtGui.QGraphicsScene):
         super(SceneView, self).mouseMoveEvent(evt)
 
     def keyPressEvent(self, evt):
-        if self.topContainer.keyPressEvent() or self.isSceneCovered():
+        if self.focusBeyondScene() or self.isSceneCovered():
             if self._consoleOn and evt.key() == 0x60:
                 self.mainwindow.gconsole.hideGConsole()
                 return

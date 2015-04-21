@@ -6,7 +6,7 @@ Item {
     property Rectangle last_active_tool: null
     property Rectangle last_active_bar: null
     width: parent.width
-    height: custom_height
+    height: options_bar.opacity == 1 ? custom_height*2 + orange_bar.height : custom_height
 
     signal scaled(string value, int axis, bool unified, bool is_mm)
 
@@ -1337,7 +1337,7 @@ Item {
         mirror_y.setOptionEnabled(enabled)
         mirror_z.setOptionEnabled(enabled)
 
-        options_bar.opacity = 0;
+        hideOptionsBar();
         if (bars.last_active_tool) {
             bars.last_active_tool.isCurrentItem = false;
         }
@@ -1350,8 +1350,8 @@ Item {
 
     function getDimensions() {
         return {
-            'width': parent.width,
-            'height': top_bar.height + options_bar.height
+            'width': bars.width,
+            'height': bars.height
             }
     }
 
@@ -1364,7 +1364,7 @@ Item {
             if (rect_bar) {
                 rect_bar.opacity = 0;
             }
-            options_bar.opacity = 0;
+            hideOptionsBar();
             bars.last_active_tool = null;
             bars.last_active_bar = null;
         } else if (bars.last_active_tool) {
@@ -1372,14 +1372,14 @@ Item {
             if (bars.last_active_bar) {
                 bars.last_active_bar.opacity = 0;
             }
-            options_bar.opacity = 0
+            hideOptionsBar();
         }
         if (rect_tool.isCurrentItem) {
             bars.last_active_tool = rect_tool;
             bars.last_active_bar = rect_bar;
             if (rect_bar) {
                 rect_bar.opacity = 1;
-                options_bar.opacity = 1;
+                showOptionsBar();
             }
         }
 
@@ -1405,6 +1405,11 @@ Item {
 
     function showOptionsBar() {
         options_bar.opacity = 1;
+        graphicsscene.setTopContainerHeight(bars.height);
     }
 
+    function hideOptionsBar() {
+        options_bar.opacity = 0;
+        graphicsscene.setTopContainerHeight(bars.height);
+    }
 }

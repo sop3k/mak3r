@@ -275,61 +275,168 @@ Rectangle {
     }
 
     Rectangle {
-        id: minus_z_10
+        id: rect_zplus
         width: 100
-        height: 46
-        color: "#51545b"
-        radius: 5
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 0
+        height: 142
+        color: "#00000000"
         anchors.right: parent.right
         anchors.rightMargin: 0
+        anchors.top: parent.top
+        anchors.topMargin: 0
+
+        Rectangle {
+            id: plus_z_10
+            width: 100
+            height: 46
+            color: "#51545b"
+            radius: 5
+            anchors.top: parent.top
+            anchors.topMargin: 0
+        }
+
+        Rectangle {
+            id: plus_z_1
+            width: 100
+            height: 46
+            color: "#51545b"
+            radius: 5
+            anchors.top: parent.top
+            anchors.topMargin: 48
+        }
+
+        Rectangle {
+            id: plus_z_01
+            width: 100
+            height: 46
+            color: "#51545b"
+            radius: 5
+            anchors.top: parent.top
+            anchors.topMargin: 96
+        }
+
+        Image {
+            id: zup
+            source: "resources/axes/zup.png"
+            anchors.top: parent.top
+            anchors.topMargin: 10
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
+
+        MouseArea {
+            id: mouse_area_plus_z_10
+            width: 100
+            height: 46
+            anchors.top: parent.top
+            anchors.topMargin: 0
+
+            onClicked: {
+                mainwindow.moveZ(10.0)
+            }
+        }
+
+        MouseArea {
+            id: mouse_area_plus_z_1
+            width: 100
+            height: 46
+            anchors.top: parent.top
+            anchors.topMargin: 48
+
+            onClicked: {
+                mainwindow.moveZ(1.0)
+            }
+        }
+
+        MouseArea {
+            id: mouse_area_plus_z_01
+            width: 100
+            height: 46
+            anchors.top: parent.top
+            anchors.topMargin: 96
+
+            onClicked: {
+                mainwindow.moveZ(0.1)
+            }
+        }
+    }
+
+    Rectangle {
+        id: rect_zminus
+        width: 100
+        height: 142
+        color: "#00000000"
+        anchors.right: parent.right
+        anchors.rightMargin: 0
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 0
+
+        Rectangle {
+            id: minus_z_10
+            width: 100
+            height: 46
+            color: "#51545b"
+            radius: 5
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 0
+        }
+
+        Rectangle {
+            id: minus_z_1
+            width: 100
+            height: 46
+            color: "#51545b"
+            radius: 5
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 48
+        }
+
+        Rectangle {
+            id: minus_z_01
+            width: 100
+            height: 46
+            color: "#51545b"
+            radius: 5
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 96
+        }
+
+        Image {
+            id: zdown
+            source: "resources/axes/zdown.png"
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 10
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
 
         MouseArea {
             id: mouse_area_minus_z_10
-            anchors.fill: parent
+            width: 100
+            height: 46
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 0
 
             onClicked: {
                 mainwindow.moveZ(-10.0)
             }
         }
-    }
-
-    Rectangle {
-        id: minus_z_1
-        width: 100
-        height: 46
-        color: "#51545b"
-        radius: 5
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 48
-        anchors.right: parent.right
-        anchors.rightMargin: 0
 
         MouseArea {
             id: mouse_area_minus_z_1
-            anchors.fill: parent
+            width: 100
+            height: 46
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 48
 
             onClicked: {
                 mainwindow.moveZ(-1.0)
             }
         }
-    }
-
-    Rectangle {
-        id: minus_z_01
-        width: 100
-        height: 46
-        color: "#51545b"
-        radius: 5
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 96
-        anchors.right: parent.right
-        anchors.rightMargin: 0
 
         MouseArea {
             id: mouse_area_minus_z_01
-            anchors.fill: parent
+            width: 100
+            height: 46
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 96
 
             onClicked: {
                 mainwindow.moveZ(-0.1)
@@ -337,68 +444,7 @@ Rectangle {
         }
     }
 
-    Rectangle {
-        id: plus_z_10
-        width: 100
-        height: 46
-        color: "#51545b"
-        radius: 5
-        anchors.top: parent.top
-        anchors.topMargin: 0
-        anchors.rightMargin: 0
-        anchors.right: parent.right
 
-        MouseArea {
-            id: mouse_area_plus_z_10
-            anchors.fill: parent
-
-            onClicked: {
-                mainwindow.moveZ(10.0)
-            }
-        }
-    }
-
-    Rectangle {
-        id: plus_z_1
-        width: 100
-        height: 46
-        color: "#51545b"
-        radius: 5
-        anchors.top: parent.top
-        anchors.topMargin: 48
-        anchors.rightMargin: 0
-        anchors.right: parent.right
-
-        MouseArea {
-            id: mouse_area5_plus_z_1
-            anchors.fill: parent
-
-            onClicked: {
-                mainwindow.moveZ(1.0)
-            }
-        }
-    }
-
-    Rectangle {
-        id: plus_z_01
-        width: 100
-        height: 46
-        color: "#51545b"
-        radius: 5
-        anchors.top: parent.top
-        anchors.topMargin: 96
-        anchors.rightMargin: 0
-        anchors.right: parent.right
-
-        MouseArea {
-            id: mouse_area_plus_z_01
-            anchors.fill: parent
-
-            onClicked: {
-                mainwindow.moveZ(0.1)
-            }
-        }
-    }
 
     function topClicked(mouseX, mouseY) {
         // vector length

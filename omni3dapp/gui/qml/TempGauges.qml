@@ -3,7 +3,7 @@ import QtQuick 1.1
 Rectangle {
     id: gauges
     width: 420
-    height: 60
+    height: 65
     color: "#00000000"
 
     Rectangle {
@@ -102,6 +102,36 @@ Rectangle {
                 font.family: lato_font.name
             }
 
+            Rectangle {
+                id: set_temp1
+                width: 40
+                height: 20
+                color: "#ff5724"
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: text_deg_temp1.right
+                anchors.leftMargin: 10
+
+                Text {
+                    id: text_set_temp1
+                    text: qsTr("Set")
+                    color: "#ffffff"
+                    font.family: lato_font.name
+                    font.pixelSize: 12
+                    font.bold: true
+                    anchors.fill: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            mainwindow.setPrintTemp(temp1val.text)
+                        }
+                    }
+                }
+            }
+
+
             Text {
                 id: text_current_temp_1
                 color: "#d1d1d2"
@@ -109,7 +139,7 @@ Rectangle {
                 font.pixelSize: 11
                 font.family: lato_font.name
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.left: text_deg_temp1.right
+                anchors.left: set_temp1.right
                 anchors.leftMargin: 10
             }
 
@@ -131,7 +161,7 @@ Rectangle {
             height: 3
             color: "#00000000"
             anchors.top: temp_1_text.bottom
-            anchors.topMargin: 2
+            anchors.topMargin: 5
 
             Rectangle {
                 id: bar_1
@@ -250,6 +280,35 @@ Rectangle {
                 font.family: lato_font.name
             }
 
+            Rectangle {
+                id: set_tempbed
+                width: 40
+                height: 20
+                color: "#ff5724"
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: text_deg_tempbed.right
+                anchors.leftMargin: 10
+
+                Text {
+                    id: text_set_tempbed
+                    text: qsTr("Set")
+                    color: "#ffffff"
+                    font.family: lato_font.name
+                    font.pixelSize: 12
+                    font.bold: true
+                    anchors.fill: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            mainwindow.setBedTemp(tempbedval.text)
+                        }
+                    }
+                }
+            }
+
             Text {
                 id: text_current_temp_bed
                 color: "#d1d1d2"
@@ -257,7 +316,7 @@ Rectangle {
                 font.pixelSize: 11
                 font.family: lato_font.name
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.left: text_deg_tempbed.right
+                anchors.left: set_tempbed.right
                 anchors.leftMargin: 10
             }
 
@@ -279,7 +338,7 @@ Rectangle {
             height: 3
             color: "#00000000"
             anchors.top: temp_bed_text.bottom
-            anchors.topMargin: 2
+            anchors.topMargin: 5
 
             Rectangle {
                 id: bar_bed

@@ -46,6 +46,11 @@ Rectangle {
                 target: axescontroller
                 opacity: 0
             }
+
+            PropertyChanges {
+                target: tempgauges
+                opacity: 0
+            }
         },
         State {
             name: "ONLINE"
@@ -57,6 +62,11 @@ Rectangle {
 
             PropertyChanges {
                 target: axescontroller
+                opacity: 1
+            }
+
+            PropertyChanges {
+                target: tempgauges
                 opacity: 1
             }
         }

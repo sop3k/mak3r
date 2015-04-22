@@ -82,21 +82,22 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
     }
 
-    // PrintArea {
-    //     id: print_area
-    //     objectName: "print_area"
-    //     anchors.right: parent.right
-    //     anchors.rightMargin: 20
-    //     anchors.top: bars.bottom
-    //     anchors.topMargin: 55
-    // }
+    TempGauges {
+        id: tempgauges
+        objectName: "tempgauges"
+        anchors.right: parent.right
+        anchors.rightMargin: 24
+        anchors.top: bars.bottom
+        anchors.topMargin: 24
+        opacity: 0
+    }
 
     AxesController {
         id: axescontroller
         anchors.right: parent.right
         anchors.rightMargin: 24
-        anchors.top: parent.top
-        anchors.topMargin: 124
+        anchors.top: tempgauges.bottom
+        anchors.topMargin: 24
         opacity: 0
     }
 

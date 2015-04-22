@@ -135,18 +135,37 @@ class SceneView(QtGui.QGraphicsScene):
                 self, 0, 0, dims.get('width') or 0, dims.get('height') or 0)
         return self._topContainer
 
+    @QtCore.Slot(int)
+    def setTopContainerHeight(self, height):
+        self._topContainer.setHeight(height)
+
     def isSceneCovered(self):
         """
         Returns true if graphicsscene should handle events
         """
         return self._layerOn or self._consoleOn
 
-    def hasFocusTopBar(self):
-        inputs = self.mainwindow.top_bar.findChildren(
+    def getTopBarInputs(self):
+        return self.mainwindow.top_bar.findChildren(
             QtCore.QObject, QtCore.QRegExp(r'^text_input_\S+'))
+
+    def hasFocusTopBar(self):
+        inputs = self.getTopBarInputs()
         if any((inp.hasFocus() for inp in inputs)):
             return True
         return False
+
+    def focusBeyondScene(self):
+        # Check if any of TextInputs of top bar or temperature gauges has
+        # active focus
+        inputs = self.getTopBarInputs()
+        inputs.extend(self.mainwindow.temp_gauges.findChildren(
+            QtCore.QObject, QtCore.QRegExp(r'^temp\S*val$')))
+
+        if any((inp.hasFocus() for inp in inputs)):
+            return True
+        return False
+        
 
     def getObjectCenterPos(self):
         if self.selectedObj is None:
@@ -1218,7 +1237,7 @@ class SceneView(QtGui.QGraphicsScene):
         super(SceneView, self).mouseMoveEvent(evt)
 
     def keyPressEvent(self, evt):
-        if self.topContainer.keyPressEvent() or self.isSceneCovered():
+        if self.focusBeyondScene() or self.isSceneCovered():
             if self._consoleOn and evt.key() == 0x60:
                 self.mainwindow.gconsole.hideGConsole()
                 return
@@ -1353,20 +1372,16 @@ class SceneView(QtGui.QGraphicsScene):
     @QtCore.Slot(float)
     def setPrinttempTarget(self, temp):
         self._printtemp = temp
-        # self.printtemp_gauge.setTarget(temp)
 
     @QtCore.Slot(float)
     def setBedtempTarget(self, temp):
         self._bedtemp = temp
-        # self.bedtemp_gauge.setTarget(temp)
 
     def setHeatingFinished(self):
         self._heating = False
         self.progressBar.setValue(0)
         self.setInfoText(_("Printing..."))
-        # self.mainwindow.pc.heating_finished()
         self.mainwindow.setHeatingFinished()
-        # self.mainwindow.pc.startprint()
 
     def setHeatingStarted(self):
         self._heating = True
@@ -1397,13 +1412,19 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot(float)
     def setPrinttempValue(self, temp):
-        pass
-        # self.printtemp_gauge.setValue(temp)
+        self.mainwindow.temp_gauges.setCurrentPrinttemp(temp)
+        if not self._printtemp:
+            return
+        self.mainwindow.temp_gauges.setPrinttempValue(temp/self._printtemp)
+        self.queueRefresh()
 
     @QtCore.Slot(float)
     def setBedtempValue(self, temp):
-        pass
-        # self.bedtemp_gauge.setValue(temp)
+        self.mainwindow.temp_gauges.setCurrentBedtemp(temp)
+        if not self._bedtemp:
+            return
+        self.mainwindow.temp_gauges.setBedtempValue(temp/self._bedtemp)
+        self.queueRefresh()
 
     @QtCore.Slot(float)
     def setExtr0TempTarget(self, temp):

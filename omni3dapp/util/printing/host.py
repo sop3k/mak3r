@@ -37,6 +37,7 @@ class GuiSignals(QtCore.QObject):
     setonline = QtCore.Signal()
     setoffline = QtCore.Signal()
     enable_printing = QtCore.Signal()
+    set_statusbar = QtCore.Signal(str)
     set_printtemp_target = QtCore.Signal(float)
     set_bedtemp_target = QtCore.Signal(float)
     set_printtemp_value = QtCore.Signal(float)
@@ -158,6 +159,7 @@ class PrinterConnection(Pronsole):
         self.guisignals.setoffline.connect(self.offline_gui) 
         self.guisignals.enable_printing.connect(
             self.parent.sceneview.enablePrinting)
+        self.guisignals.set_statusbar.connect(self.parent.setStatusbar)
         self.guisignals.set_printtemp_target.connect(
             self.parent.sceneview.setPrinttempTarget)
         self.guisignals.set_bedtemp_target.connect(
@@ -551,14 +553,9 @@ class PrinterConnection(Pronsole):
         """Callback when printer goes online"""
         msg = _("Printer is now online.")
         self.log(msg)
-        # self.guisignals.addtext.emit(msg)
         self.addtexttolog(msg)
-        # self.guisignals.setonline.emit()
         self.online_gui()
         self.parent.sceneview.enablePrinting()
-        # self.guisignals.enable_printing.emit()
-        # self.parent.sceneview.printtemp_gauge.setHidden(False)
-        # self.parent.sceneview.bedtemp_gauge.setHidden(False)
 
     @QtCore.Slot()
     def online_gui(self):
@@ -589,8 +586,8 @@ class PrinterConnection(Pronsole):
             else:
                 hotend_temp = None
             if hotend_temp is not None:
-                # if self.display_gauges:
-                #     self.guisignals.set_printtemp_value.emit(hotend_temp)
+                if self.display_gauges:
+                    self.guisignals.set_printtemp_value.emit(hotend_temp)
                 setpoint = None
                 if "T0" in temps and temps["T0"][1]: setpoint = float(temps["T0"][1])
                 elif temps["T"][1]: setpoint = float(temps["T"][1])
@@ -606,8 +603,8 @@ class PrinterConnection(Pronsole):
                 #     wx.CallAfter(self.graph.SetExtruder1TargetTemperature, float(setpoint))
             bed_temp = float(temps["B"][0]) if "B" in temps and temps["B"][0] else None
             if bed_temp is not None:
-                # if self.display_gauges:
-                #     self.guisignals.set_bedtemp_value.emit(bed_temp)
+                if self.display_gauges:
+                    self.guisignals.set_bedtemp_value.emit(bed_temp)
                 setpoint = temps["B"][1]
                 if setpoint:
                     setpoint = float(setpoint)
@@ -717,6 +714,33 @@ class PrinterConnection(Pronsole):
         #     wx.CallAfter(self.htemp.SetBackgroundColour, "white")
         #     wx.CallAfter(self.htemp.Refresh)
 
+    def set_printtemp(self, l):
+        command = "M104 S{}".format(l)
+        msg = _("Setting nozzle temperature to {} degrees Celsius.")
+        self.do_settemp(l, command, msg)
+
+    def set_bedtemp(self, l):
+        command = "M140 S{}".format(l)
+        msg = _("Setting bed temperature to {} degrees Celsius.")
+        self.do_settemp(l, command, msg)
+
+    def do_settemp(self, l, command, msg):
+        if isinstance(l, str) or isinstance(l, unicode):
+            l = l.replace(", ", ".")
+        f = float(l)
+        if f >= 0:
+            if self.p.online:
+                self.p.send_now(command)
+                self.guisignals.addtext.emit(msg.format(f))
+                self.guisignals.set_statusbar.emit(msg.format(f))
+                # self.sethotendgui(f)
+            else:
+                self.guisignals.addtext.emit(_("Printer is not online."))
+        else:
+            self.guisignals.addtext.emit(
+                _("You cannot set negative temperatures. " \
+                  "To turn the hotend off entirely, set its temperature to 0."))
+
     def set_heating_started(self):
         self.heating = True
         self.parent.sceneview.setHeatingStarted()
@@ -730,13 +754,11 @@ class PrinterConnection(Pronsole):
 
     def start_heating(self):
         self.heating_thread = QtCore.QThread(self.parent)
-        self.heater = Heater(self.p)
+        self.heater = Heater(self.p, self.set_printtemp, self.set_bedtemp)
         self.heater.moveToThread(self.heating_thread)
 
         self.heating_thread.started.connect(self.heater.heat_up)
-        self.heater.addtext.connect(self.addtexttolog)
         self.heater.set_progress_sig.connect(self.parent.setProgress)
-        self.heater.set_statusbar_sig.connect(self.parent.setStatusbar)
 
         self.heater.finished.connect(self.heating_thread.quit)
         self.heater.finished.connect(self.heater.deleteLater)
@@ -749,14 +771,14 @@ class PrinterConnection(Pronsole):
 
 
 class Heater(QtCore.QObject):
-    addtext = QtCore.Signal(str)
     set_progress_sig = QtCore.Signal(float)
-    set_statusbar_sig = QtCore.Signal(str)
     finished = QtCore.Signal()
 
-    def __init__(self, printcore):
+    def __init__(self, printcore, set_printtemp_func, set_bedtemp_func):
         super(Heater, self).__init__()
         self.p = printcore
+        self.set_printtemp = set_printtemp_func
+        self.set_bedtemp = set_bedtemp_func
 
     def heat_up(self):
         self.set_progress_sig.emit(0.01)
@@ -767,30 +789,3 @@ class Heater(QtCore.QObject):
         bedtemp = profile.settingsDictionary.get("print_bed_temperature")
         if bedtemp:
             self.set_bedtemp(bedtemp.getValue())
-
-    def set_printtemp(self, l):
-        command = "M104 S" + l
-        msg = _("Setting nozzle temperature to %f degrees Celsius.")
-        self.do_settemp(l, command, msg)
-
-    def set_bedtemp(self, l):
-        command = "M140 S" + l
-        msg = _("Setting bed temperature to %f degrees Celsius.")
-        self.do_settemp(l, command, msg)
-
-    def do_settemp(self, l, command, msg):
-        if isinstance(l, str) or isinstance(l, unicode):
-            l = l.replace(", ", ".")
-        f = float(l)
-        if f >= 0:
-            if self.p.online:
-                self.p.send_now(command)
-                self.addtext.emit(msg % f)
-                self.set_statusbar_sig.emit(msg % f)
-                # self.sethotendgui(f)
-            else:
-                self.addtext.emit(_("Printer is not online."))
-        else:
-            self.addtext.emit(
-                _("You cannot set negative temperatures. " \
-                  "To turn the hotend off entirely, set its temperature to 0."))

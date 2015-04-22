@@ -1372,20 +1372,16 @@ class SceneView(QtGui.QGraphicsScene):
     @QtCore.Slot(float)
     def setPrinttempTarget(self, temp):
         self._printtemp = temp
-        # self.printtemp_gauge.setTarget(temp)
 
     @QtCore.Slot(float)
     def setBedtempTarget(self, temp):
         self._bedtemp = temp
-        # self.bedtemp_gauge.setTarget(temp)
 
     def setHeatingFinished(self):
         self._heating = False
         self.progressBar.setValue(0)
         self.setInfoText(_("Printing..."))
-        # self.mainwindow.pc.heating_finished()
         self.mainwindow.setHeatingFinished()
-        # self.mainwindow.pc.startprint()
 
     def setHeatingStarted(self):
         self._heating = True
@@ -1416,13 +1412,19 @@ class SceneView(QtGui.QGraphicsScene):
 
     @QtCore.Slot(float)
     def setPrinttempValue(self, temp):
-        pass
-        # self.printtemp_gauge.setValue(temp)
+        self.mainwindow.temp_gauges.setCurrentPrinttemp(temp)
+        if not self._printtemp:
+            return
+        self.mainwindow.temp_gauges.setPrinttempValue(temp/self._printtemp)
+        self.queueRefresh()
 
     @QtCore.Slot(float)
     def setBedtempValue(self, temp):
-        pass
-        # self.bedtemp_gauge.setValue(temp)
+        self.mainwindow.temp_gauges.setCurrentBedtemp(temp)
+        if not self._bedtemp:
+            return
+        self.mainwindow.temp_gauges.setBedtempValue(temp/self._bedtemp)
+        self.queueRefresh()
 
     @QtCore.Slot(float)
     def setExtr0TempTarget(self, temp):

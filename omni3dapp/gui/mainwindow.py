@@ -129,6 +129,9 @@ class MainWindow(QtGui.QGraphicsView):
             field_vals[key] = val.getValue()
 
         self.advanced_options.setFields(field_vals)
+        self.temp_gauges.setTemperatures(
+            field_vals.get("print_temperature") or "",
+            field_vals.get("print_bed_temperature" or ""))
 
         # startgcode = self.advanced_options.findChild(
         #     QtCore.QObject, "startgcode")
@@ -351,6 +354,35 @@ class MainWindow(QtGui.QGraphicsView):
         if not hasattr(self, 'sceneview'):
             return False
         return self.sceneview.isPrintingEnabled()
+
+    def validatedTemp(self, val):
+        try:
+            val = float(val)
+        except ValueError as e:
+            log.error("{0} is invalid temperature value: {1}".format(val, e))
+            # TODO: Notify user to enter a valid value
+            return None
+        return val
+
+    @QtCore.Slot(str)
+    def setPrintTemp(self, val):
+        temp = self.validatedTemp(val)
+        if not temp:
+            return
+        self.changeSetting("print_temperature", temp)
+        self.sceneview.setPrinttempTarget(temp)
+        self.pc.set_printtemp(temp)
+        self.pc.update_tempdisplay()
+
+    @QtCore.Slot(str)
+    def setBedTemp(self, val):
+        temp = self.validatedTemp(val)
+        if not temp:
+            return
+        self.changeSetting("print_bed_temperature", temp)
+        self.sceneview.setBedtempTarget(temp)
+        self.pc.set_bedtemp(temp)
+        self.pc.update_tempdisplay()
 
     @QtCore.Slot(str)
     def sendCommand(self, command):

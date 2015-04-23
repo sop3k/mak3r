@@ -82,23 +82,146 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
     }
 
-    TempGauges {
-        id: tempgauges
-        objectName: "tempgauges"
+    Rectangle {
+        id: printarea_icon
+        height: 27
+        width: 27
+        color: "#00000000"
+        opacity: printingEnabled ? 1 : 0.2
         anchors.right: parent.right
         anchors.rightMargin: 24
         anchors.top: bars.bottom
         anchors.topMargin: 24
-        opacity: 0
+
+        property bool printingEnabled: false
+
+        state: "HIDDEN"
+
+        Image {
+            id: printarea_show_icon
+            source: "resources/icons/printarea.png"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        Image {
+            id: printarea_hide_icon
+            source: "resources/icons/cancel.png"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        MouseArea {
+            id: mouse_area_printarea_icon
+            anchors.fill: parent
+            enabled: printarea_icon.printingEnabled
+
+            onClicked: {
+                printarea_icon.state = printarea_icon.state == "HIDDEN" ? "SHOWN" : "HIDDEN"
+            }
+        }
+
+        states: [
+            State {
+                name: "HIDDEN"
+
+                PropertyChanges {
+                    target: printarea_hide_icon
+                    opacity: 0
+                }
+
+                PropertyChanges {
+                    target: printarea_show_icon
+                    opacity: 1
+                }
+
+                PropertyChanges {
+                    target: printarea
+                    width: 0
+                }
+
+                PropertyChanges {
+                    target: printarea
+                    enabled: false
+                }
+
+                PropertyChanges {
+                    target: printarea
+                    opacity: 0
+                }
+            },
+
+            State {
+                name: "SHOWN"
+
+                PropertyChanges {
+                    target: printarea_hide_icon
+                    opacity: 1
+                }
+
+                PropertyChanges {
+                    target: printarea_show_icon
+                    opacity: 0
+                }
+
+                PropertyChanges {
+                    target: printarea
+                    width: 420
+                }
+
+                PropertyChanges {
+                    target: printarea
+                    enabled: true
+                }
+
+                PropertyChanges {
+                    target: printarea
+                    opacity: 1
+                }
+            }
+        ]
     }
 
-    AxesController {
-        id: axescontroller
+    Rectangle {
+        id: printarea
+        width: 0
+        height: 400
+        color: "#00000000"
         anchors.right: parent.right
         anchors.rightMargin: 24
-        anchors.top: tempgauges.bottom
+        anchors.top: printarea_icon.bottom
         anchors.topMargin: 24
-        opacity: 0
+        enabled: false
+
+        Behavior on width {
+            PropertyAnimation {
+                easing.type: Easing.InOutQuad
+                duration: 500
+            }
+        }
+        Behavior on opacity {
+            PropertyAnimation {
+                easing.type: Easing.InOutQuad
+                duration: 800
+            }
+         }
+
+        TempGauges {
+            id: tempgauges
+            objectName: "tempgauges"
+            anchors.top: parent.top
+            anchors.topMargin: 0
+            anchors.left: parent.left
+            anchors.leftMargin: 0
+        }
+
+        AxesController {
+            id: axescontroller
+            anchors.top: tempgauges.bottom
+            anchors.topMargin: 24
+            anchors.left: parent.left
+            anchors.leftMargin: 0
+        }
     }
 
     GConsole {

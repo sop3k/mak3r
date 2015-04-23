@@ -43,13 +43,8 @@ Rectangle {
             }
 
             PropertyChanges {
-                target: axescontroller
-                opacity: 0
-            }
-
-            PropertyChanges {
-                target: tempgauges
-                opacity: 0
+                target: printarea_icon
+                printingEnabled: false
             }
         },
         State {
@@ -61,13 +56,8 @@ Rectangle {
             }
 
             PropertyChanges {
-                target: axescontroller
-                opacity: 1
-            }
-
-            PropertyChanges {
-                target: tempgauges
-                opacity: 1
+                target: printarea_icon
+                printingEnabled: true
             }
         }
     ]

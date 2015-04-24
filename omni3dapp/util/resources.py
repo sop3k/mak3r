@@ -38,12 +38,6 @@ def getPathForResource(direc, subdir, resource_name):
 def getPathForImage(name):
     return getPathForResource(resourceBasePath, 'images', name)
 
-def getPathForMesh(name):
-    return getPathForResource(resourceBasePath, 'meshes', name)
-
-def getPathForFirmware(name):
-    return getPathForResource(resourceBasePath, 'firmware', name)
-
 def getDefaultMachineProfiles():
     path = os.path.normpath(os.path.join(resourceBasePath, 'machine_profiles', '*.ini'))
     return glob.glob(path)

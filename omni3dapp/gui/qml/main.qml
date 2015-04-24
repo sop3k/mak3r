@@ -95,7 +95,7 @@ Rectangle {
 
         property bool printingEnabled: false
 
-        state: "HIDDEN"
+        state: printingEnabled ? "SHOWN" : "HIDDEN"
 
         Image {
             id: printarea_show_icon

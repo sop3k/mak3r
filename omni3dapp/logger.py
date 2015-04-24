@@ -1,5 +1,6 @@
 from logging import getLogger
 from logging.config import dictConfig
+from raven.handlers.logging import SentryHandler
 
 
 LOGGING = {
@@ -7,17 +8,20 @@ LOGGING = {
     'disable_existing_loggers': True,
 
     'formatters': {
-        'console': {
+        'file': {
             'format': '[%(asctime)s][%(levelname)s] %(name)s %(filename)s:%(funcName)s:%(lineno)d | %(message)s',
             'datefmt': '%H:%M:%S',
             },
         },
 
     'handlers': {
-        'console': {
+        'file': {
             'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'console'
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'file',
+            'filename': 'mak3r.log',
+            'maxBytes': 1048576,
+            'backupCount': 3,
             },
         'sentry': {
             'level': 'ERROR',
@@ -28,7 +32,7 @@ LOGGING = {
 
     'loggers': {
         '': {
-            'handlers': ['console', 'sentry'],
+            'handlers': ['file', 'sentry'],
             'level': 'DEBUG',
             'propagate': False,
             },

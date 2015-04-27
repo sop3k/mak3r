@@ -82,8 +82,11 @@ try:
 
     if platform.system() != "Windows":
         import resource
-        rlimit_nice = 13 if not hasattr(psutil, "RLIMIT_NICE") else psutil.RLIMIT_NICE
-        nice_limit, _ = resource.getrlimit(rlimit_nice)
+        rlimit_nice = getattr(psutil, "RLIMIT_NICE", 13)
+        try:
+            nice_limit, _ = resource.getrlimit(rlimit_nice)
+        except ValueError:
+            nice_limit = 0
         high_priority_nice = 20 - nice_limit
 
     def set_nice(nice):

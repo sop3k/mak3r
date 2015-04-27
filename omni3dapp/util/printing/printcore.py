@@ -209,6 +209,10 @@ class Printcore(QtCore.QObject):
                 self.printer = None
                 return
 
+        return True
+
+    @QtCore.Slot()
+    def start_listener(self):
         self.stop_read_thread = False
         self.listener = Listener(self)
         self.read_thread = QtCore.QThread(self.parent)
@@ -229,7 +233,6 @@ class Printcore(QtCore.QObject):
         self.host.after_connect()
 
         self.parent.setConnected()
-        return True
 
     def reset(self):
         """Reset the printer

@@ -261,6 +261,7 @@ class MainWindow(QtGui.QGraphicsView):
     def strippedName(self, full_filename):
         return QtCore.QFileInfo(full_filename).fileName()
 
+    @QtCore.Slot(str)
     def setStatusbar(self, msg):
         log.debug(msg)
         self.sceneview.setInfoText(msg)
@@ -281,7 +282,7 @@ class MainWindow(QtGui.QGraphicsView):
     def connectPrinter(self):
         self.setStatusbar(_("Connecting..."))
         if not self.isOnline():
-            self.pc.connect_printer()
+            self.pc.start_connect_thread()
         else:
             self.setConnected()
 
@@ -313,12 +314,14 @@ class MainWindow(QtGui.QGraphicsView):
             return self.pc.p.online
         return False
 
+    @QtCore.Slot(str)
     def setConnected(self, msg=None):
         msg = msg or _("Connected to printer")
         self.setStatusbar(msg)
         self.enablePrintButton(True)
         self.connect_button.setState("ONLINE")
 
+    @QtCore.Slot(str)
     def setDisconnected(self, msg=None):
         self.connect_button.setState("OFFLINE")
         self.enablePrintButton(False)

@@ -32,6 +32,10 @@ from .pronsole import REPORT_NONE, REPORT_POS, REPORT_TEMP
 from omni3dapp.logger import log
 
 
+class PrintingSignals(QtCore.QObject):
+    connect_to_port_sig = QtCore.Signal()
+
+
 class GuiSignals(QtCore.QObject):
     addtext = QtCore.Signal(str)
     setonline = QtCore.Signal()
@@ -174,108 +178,49 @@ class PrinterConnection(Pronsole):
         #     self.parent.sceneview.setTempProgress)
 
         if self.autoconnect:
-            self.connect_printer()
+            self.start_connect_thread()
+
+    def setpaused(self, paused):
+        self.p.paused = 0
+        self.p.printing = 0
+        self.paused = 0
+
+    def start_connect_thread(self):
+        self.finish_connector()
+
+        self.connect_thread = QtCore.QThread(self.parent) 
+        self.connector = Connector(self, self.p)
+        self.connector.moveToThread(self.connect_thread)
+
+        self.connect_thread.started.connect(self.connector.connect_printer)
+        self.connector.set_statusbar_sig.connect(self.parent.setStatusbar)
+        self.connector.set_connected_sig.connect(self.parent.setConnected) 
+        self.connector.set_disconnected_sig.connect(self.parent.setDisconnected) 
+        self.connector.start_listener_sig.connect(self.p.start_listener)
+
+        self.printingsignals = PrintingSignals()
+        self.printingsignals.connect_to_port_sig.connect(self.connector.connect_to_port)
+
+        self.connector.finished.connect(self.connect_thread.quit)
+        self.connector.finished.connect(self.connector.deleteLater)
+        self.connect_thread.finished.connect(self.connect_thread.deleteLater)
+
+        self.parent.setStatusbar(_("Trying to connect to printer..."))
+        self.connect_thread.start()
+
+    @QtCore.Slot()
+    def finish_connector(self):
+        self.printingsignals = None
+        if hasattr(self, "connect_thread"):
+            try:
+                self.connect_thread.terminate()
+            except Exception as e:
+                log.error(e)
+            finally:
+                self.connect_thread = None
 
     def terminate_printing_threads(self):
         pass
-
-    def connect_to_port(self):
-        if not hasattr(self, 'ports') or not self.ports:
-            msg = _("Could not connect to printer")
-            log.error("{}; scanned every port at every baudrate".format(msg))
-            self.parent.setDisconnected(msg)
-            return
-
-        if not hasattr(self, 'baud_set') or not self.baud_set:
-            self.port_val = self.ports.pop()
-            try:
-                self.baud_set = profile.settingsDictionary.get(
-                    'port_baud_rate').getOptions()
-            except Exception as e:
-                log.error(e)
-                self.baud_set = []
-            if not self.baud_set:
-                self.baud_set = [250000]
-
-        baud_val = self.baud_set.pop()
-        try:
-            baud_val = int(baud_val)
-        except ValueError as e:
-            log.error(_("Could not parse baud rate: {0}".format(e)))
-            return self.connect_to_port()
-
-        return self.connect(self.port_val, baud_val)
-
-    def connect_printer(self):
-        self.ports = self.rescanports()
-        if not self.ports:
-            self.parent.setStatusbar(_('Could not find active ports'))
-            return
-
-        try:
-            port_val = profile.settingsDictionary.get('port_type').getValue()
-            baud_val = profile.settingsDictionary.get(
-                'port_baud_rate').getValue()
-            if port_val and baud_val:
-                self.connect(port_val, int(baud_val))
-            else:
-                self.connect_to_port()
-        except Exception as e:
-            log.debug("Error getting port and baud settings from profile: {}".format(e))
-            self.connect_to_port()
-
-    def connect(self, port_val, baud_val):
-        msg = "Connecting to port {0} at baudrate {1}".format(port_val,
-            baud_val)
-        self.parent.setStatusbar(msg)
-
-        if self.paused:
-            self.p.paused = 0
-            self.p.printing = 0
-            self.paused = 0
-            if self.sdprinting:
-                self.p.send_now("M26 S0")
-        # TODO: change this to mutex as we need to know return status
-        # self.p.signals.connect_sig.emit(port_val, baud_val)
-        ret = self.p.connect(port_val, baud_val)
-        if not ret:
-            return self.connect_to_port()
-
-        try:
-            settings_port = profile.settingsDictionary.get('port_type').getValue()
-        except AttributeError:
-            settings_port = ""
-        if port_val != settings_port:
-            profile.putMachineSetting('port_type', port_val)
-
-        try:
-            settings_baud = profile.settingsDictionary.get('port_baud_rate').getValue()
-        except AttributeError:
-            settings_baud = ""
-        if baud_val != settings_baud:
-            profile.putMachineSetting('port_baud_rate', baud_val)
-        msg = _("Connected to port {0} at baudrate {1}".format(
-            port_val, baud_val))
-        self.parent.setConnected(msg)
-
-        # if self.predisconnect_mainqueue:
-        #     self.recoverbtn.Enable()
-
-    def rescanports(self):
-        scanned = self.scanserial()
-        portslist = list(scanned)
-        log.debug("Portlist: {}".format(portslist))
-        port = profile.settingsDictionary.get('port_type') or ""
-        if port:
-            port = port.getValue()
-        if port != "" and port not in portslist:
-            portslist.append(port)
-        if portslist:    
-            self.parent.setStatusbar(_("Found active ports"))
-        else:
-            self.parent.setStatusbar(_("Did not find any connected ports"))
-
-        return portslist
 
     def store_predisconnect_state(self):
         self.predisconnect_mainqueue = self.p.mainqueue
@@ -303,8 +248,9 @@ class PrinterConnection(Pronsole):
             try:
                 self.status_thread.terminate()
             except Exception as e:
-                    log.error(e)
-            self.status_thread = None
+                log.error(e)
+            finally:
+                self.status_thread = None
 
         if self.paused:
             self.p.paused = 0
@@ -326,7 +272,9 @@ class PrinterConnection(Pronsole):
         else:
             msg = _("Attempted to write invalid text to console, which could be due to an invalid baudrate. Reconnecting...")
             log.debug(msg)
-            self.connect_to_port()
+            # self.connect_to_port()
+            if getattr(self, 'connector'):
+                self.printingsignals.connect_to_port_sig.emit() 
 
     def sentcb(self, line, gline):
         """Callback when a printer gcode has been sent"""
@@ -789,3 +737,144 @@ class Heater(QtCore.QObject):
         bedtemp = profile.settingsDictionary.get("print_bed_temperature")
         if bedtemp:
             self.set_bedtemp(bedtemp.getValue())
+
+
+class Connector(QtCore.QObject):
+    set_statusbar_sig = QtCore.Signal(str)
+    set_connected_sig = QtCore.Signal(str)
+    set_disconnected_sig = QtCore.Signal(str)
+    start_listener_sig = QtCore.Signal()
+    finished = QtCore.Signal()
+
+    def __init__(self, parent, pcore):
+        super(Connector, self).__init__()
+        self.parent = parent
+        self.pcore = pcore
+
+    def connect_printer(self):
+        self.ports = self.rescanports()
+        if not self.ports:
+            self.set_statusbar_sig.emit(_('Could not find active ports'))
+            self.finished.emit()
+            return
+
+        try:
+            port_val = profile.settingsDictionary.get('port_type').getValue()
+            baud_val = profile.settingsDictionary.get(
+                'port_baud_rate').getValue()
+            if port_val and baud_val:
+                self.connect_port_baud(port_val, int(baud_val))
+            else:
+                self.connect_to_port()
+        except Exception as e:
+            log.debug("Error getting port and baud settings from profile: {}".format(e))
+            self.connect_to_port()
+        finally:
+            self.finished.emit()
+
+    def connect_port_baud(self, port_val, baud_val):
+        msg = "Connecting to port {0} at baudrate {1}".format(port_val,
+            baud_val)
+        self.set_statusbar_sig.emit(msg)
+
+        if self.parent.paused:
+            self.parent.setpaused(0)
+            if self.parent.sdprinting:
+                self.pcore.send_now("M26 S0")
+        # TODO: change this to mutex as we need to know return status
+        # self.p.signals.connect_sig.emit(port_val, baud_val)
+        ret = self.pcore.connect(port_val, baud_val)
+        if not ret:
+            return self.connect_to_port()
+        else:
+            self.start_listener_sig.emit()
+
+        try:
+            settings_port = profile.settingsDictionary.get('port_type').getValue()
+        except AttributeError:
+            settings_port = ""
+        if port_val != settings_port:
+            profile.putMachineSetting('port_type', port_val)
+
+        try:
+            settings_baud = profile.settingsDictionary.get('port_baud_rate').getValue()
+        except AttributeError:
+            settings_baud = ""
+        if baud_val != settings_baud:
+            profile.putMachineSetting('port_baud_rate', baud_val)
+        msg = _("Connected to port {0} at baudrate {1}".format(
+            port_val, baud_val))
+        self.set_connected_sig.emit(msg)
+
+        # if self.predisconnect_mainqueue:
+        #     self.recoverbtn.Enable()
+
+    def connect_to_port(self):
+        if not hasattr(self, 'ports') or not self.ports:
+            msg = _("Could not connect to printer")
+            log.error("{}; scanned every port at every baudrate".format(msg))
+            self.set_disconnected_sig(msg)
+            return
+
+        if not hasattr(self, 'baud_set') or not self.baud_set:
+            self.port_val = self.ports.pop()
+            try:
+                self.baud_set = profile.settingsDictionary.get(
+                    'port_baud_rate').getOptions()
+            except Exception as e:
+                log.error(e)
+                self.baud_set = []
+            if not self.baud_set:
+                self.baud_set = [250000]
+
+        baud_val = self.baud_set.pop()
+        try:
+            baud_val = int(baud_val)
+        except ValueError as e:
+            log.error(_("Could not parse baud rate: {0}".format(e)))
+            return self.connect_to_port()
+
+        return self.connect_port_baud(self.port_val, baud_val)
+
+    def rescanports(self):
+        scanned = self.scanserial()
+        portslist = list(scanned)
+        log.debug("Portlist: {}".format(portslist))
+        port = profile.settingsDictionary.get('port_type') or ""
+        if port:
+            port = port.getValue()
+        if port != "" and port not in portslist:
+            portslist.append(port)
+        if portslist:    
+            self.set_statusbar_sig.emit(_("Found active ports"))
+        else:
+            self.set_statusbar_sig.emit(_("Did not find any connected ports"))
+
+        return portslist
+
+    def scanserial(self):
+        """scan for available ports. return a list of device names."""
+        baselist = []
+        if os.name == "nt":
+            try:
+                log.debug("Getting registry key: {}".format(
+                    _winreg.HKEY_LOCAL_MACHINE))
+                key = _winreg.OpenKey(
+                    _winreg.HKEY_LOCAL_MACHINE,
+                    "HARDWARE\\DEVICEMAP\\SERIALCOMM")
+                log.debug("Got key: {}".format(key))
+                i = 0
+                while(1):
+                    baselist += [_winreg.EnumValue(key, i)[1]]
+                    i += 1
+                log.debug("Baselist is: {}".format(baselist))
+            except Exception as e:
+                log.error("Error opening windows registry key: {}".format(e))
+
+        for g in ['/dev/ttyUSB*', '/dev/ttyACM*', "/dev/tty.*", "/dev/cu.*", "/dev/rfcomm*"]:
+            baselist += glob.glob(g)
+        log.debug("Baselist is: {}".format(baselist))
+        return filter(self._bluetoothSerialFilter, baselist)
+
+    def _bluetoothSerialFilter(self, serial):
+        return not ("Bluetooth" in serial or "FireFly" in serial)

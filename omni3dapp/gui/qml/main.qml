@@ -84,6 +84,7 @@ Rectangle {
 
     Rectangle {
         id: printarea_icon
+        objectName: "printarea_icon"
         height: 27
         width: 27
         color: "#00000000"
@@ -95,7 +96,7 @@ Rectangle {
 
         property bool printingEnabled: false
 
-        state: printingEnabled ? "SHOWN" : "HIDDEN"
+        state: "HIDDEN"
 
         Image {
             id: printarea_show_icon
@@ -184,6 +185,7 @@ Rectangle {
 
     Rectangle {
         id: printarea
+        objectName: "printarea"
         width: 0
         height: 400
         color: "#00000000"
@@ -231,5 +233,20 @@ Rectangle {
         anchors.topMargin: 0
         anchors.left: parent.left
         anchors.leftMargin: 0
+    }
+
+    function disableOtherElements(activeElement) {
+        for (var i = 0; i < page.children.length; i++) {
+            var child = page.children[i];
+            if (child.objectName && child.objectName != activeElement) {
+                child.enabled = false;
+            }
+        }
+    }
+
+    function enableAllElements(enabled) {
+        for (var i = 0; i < page.children.length; i++) {
+            page.children[i].enabled = enabled; 
+        }
     }
 }

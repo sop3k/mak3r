@@ -46,6 +46,11 @@ Rectangle {
                 target: printarea_icon
                 printingEnabled: false
             }
+
+            PropertyChanges {
+                target: printarea_icon
+                state: "HIDDEN"
+            }
         },
         State {
             name: "ONLINE"

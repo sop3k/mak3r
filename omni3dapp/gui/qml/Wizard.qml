@@ -752,12 +752,14 @@ Rectangle {
     ]
 
     function showLayer() {
+        page.enableAllElements(false);
         wizard.enabled = true;
         wizard.opacity = 1;
         graphicsscene.setLayerOn();
     }
 
     function hideLayer() {
+        page.enableAllElements(true);
         wizard.enabled = false;
         wizard.opacity = 0;
         graphicsscene.setLayerOff();

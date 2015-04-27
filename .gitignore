@@ -3,6 +3,7 @@
 *.gcode
 *.stl
 *.STL
+*.swp
 build/
 dist/
 *.egg*

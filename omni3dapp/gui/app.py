@@ -25,14 +25,12 @@ class OmniApp(object):
         self.splash = None
         self.load_files = files
 
-        if sys.platform.startswith('darwin'):
-            # Do not show a splashscreen on OSX, as by Apple guidelines
-            self.after_splash()
-        else:
+        # Do not show a splashscreen on OSX, as by Apple guidelines
+        if not sys.platform.startswith('darwin'):
             self.set_splash_screen()
             self.splash.show()
             app.processEvents()
-            self.after_splash()
+        self.after_splash()
 
         gl_format = QtOpenGL.QGLFormat()
         gl_format.setSampleBuffers(True)
@@ -43,7 +41,8 @@ class OmniApp(object):
         self.main_window.setViewportUpdateMode(
             QtGui.QGraphicsView.FullViewportUpdate)
 
-        self.splash.finish(self.main_window)
+        if self.splash:
+            self.splash.finish(self.main_window)
         self.main_window.showMaximized()
 
         # if profile.getPreference('check_for_updates') == 'True' and \

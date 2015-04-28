@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 from optparse import OptionParser
 
 from PySide import QtGui
@@ -9,7 +10,12 @@ from omni3dapp.util import profile
 from omni3dapp.logger import log
 
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+if getattr(sys, 'frozen', False):
+    filepath = sys.executable
+else:
+    filepath = os.path.dirname(__file__)
+
+BASE_DIR = os.path.abspath(os.path.join(filepath))
 
 
 def parse_arguments():
@@ -51,8 +57,6 @@ def setUp(app):
 
 
 if __name__ == "__main__":
-
-    import sys
 
     app = QtGui.QApplication(sys.argv)
     setUp(app)

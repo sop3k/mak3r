@@ -255,7 +255,8 @@ class Pronsole(cmd.Cmd):
         # TODO: log to pronterface console
         msg = u"".join(unicode(i) for i in msg)
         log.error(msg)
-        self.guisignals.addtext.emit(msg)
+        # self.guisignals.addtext.emit(msg)
+        self.addtexttolog(msg)
         # if not self.settings.error_command:
         #     return
         # output = get_command_output(self.settings.error_command, {"$m": msg})
@@ -784,7 +785,7 @@ class Pronsole(cmd.Cmd):
             return
         self.log("Loading file: " + filename)
         if not os.path.exists(filename):
-            self.logError("File not found!")
+            self.logError("File {} not found!".format(filename))
             return
         self.load_gcode(filename)
         self.log(_("Loaded %s, %d lines.") % (filename, len(self.fgcode)))

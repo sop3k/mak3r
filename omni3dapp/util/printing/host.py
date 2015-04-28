@@ -813,7 +813,7 @@ class Connector(QtCore.QObject):
         if not hasattr(self, 'ports') or not self.ports:
             msg = _("Could not connect to printer")
             log.error("{}; scanned every port at every baudrate".format(msg))
-            self.set_disconnected_sig(msg)
+            self.set_disconnected_sig.emit(msg)
             return
 
         if not hasattr(self, 'baud_set') or not self.baud_set:

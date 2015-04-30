@@ -1515,7 +1515,8 @@ class SceneView(QtGui.QGraphicsScene):
     @QtCore.Slot(str)
     def setInfoText(self, text):
         self.progressBar.setInfoText(text)
-        self.queueRefresh()
+        print "updating after setting info text"
+        self.update()
 
     @QtCore.Slot()
     def showSaveModel(self):

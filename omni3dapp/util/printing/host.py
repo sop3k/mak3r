@@ -34,6 +34,7 @@ from omni3dapp.logger import log
 
 class PrintingSignals(QtCore.QObject):
     connect_to_port_sig = QtCore.Signal()
+    set_connected_sig = QtCore.Signal()
 
 
 class GuiSignals(QtCore.QObject):
@@ -151,6 +152,7 @@ class PrinterConnection(Pronsole):
         self.predisconnect_layer = None
         self.hsetpoint = 0.0
         self.bsetpoint = 0.0
+        self.connector_running = False
 
         printset = set(string.printable)
         self.is_printable = lambda text: set(text).issubset(printset)
@@ -186,7 +188,9 @@ class PrinterConnection(Pronsole):
         self.paused = 0
 
     def start_connect_thread(self):
-        self.finish_connector()
+        if self.connector_running:
+            self.parent.setStatusbar(_("Already trying to connect..."))
+            return
 
         self.connect_thread = QtCore.QThread(self.parent) 
         self.connector = Connector(self, self.p)
@@ -199,6 +203,7 @@ class PrinterConnection(Pronsole):
         self.connector.set_online_sig.connect(self.set_online)
         self.printingsignals = PrintingSignals()
         self.printingsignals.connect_to_port_sig.connect(self.connector.connect_to_port)
+        self.printingsignals.set_connected_sig.connect(self.connector.set_connected)
 
         self.connector.finished.connect(self.connect_thread.quit)
         self.connector.finished.connect(self.connector.deleteLater)
@@ -212,17 +217,6 @@ class PrinterConnection(Pronsole):
         self.online(msg)
         self.after_connect()
         self.parent.setConnected()
-
-    @QtCore.Slot()
-    def finish_connector(self):
-        self.printingsignals = None
-        if hasattr(self, "connect_thread"):
-            try:
-                self.connect_thread.terminate()
-            except Exception as e:
-                log.error(e)
-            finally:
-                self.connect_thread = None
 
     def terminate_printing_threads(self):
         pass
@@ -501,9 +495,9 @@ class PrinterConnection(Pronsole):
         else:
             Pronsole.process_host_command(self, command)
 
-    def online(self):
+    def online(self, msg=""):
         """Callback when printer goes online"""
-        msg = _("Printer is now online.")
+        msg = msg or _("Printer is now online.")
         self.log(msg)
         self.addtexttolog(msg)
         self.online_gui()
@@ -753,20 +747,24 @@ class Connector(QtCore.QObject):
         super(Connector, self).__init__()
         self.parent = parent
         self.pcore = pcore
+        self.orig_baud_set = profile.settingsDictionary.get(
+            'port_baud_rate').getOptions()
 
     def connect_printer(self):
+        self.parent.connector_running = True
         self.ports = self.rescanports()
         if not self.ports:
             self.set_statusbar_sig.emit(_('Could not find active ports'))
+            self.parent.connector_running = False
             self.finished.emit()
             return
 
         try:
-            port_val = profile.settingsDictionary.get('port_type').getValue()
-            baud_val = profile.settingsDictionary.get(
+            self.port_val = profile.settingsDictionary.get('port_type').getValue()
+            self.baud_val = profile.settingsDictionary.get(
                 'port_baud_rate').getValue()
-            if port_val and baud_val:
-                self.connect_port_baud(port_val, int(baud_val))
+            if self.port_val and self.baud_val:
+                self.connect_port_baud(self.port_val, int(self.baud_val))
             else:
                 self.connect_to_port()
         except Exception as e:
@@ -785,28 +783,25 @@ class Connector(QtCore.QObject):
 
         ret = self.pcore.connect(port_val, baud_val)
         if not ret:
+            log.debug("Got error from printcore's connect, trying to connect to another port")
             self.connect_to_port()
         else:
-            print "Calling start listener"
             self.start_listener_sig.emit()
 
     @QtCore.Slot()
     def connect_to_port(self):
-        print "inside connect to port"
-        if not hasattr(self, 'ports') or not self.ports:
+        if not self.ports and not self.baud_set:
             msg = _("Could not connect to printer")
-            # self.set_statusbar_sig.emit(msg)
-            # log.error("{}; scanned every port at every baudrate".format(msg))
             self.set_disconnected_sig.emit(msg)
+            self.parent.connector_running = False
+            self.finished.emit()
             return
 
         if not hasattr(self, 'baud_set') or not self.baud_set:
-            print "Getting new port value"
 
             self.port_val = self.ports.pop()
             try:
-                self.baud_set = profile.settingsDictionary.get(
-                    'port_baud_rate').getOptions()
+                self.baud_set = self.orig_baud_set[:]
             except Exception as e:
                 log.error(e)
                 self.baud_set = []
@@ -823,6 +818,7 @@ class Connector(QtCore.QObject):
 
         return self.connect_port_baud(self.port_val, self.baud_val)
 
+    @QtCore.Slot()
     def set_connected(self):
         try:
             settings_port = profile.settingsDictionary.get('port_type').getValue()
@@ -841,6 +837,8 @@ class Connector(QtCore.QObject):
             self.port_val, self.baud_val))
 
         self.set_online_sig.emit(msg)
+        self.parent.connector_running = False
+        self.finished.emit()
 
         # if self.predisconnect_mainqueue:
         #     self.recoverbtn.Enable()

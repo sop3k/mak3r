@@ -34,6 +34,7 @@ from omni3dapp.logger import log
 
 class PrintingSignals(QtCore.QObject):
     connect_to_port_sig = QtCore.Signal()
+    set_connected_sig = QtCore.Signal()
 
 
 class GuiSignals(QtCore.QObject):
@@ -151,6 +152,7 @@ class PrinterConnection(Pronsole):
         self.predisconnect_layer = None
         self.hsetpoint = 0.0
         self.bsetpoint = 0.0
+        self.connector_running = False
 
         printset = set(string.printable)
         self.is_printable = lambda text: set(text).issubset(printset)
@@ -186,7 +188,9 @@ class PrinterConnection(Pronsole):
         self.paused = 0
 
     def start_connect_thread(self):
-        self.finish_connector()
+        if self.connector_running:
+            self.parent.setStatusbar(_("Already trying to connect..."))
+            return
 
         self.connect_thread = QtCore.QThread(self.parent) 
         self.connector = Connector(self, self.p)
@@ -194,12 +198,12 @@ class PrinterConnection(Pronsole):
 
         self.connect_thread.started.connect(self.connector.connect_printer)
         self.connector.set_statusbar_sig.connect(self.parent.setStatusbar)
-        self.connector.set_connected_sig.connect(self.parent.setConnected) 
         self.connector.set_disconnected_sig.connect(self.parent.setDisconnected) 
         self.connector.start_listener_sig.connect(self.p.start_listener)
-
+        self.connector.set_online_sig.connect(self.set_online)
         self.printingsignals = PrintingSignals()
         self.printingsignals.connect_to_port_sig.connect(self.connector.connect_to_port)
+        self.printingsignals.set_connected_sig.connect(self.connector.set_connected)
 
         self.connector.finished.connect(self.connect_thread.quit)
         self.connector.finished.connect(self.connector.deleteLater)
@@ -208,16 +212,11 @@ class PrinterConnection(Pronsole):
         self.parent.setStatusbar(_("Trying to connect to printer..."))
         self.connect_thread.start()
 
-    @QtCore.Slot()
-    def finish_connector(self):
-        self.printingsignals = None
-        if hasattr(self, "connect_thread"):
-            try:
-                self.connect_thread.terminate()
-            except Exception as e:
-                log.error(e)
-            finally:
-                self.connect_thread = None
+    @QtCore.Slot(str)
+    def set_online(self, msg):
+        self.online(msg)
+        self.after_connect()
+        self.parent.setConnected()
 
     def terminate_printing_threads(self):
         pass
@@ -272,7 +271,6 @@ class PrinterConnection(Pronsole):
         else:
             msg = _("Attempted to write invalid text to console, which could be due to an invalid baudrate. Reconnecting...")
             log.debug(msg)
-            # self.connect_to_port()
             if getattr(self, 'connector'):
                 self.printingsignals.connect_to_port_sig.emit() 
 
@@ -497,9 +495,9 @@ class PrinterConnection(Pronsole):
         else:
             Pronsole.process_host_command(self, command)
 
-    def online(self):
+    def online(self, msg=""):
         """Callback when printer goes online"""
-        msg = _("Printer is now online.")
+        msg = msg or _("Printer is now online.")
         self.log(msg)
         self.addtexttolog(msg)
         self.online_gui()
@@ -582,7 +580,6 @@ class PrinterConnection(Pronsole):
         if y is not None: self.current_pos[1] = y
         if z is not None: self.current_pos[2] = z
 
-    @QtCore.Slot(str)
     def recvcb(self, l):
         report_type = self.recvcb_report(l)
         isreport = report_type != REPORT_NONE
@@ -741,8 +738,8 @@ class Heater(QtCore.QObject):
 
 class Connector(QtCore.QObject):
     set_statusbar_sig = QtCore.Signal(str)
-    set_connected_sig = QtCore.Signal(str)
     set_disconnected_sig = QtCore.Signal(str)
+    set_online_sig = QtCore.Signal(str)
     start_listener_sig = QtCore.Signal()
     finished = QtCore.Signal()
 
@@ -750,27 +747,29 @@ class Connector(QtCore.QObject):
         super(Connector, self).__init__()
         self.parent = parent
         self.pcore = pcore
+        self.orig_baud_set = profile.settingsDictionary.get(
+            'port_baud_rate').getOptions()
 
     def connect_printer(self):
+        self.parent.connector_running = True
         self.ports = self.rescanports()
         if not self.ports:
             self.set_statusbar_sig.emit(_('Could not find active ports'))
+            self.parent.connector_running = False
             self.finished.emit()
             return
 
         try:
-            port_val = profile.settingsDictionary.get('port_type').getValue()
-            baud_val = profile.settingsDictionary.get(
+            self.port_val = profile.settingsDictionary.get('port_type').getValue()
+            self.baud_val = profile.settingsDictionary.get(
                 'port_baud_rate').getValue()
-            if port_val and baud_val:
-                self.connect_port_baud(port_val, int(baud_val))
+            if self.port_val and self.baud_val:
+                self.connect_port_baud(self.port_val, int(self.baud_val))
             else:
                 self.connect_to_port()
         except Exception as e:
             log.debug("Error getting port and baud settings from profile: {}".format(e))
             self.connect_to_port()
-        finally:
-            self.finished.emit()
 
     def connect_port_baud(self, port_val, baud_val):
         msg = "Connecting to port {0} at baudrate {1}".format(port_val,
@@ -781,60 +780,68 @@ class Connector(QtCore.QObject):
             self.parent.setpaused(0)
             if self.parent.sdprinting:
                 self.pcore.send_now("M26 S0")
-        # TODO: change this to mutex as we need to know return status
-        # self.p.signals.connect_sig.emit(port_val, baud_val)
+
         ret = self.pcore.connect(port_val, baud_val)
         if not ret:
-            return self.connect_to_port()
+            log.debug("Got error from printcore's connect, trying to connect to another port")
+            self.connect_to_port()
         else:
             self.start_listener_sig.emit()
 
-        try:
-            settings_port = profile.settingsDictionary.get('port_type').getValue()
-        except AttributeError:
-            settings_port = ""
-        if port_val != settings_port:
-            profile.putMachineSetting('port_type', port_val)
-
-        try:
-            settings_baud = profile.settingsDictionary.get('port_baud_rate').getValue()
-        except AttributeError:
-            settings_baud = ""
-        if baud_val != settings_baud:
-            profile.putMachineSetting('port_baud_rate', baud_val)
-        msg = _("Connected to port {0} at baudrate {1}".format(
-            port_val, baud_val))
-        self.set_connected_sig.emit(msg)
-
-        # if self.predisconnect_mainqueue:
-        #     self.recoverbtn.Enable()
-
+    @QtCore.Slot()
     def connect_to_port(self):
-        if not hasattr(self, 'ports') or not self.ports:
+        if not self.ports and not self.baud_set:
             msg = _("Could not connect to printer")
-            log.error("{}; scanned every port at every baudrate".format(msg))
-            self.set_disconnected_sig(msg)
+            self.set_disconnected_sig.emit(msg)
+            self.parent.connector_running = False
+            self.finished.emit()
             return
 
         if not hasattr(self, 'baud_set') or not self.baud_set:
+
             self.port_val = self.ports.pop()
             try:
-                self.baud_set = profile.settingsDictionary.get(
-                    'port_baud_rate').getOptions()
+                self.baud_set = self.orig_baud_set[:]
             except Exception as e:
                 log.error(e)
                 self.baud_set = []
             if not self.baud_set:
                 self.baud_set = [250000]
+            log.debug("New baud set is: {}".format(self.baud_set))
 
-        baud_val = self.baud_set.pop()
+        self.baud_val = self.baud_set.pop()
         try:
-            baud_val = int(baud_val)
+            self.baud_val = int(self.baud_val)
         except ValueError as e:
             log.error(_("Could not parse baud rate: {0}".format(e)))
             return self.connect_to_port()
 
-        return self.connect_port_baud(self.port_val, baud_val)
+        return self.connect_port_baud(self.port_val, self.baud_val)
+
+    @QtCore.Slot()
+    def set_connected(self):
+        try:
+            settings_port = profile.settingsDictionary.get('port_type').getValue()
+        except AttributeError:
+            settings_port = ""
+        if self.port_val != settings_port:
+            profile.putMachineSetting('port_type', self.port_val)
+
+        try:
+            settings_baud = profile.settingsDictionary.get('port_baud_rate').getValue()
+        except AttributeError:
+            settings_baud = ""
+        if self.baud_val != settings_baud:
+            profile.putMachineSetting('port_baud_rate', self.baud_val)
+        msg = _("Connected to port {0} at baudrate {1}".format(
+            self.port_val, self.baud_val))
+
+        self.set_online_sig.emit(msg)
+        self.parent.connector_running = False
+        self.finished.emit()
+
+        # if self.predisconnect_mainqueue:
+        #     self.recoverbtn.Enable()
 
     def rescanports(self):
         scanned = self.scanserial()

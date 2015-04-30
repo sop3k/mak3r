@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
+import inspect
 from optparse import OptionParser
 
 from PySide import QtGui
+from OpenGL.arrays import *
 
 from omni3dapp.util import profile
 from omni3dapp.logger import log
 
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    thisdir = os.path.dirname(inspect.getfile(inspect.currentframe()))
+    BASE_DIR = os.path.abspath(thisdir)
 
 
 def parse_arguments():
@@ -51,8 +58,6 @@ def setUp(app):
 
 
 if __name__ == "__main__":
-
-    import sys
 
     app = QtGui.QApplication(sys.argv)
     setUp(app)

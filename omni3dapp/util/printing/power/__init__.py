@@ -86,7 +86,7 @@ try:
         try:
             nice_limit, _ = resource.getrlimit(rlimit_nice)
         except ValueError:
-            nice_limit = 0
+            nice_limit = 13
         high_priority_nice = 20 - nice_limit
 
     def set_nice(nice):

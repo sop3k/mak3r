@@ -6,6 +6,7 @@ import sys
 
 from PySide import QtCore, QtGui, QtDeclarative
 
+from omniapp import BASE_DIR
 from omni3dapp.util import profile
 from omni3dapp.util.printing import host
 from omni3dapp.gui.util.gcode_text_styling import GCodeSyntaxHighlighter
@@ -91,9 +92,14 @@ class MainWindow(QtGui.QGraphicsView):
 
     def setupQmlView(self):
         self.qmlview = QtDeclarative.QDeclarativeView()
+
+        MAINQML_PATH = "omni3dapp/gui/qml/main.qml"
+        qmlpath = getattr(sys, 'frozen', False) and \
+            os.path.abspath(os.path.join(BASE_DIR, MAINQML_PATH)) or MAINQML_PATH
+
         url = QtCore.QUrl()
         url.setScheme("file")
-        url.setEncodedPath("omni3dapp/gui/qml/main.qml")
+        url.setEncodedPath(qmlpath)
         self.qmlview.setSource(url)
         self.qmlview.setMinimumWidth(1000)
         self.qmlview.setMinimumHeight(600)

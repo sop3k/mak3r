@@ -1,4 +1,5 @@
 import os
+import sys
 from esky import bdist_esky
 from distutils.core import setup
 
@@ -37,15 +38,35 @@ openglimports = [
     'OpenGL.arrays.vbo',
     ]
 
+# OpenGL hook
+if os.name == 'nt':
+    hiddenimports = ['OpenGL.platform.win32']
+else:
+    if sys.platform == 'linux2':
+        hiddenimports = ['OpenGL.platform.glx']
+    elif sys.platform[:6] == 'darwin':
+        hiddenimports = ['OpenGL.platform.darwin']
+    else:
+        print 'ERROR: hook-OpenGL: Unrecognised combo (os.name: %s, sys.platform: %s)' % (os.name, sys.platform)
+
+# lxml hook
+hiddenimports += ['lxml._elementpath', 'gzip']
 
 ESKY_OPTIONS = {
     "includes": [
         "PySide",
+        # "PySide.QtCore",
+        # "PySide.QtGui",
+        # "PySide.QtDeclarative",
         "OpenGL",
-        "OpenGL.platform.glx",
         "numpy",
         "psutil",
-        "serial"] + openglimports,
+        "raven",
+        "raven.events",
+        "raven.processors",
+        # "pyobjc",
+        # "pyobjc-core",
+        "serial"] + hiddenimports  # + openglimports,
     }
 
 
@@ -70,7 +91,7 @@ setup(name="mak3r",
           "omni3dapp/util",
           "omni3dapp/util/meshLoaders",
           "omni3dapp/util/printing",
-          "omni3dapp/util/printing/power"
+          "omni3dapp/util/printing/power",
           ],
       package_data={"omni3dapp": ["version"]},
       scripts=["omniapp.py"],

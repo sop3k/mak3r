@@ -94,7 +94,6 @@ class MainWindow(QtGui.QGraphicsView):
         self.qmlview = QtDeclarative.QDeclarativeView()
 
         qmlpath = os.path.abspath(os.path.join(BASE_DIR, "omni3dapp/gui/qml/main.qml"))
-        log.debug("QMLPATH: {}".format(qmlpath))
 
         url = QtCore.QUrl()
         url.setScheme("file")

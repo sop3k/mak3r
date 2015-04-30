@@ -114,7 +114,7 @@ class Pronsole(cmd.Cmd):
         self.status_thread = None
         self.monitor_interval = 3
         self.p = printcore.Printcore(parent, self)
-        self.p.recvcb = self.recvcb
+        # self.p.recvcb = self.recvcb
         self.p.startcb = self.startcb
         self.p.endcb = self.endcb
         self.p.layerchangecb = self.layer_change_cb
@@ -1130,20 +1130,20 @@ class Pronsole(cmd.Cmd):
                 isreport = REPORT_TEMP
         return isreport
 
-    def recvcb(self, l):
-        report_type = self.recvcb_report(l)
-        if report_type == REPORT_TEMP:
-            self.status.update_tempreading(l)
-        tstring = l.rstrip()
-        for listener in self.recvlisteners:
-            listener(l)
-        if tstring != "ok" and not self.sdlisting \
-          and not self.monitoring and report_type == REPORT_NONE:
-            if tstring[:5] == "echo:":
-                tstring = tstring[5:].lstrip()
-            if self.silent is False: print "\r" + tstring.ljust(15)
-            sys.stdout.write(self.promptf())
-            sys.stdout.flush()
+    # def recvcb(self, l):
+    #     report_type = self.recvcb_report(l)
+    #     if report_type == REPORT_TEMP:
+    #         self.status.update_tempreading(l)
+    #     tstring = l.rstrip()
+    #     for listener in self.recvlisteners:
+    #         listener(l)
+    #     if tstring != "ok" and not self.sdlisting \
+    #       and not self.monitoring and report_type == REPORT_NONE:
+    #         if tstring[:5] == "echo:":
+    #             tstring = tstring[5:].lstrip()
+    #         if self.silent is False: print "\r" + tstring.ljust(15)
+    #         sys.stdout.write(self.promptf())
+    #         sys.stdout.flush()
 
     def layer_change_cb(self, newlayer):
         layerz = self.fgcode.all_layers[newlayer].z

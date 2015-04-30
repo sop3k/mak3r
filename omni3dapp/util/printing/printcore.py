@@ -91,7 +91,7 @@ class Printcore(QtCore.QObject):
         self.sent = []
         self.writefailures = 0
         self.tempcb = None  # impl (wholeline)
-        self.recvcb = None  # impl (wholeline)
+        # self.recvcb = None  # impl (wholeline)
         self.sendcb = None  # impl (wholeline)
         self.preprintsendcb = None  # impl (wholeline)
         self.printsendcb = None  # impl (wholeline)
@@ -129,7 +129,8 @@ class Printcore(QtCore.QObject):
     def disconnect(self):
         """Disconnects from printer and pauses the print
         """
-        if not self.printer:
+        # if not self.printer:
+        if True:
             if self.read_thread:
                 self.stop_read_thread = True
                 try:
@@ -137,7 +138,9 @@ class Printcore(QtCore.QObject):
                 except Exception as e:
                     log.error("Error while terminating read thread "
                               "(disconnecting printer): ".format(e))
+                print "read thread set to None"
                 self.read_thread = None
+                self.listener = None
 
             if self.print_thread:
                 self.printing = False
@@ -158,6 +161,16 @@ class Printcore(QtCore.QObject):
         self.online = False
         self.printing = False
 
+    @QtCore.Slot()
+    def reconnect(self):
+        # self.host.connect_to_port()
+        print "inside reconnect"
+        # if getattr(self.host, 'connector'):
+        print "disconnecting..."
+        self.disconnect()
+        print "calling connect to port"
+        self.host.printingsignals.connect_to_port_sig.emit()
+
     @QtCore.Slot(str, int)
     def connect(self, port, baud):
         """Set port and baudrate if given, then connect to printer
@@ -165,6 +178,7 @@ class Printcore(QtCore.QObject):
         if self.printer:
             self.disconnect()
         if not (port and baud):
+            log.debug("Cancelling connect as no port and baud were given")
             return
 
         # Connect to socket if "port" is an IP, device if not
@@ -211,28 +225,43 @@ class Printcore(QtCore.QObject):
 
         return True
 
+    @QtCore.Slot(str)
+    def recvcb(self, l):
+        self.host.recvcb(l)
+
     @QtCore.Slot()
     def start_listener(self):
+        print "inside start listener"
         self.stop_read_thread = False
         self.listener = Listener(self)
         self.read_thread = QtCore.QThread(self.parent)
         self.listener.moveToThread(self.read_thread)
 
+        print "about to connect signals"
         self.read_thread.started.connect(self.listener.listen)
-        self.listener.send_command.connect(self._send)
+        print "connected started signal"
+        self.listener.send_command.connect(self.send_command)
+        print "connected send command signal"
         self.listener.recvcb_sig.connect(self.recvcb)
-        self.listener.set_online.connect(self.onlinecb)
+        print "connected recvcb signal"
+        self.listener.set_connected.connect(self.set_connected)
+        print "connected set connected signal"
+        self.listener.reconnect.connect(self.reconnect)
+        print "connected all signals"
 
         self.listener.finished.connect(self.read_thread.quit)
         self.listener.finished.connect(self.listener.deleteLater)
         self.read_thread.finished.connect(self.read_thread.deleteLater)
 
+        print "starting read thread"
         self.read_thread.start()
+
+    @QtCore.Slot()
+    def set_connected(self):
         self._start_sender()
-
-        self.host.after_connect()
-
-        self.parent.setConnected()
+        self.onlinecb()
+        self.online = True
+        self.host.set_connected()
 
     def reset(self):
         """Reset the printer
@@ -250,7 +279,7 @@ class Printcore(QtCore.QObject):
         self.sender_worker.moveToThread(self.send_thread)
 
         self.send_thread.started.connect(self.sender_worker.sender)
-        self.sender_worker.send_command.connect(self._send)
+        self.sender_worker.send_command.connect(self.send_command)
         self.sender_worker.finished.connect(self.send_thread.quit)
         self.sender_worker.finished.connect(self.sender_worker.deleteLater)
         self.send_thread.finished.connect(self.send_thread.deleteLater)
@@ -269,6 +298,7 @@ class Printcore(QtCore.QObject):
             log.error("Error terminating send thread: ".format(e))
         finally:
             self.send_thread = None
+            self.sender_worker = None
 
     def _checksum(self, command):
         return reduce(lambda x, y: x ^ y, map(ord, command))
@@ -435,6 +465,12 @@ class Printcore(QtCore.QObject):
         else:
             log.error(_("Can't send command. Not connected to printer"))
 
+    @QtCore.Slot(dict)
+    def send_command(self, attrs):
+        self._send(attrs.get('command'),
+                   attrs.get('lineno') or 0,
+                   attrs.get('calcchecksum') or False)
+
     def _send(self, command, lineno=0, calcchecksum=False):
         # Only add checksums if over serial (tcp does the flow control itself)
         log.debug("Sending command: {0}".format(command))
@@ -489,10 +525,13 @@ class Printcore(QtCore.QObject):
 class Listener(QtCore.QObject):
     send_command = QtCore.Signal(dict)
     recvcb_sig = QtCore.Signal(str)
-    set_online = QtCore.Signal()
+    set_connected = QtCore.Signal()
+    reconnect = QtCore.Signal()
     finished = QtCore.Signal()
 
     greetings = ['start', 'Grbl ']
+
+    printer_temp = re.compile(r'ok: T:\d{2}')
 
     def __init__(self, parent):
         super(Listener, self).__init__()
@@ -501,6 +540,7 @@ class Listener(QtCore.QObject):
     def listen(self):
         """This function acts on messages from the firmware
         """
+        print "inside listen"
         self.parent.clear = True
         if not self.parent.printing:
             self._listen_until_online()
@@ -512,7 +552,7 @@ class Listener(QtCore.QObject):
                 continue
             if line.startswith(tuple(self.greetings)) or line.startswith('ok'):
                 self.parent.clear = True
-            if line.startswith('ok') and "T:" in line and self.parent.tempcb:
+            if self.printer_temp.match(line) and self.parent.tempcb:
                 # callback for temp, status, whatever
                 # TODO
                 try:
@@ -564,14 +604,13 @@ class Listener(QtCore.QObject):
                     if empty_lines == 15: break
                 else: empty_lines = 0
                 if line.startswith(tuple(self.greetings)) \
-                   or line.startswith('ok') or "T:" in line:
-                    self.parent.online = True
-                    if self.parent.onlinecb:
-                        try: 
-                            # self.parent.onlinecb()
-                            self.set_online.emit()
-                        except:
-                            log.error(traceback.print_exc())
+                   or self.printer_temp.match(line):
+                    self.set_connected.emit()
+                    return
+
+                else:
+                    self.reconnect.emit()
+                    self.finished.emit()
                     return
 
     def _listen_can_continue(self):
